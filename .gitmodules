@@ -1,0 +1,48 @@
+[submodule "libs/sst/sst-cpputils"]
+	path = libs/sst/sst-cpputils
+	url = https://github.com/surge-synthesizer/sst-cpputils
+[submodule "libs/sst/sst-basic-blocks"]
+	path = libs/sst/sst-basic-blocks
+	url = https://github.com/surge-synthesizer/sst-basic-blocks
+[submodule "libs/sst/sst-filters"]
+	path = libs/sst/sst-filters
+	url = https://github.com/surge-synthesizer/sst-filters
+[submodule "libs/sst/sst-waveshapers"]
+	path = libs/sst/sst-waveshapers
+	url = https://github.com/surge-synthesizer/sst-waveshapers
+[submodule "libs/sst/sst-effects"]
+	path = libs/sst/sst-effects
+	url = https://github.com/surge-synthesizer/sst-effects
+[submodule "libs/sst/sst-plugininfra"]
+	path = libs/sst/sst-plugininfra
+	url = https://github.com/surge-synthesizer/sst-plugininfra
+[submodule "libs/clap/clap"]
+	path = libs/clap-libs/clap
+	url = https://github.com/free-audio/clap
+[submodule "libs/clap/clap-wrapper"]
+	path = libs/clap-libs/clap-wrapper
+	url = https://github.com/free-audio/clap-wrapper
+[submodule "libs/clap/clap-helpers"]
+	path = libs/clap-libs/clap-helpers
+	url = https://github.com/free-audio/clap-helpers
+[submodule "libs/JUCE"]
+	path = libs/JUCE
+	url = https://github.com/juce-framework/JUCE
+[submodule "libs/MTS-ESP"]
+	path = libs/MTS-ESP
+	url = https://github.com/ODDSound/MTS-ESP
+[submodule "libs/fmt"]
+	path = libs/fmt
+	url = https://github.com/fmtlib/fmt
+[submodule "libs/simde"]
+	path = libs/simde
+	url = https://github.com/simd-everywhere/simde.git
+[submodule "libs/sst/sst-voicemanager"]
+	path = libs/sst/sst-voicemanager
+	url = https://github.com/surge-synthesizer/sst-voicemanager
+[submodule "libs/sst/sst-clap-helpers"]
+	path = libs/sst/sst-clap-helpers
+	url = https://github.com/surge-synthesizer/sst-clap-helpers
+[submodule "libs/sst/sst-jucegui"]
+	path = libs/sst/sst-jucegui
+	url = https://github.com/surge-synthesizer/sst-jucegui
