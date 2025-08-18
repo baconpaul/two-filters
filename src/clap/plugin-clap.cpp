@@ -1,7 +1,7 @@
 /*
- * Six Sines
+ * SideQuest Starting Point
  *
- * A synth with audio rate modulation.
+ * Basically lets paul bootstrap his projects.
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,7 +10,7 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/six-sines
+ * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
  */
 
 #include "configuration.h"
@@ -49,8 +49,7 @@ static constexpr clap::helpers::CheckingLevel checkLevel = clap::helpers::Checki
 
 using plugHelper_t = clap::helpers::Plugin<misLevel, checkLevel>;
 
-template <bool multiOut>
-struct SideQuest : public plugHelper_t, sst::clap_juce_shim::EditorProvider
+template <bool multiOut> struct SideQuest : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 {
     SideQuest(const clap_host *h) : plugHelper_t(getDescriptor(), h)
     {
@@ -77,10 +76,7 @@ struct SideQuest : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     void onMainThread() noexcept override { engine->onMainThread(); }
 
     bool implementsAudioPorts() const noexcept override { return true; }
-    uint32_t audioPortsCount(bool isInput) const noexcept override
-    {
-        return isInput ? 0 : (multiOut ? 7 : 1);
-    }
+    uint32_t audioPortsCount(bool isInput) const noexcept override { return isInput ? 0 : 1; }
     bool audioPortsInfo(uint32_t index, bool isInput,
                         clap_audio_port_info *info) const noexcept override
     {
@@ -144,11 +140,11 @@ struct SideQuest : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         if (process->transport)
         {
-            //engine->monoValues.tempoSyncRatio = process->transport->tempo / 120.0;
+            // engine->monoValues.tempoSyncRatio = process->transport->tempo / 120.0;
         }
         else
         {
-            //engine->monoValues.tempoSyncRatio = 1.f;
+            // engine->monoValues.tempoSyncRatio = 1.f;
         }
 
         static constexpr int outBus{1};
@@ -180,7 +176,9 @@ struct SideQuest : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             }
 
             for (auto i = 0; i < outChan; ++i)
+            {
                 out[i][s] = engine->output[i][blockPos];
+            }
 
             blockPos++;
             if (blockPos == blockSize)
@@ -286,8 +284,10 @@ struct SideQuest : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         auto res = sst::plugininfra::patch_support::patchToOutStream(engine->patch, ostream);
         engine->readyForStream = false;
+
         return res;
     }
+
     bool stateLoad(const clap_istream *istream) noexcept override
     {
         Patch patchCopy;
@@ -337,41 +337,6 @@ struct SideQuest : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         }
 
         engine->processUIQueue(out);
-    }
-
-    bool implementsPresetLoad() const noexcept override { return true; }
-    bool presetLoadFromLocation(uint32_t location_kind, const char *location,
-                                const char *load_key) noexcept override
-    {
-        if (location_kind ==
-            clap_preset_discovery_location_kind::CLAP_PRESET_DISCOVERY_LOCATION_FILE)
-        {
-            try
-            {
-                auto p = fs::path(fs::u8path(location));
-                if (p.extension() == "sxsnp")
-                {
-                    std::ifstream t(p);
-                    if (!t.is_open())
-                        return false;
-                    std::stringstream buffer;
-                    buffer << t.rdbuf();
-
-                    Patch patchCopy;
-                    patchCopy.fromState(buffer.str());
-
-                    auto dn = p.filename().replace_extension("").u8string();
-                    presets::PresetManager::sendEntirePatchToAudio(patchCopy, engine->mainToAudio,
-                                                                   patchCopy.name, _host.host());
-                    return true;
-                }
-            }
-            catch (const fs::filesystem_error &e)
-            {
-                SQLOG("File System Error " << e.what() << " with " << location);
-            }
-        }
-        return false;
     }
 
   public:

@@ -1,7 +1,7 @@
 /*
- * Six Sines
+ * SideQuest Starting Point
  *
- * A synth with audio rate modulation.
+ * Basically lets paul bootstrap his projects.
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,11 +10,11 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/six-sines
+ * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
  */
 
-#ifndef BACONPAUL_SIX_SINES_SYNTH_PATCH_H
-#define BACONPAUL_SIX_SINES_SYNTH_PATCH_H
+#ifndef BACONPAUL_SIDEQUEST_ENGINE_PATCH_H
+#define BACONPAUL_SIDEQUEST_ENGINE_PATCH_H
 
 #include <vector>
 #include <array>
@@ -28,7 +28,6 @@
 #include "sst/basic-blocks/dsp/Lag.h"
 #include "sst/basic-blocks/modulators/DAHDSREnvelope.h"
 #include "sst/plugininfra/patch-support/patch_base.h"
-
 
 namespace baconpaul::sidequest_ns
 {
@@ -79,8 +78,7 @@ struct Patch : pats::PatchBase<Patch, Param>
     static md_t boolMd() { return md_t().asBool().withFlags(boolFlags); }
     static md_t intMd() { return md_t().asInt().withFlags(boolFlags); }
 
-    Patch()
-        : pats::PatchBase<Patch, Param>()
+    Patch() : pats::PatchBase<Patch, Param>()
 
     {
         auto pushParams = [this](auto &from) { this->pushMultipleParams(from.params()); };
@@ -126,13 +124,12 @@ struct Patch : pats::PatchBase<Patch, Param>
         static constexpr uint32_t idBase{500};
 
         SidequestNode()
-            :
-              pitch(floatMd()
-                        .asMIDIPitch().withDefault(0).withName("Pitch Offset").withID(id(0))),
-              level(floatMd()
-                           .asCubicDecibelAttenuation()
-                           .withDefault(0.f)
-                           .withName("Level").withID(id(1)))
+            : pitch(floatMd()
+                        .asSemitoneRange(-24, 24)
+                        .withDefault(0)
+                        .withName("Pitch Offset")
+                        .withID(id(0))),
+              harmlev(floatMd().asPercent().withDefault(0.f).withName("Harmonic 2").withID(id(1)))
 
         {
         }
@@ -140,12 +137,11 @@ struct Patch : pats::PatchBase<Patch, Param>
         std::string name() const { return "SideQuest"; }
         uint32_t id(int f) const { return idBase + f; }
 
-        Param pitch, level;
+        Param pitch, harmlev;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&pitch,
-                                     &level};
+            std::vector<Param *> res{&pitch, &harmlev};
             return res;
         }
     };
@@ -157,5 +153,5 @@ struct Patch : pats::PatchBase<Patch, Param>
     float migrateParamValueFromVersion(Param *p, float value, uint32_t version);
     void migratePatchFromVersion(uint32_t version);
 };
-} // namespace baconpaul::six_sines
+} // namespace baconpaul::sidequest_ns
 #endif // PATCH_H

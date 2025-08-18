@@ -1,7 +1,7 @@
 /*
- * Six Sines
+ * SideQuest Starting Point
  *
- * A synth with audio rate modulation.
+ * Basically lets paul bootstrap his projects.
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,7 +10,7 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/six-sines
+ * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
  */
 
 #include "engine/engine.h"
@@ -35,9 +35,7 @@ Engine::Engine()
     voiceManager = std::make_unique<voiceManager_t>(responder, monoResponder);
 }
 
-Engine::~Engine()
-{
-}
+Engine::~Engine() {}
 
 void Engine::setSampleRate(double sr)
 {
@@ -55,8 +53,9 @@ void Engine::setSampleRate(double sr)
                                               1.0 / blockSize);
     midiCCLagCollection.snapAllActiveToTarget();
 
-    audioToUi.push(
-        {AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
+    vuPeak.setSampleRate(sampleRate);
+
+    audioToUi.push({AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
 }
 
 void Engine::process(const clap_output_events_t *outq)
@@ -85,68 +84,63 @@ void Engine::process(const clap_output_events_t *outq)
 
     midiCCLagCollection.processAll();
 
-    int generated{0};
+    lagHandler.process();
 
-    while (generated < blockSize)
+    memset(output, 0, sizeof(output));
+
+    auto cvoice = head;
+    Voice *removeVoice{nullptr};
+
+    memset(output, 0, sizeof(output));
+    while (cvoice)
     {
-        lagHandler.process();
+        assert(!cvoice->finished());
+        cvoice->renderBlock();
 
-        float lOutput alignas(16)[2][blockSize];
-        memset(lOutput, 0, sizeof(lOutput));
+        mech::accumulate_from_to<blockSize>(cvoice->output[0], output[0]);
+        mech::accumulate_from_to<blockSize>(cvoice->output[1], output[1]);
 
-        auto cvoice = head;
-        Voice *removeVoice{nullptr};
-
-        while (cvoice)
+        if (cvoice->finished())
         {
-            assert(!cvoice->finished());
-            cvoice->renderBlock();
+            auto rvoice = cvoice;
+            cvoice = removeFromVoiceList(cvoice);
+            rvoice->next = removeVoice;
+            removeVoice = rvoice;
+        }
+        else
+        {
+            cvoice = cvoice->next;
+        }
+    }
 
-            mech::accumulate_from_to<blockSize>(cvoice->output[0], lOutput[0]);
-            mech::accumulate_from_to<blockSize>(cvoice->output[1], lOutput[1]);
+    while (removeVoice)
+    {
+        responder.doVoiceEndCallback(removeVoice);
+        auto v = removeVoice;
+        removeVoice = removeVoice->next;
+        v->next = nullptr;
+        assert(!v->next && !v->prior);
+    }
 
-            if (cvoice->finished())
-            {
-                auto rvoice = cvoice;
-                cvoice = removeFromVoiceList(cvoice);
-                rvoice->next = removeVoice;
-                removeVoice = rvoice;
-            }
-            else
-            {
-                cvoice = cvoice->next;
-            }
+    if (isEditorAttached)
+    {
+        for (int i = 0; i < blockSize; ++i)
+        {
+            vuPeak.process(output[0][i], output[1][i]);
         }
 
-        while (removeVoice)
+        if (lastVuUpdate >= updateVuEvery)
         {
-            responder.doVoiceEndCallback(removeVoice);
-            auto v = removeVoice;
-            removeVoice = removeVoice->next;
-            v->next = nullptr;
-            assert(!v->next && !v->prior);
+            AudioToUIMsg msg{AudioToUIMsg::UPDATE_VU, 0, vuPeak.vu_peak[0], vuPeak.vu_peak[1]};
+            audioToUi.push(msg);
+
+            AudioToUIMsg msg2{AudioToUIMsg::UPDATE_VOICE_COUNT, (uint32_t)voiceCount};
+            audioToUi.push(msg2);
+            lastVuUpdate = 0;
         }
-
-        if (isEditorAttached)
+        else
         {
-            for (int i = 0; i < blockSize; ++i)
-            {
-                vuPeak.process(lOutput[0][i], lOutput[1][i]);
-            }
-
-            if (lastVuUpdate >= updateVuEvery)
-            {
-                AudioToUIMsg msg{AudioToUIMsg::UPDATE_VU, 0, vuPeak.vu_peak[0], vuPeak.vu_peak[1]};
-                audioToUi.push(msg);
-
-                AudioToUIMsg msg2{AudioToUIMsg::UPDATE_VOICE_COUNT, (uint32_t)voiceCount};
-                audioToUi.push(msg2);
-                lastVuUpdate = 0;
-            }
-            else
-            {
-                lastVuUpdate++;
-            }
+            lastVuUpdate++;
         }
     }
 }
@@ -192,8 +186,8 @@ void Engine::dumpVoiceList()
     auto c = head;
     while (c)
     {
-        //SQLOG("   c=" << std::hex << c << std::dec << " key=" << c->voiceValues.key
-        //                << " u=" << c->used);
+        // SQLOG("   c=" << std::hex << c << std::dec << " key=" << c->voiceValues.key
+        //                 << " u=" << c->used);
         c = c->next;
     }
 }
@@ -377,8 +371,7 @@ void Engine::pushFullUIRefresh()
     }
     audioToUi.push({AudioToUIMsg::SET_PATCH_NAME, 0, 0, 0, patch.name});
     audioToUi.push({AudioToUIMsg::SET_PATCH_DIRTY_STATE, patch.dirty});
-    audioToUi.push(
-        {AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
+    audioToUi.push({AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
 }
 
 void Engine::onMainThread()
@@ -395,4 +388,4 @@ void Engine::onMainThread()
     }
 }
 
-} // namespace baconpaul::six_sines
+} // namespace baconpaul::sidequest_ns

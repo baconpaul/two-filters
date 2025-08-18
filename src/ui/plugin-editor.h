@@ -1,7 +1,7 @@
 /*
- * Six Sines
+ * SideQuest Starting Point
  *
- * A synth with audio rate modulation.
+ * Basically lets paul bootstrap his projects.
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,11 +10,11 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/six-sines
+ * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
  */
 
-#ifndef BACONPAUL_SIX_SINES_UI_SIX_SINES_EDITOR_H
-#define BACONPAUL_SIX_SINES_UI_SIX_SINES_EDITOR_H
+#ifndef BACONPAUL_SIDEQUEST_UI_PLUGIN_EDITOR_H
+#define BACONPAUL_SIDEQUEST_UI_PLUGIN_EDITOR_H
 
 #include <functional>
 #include <utility>
@@ -44,18 +44,18 @@ namespace jdat = sst::jucegui::data;
 namespace baconpaul::sidequest_ns::ui
 {
 
+struct MainPanel;
 
 struct PluginEditor : jcmp::WindowPanel
 {
     Patch patchCopy;
-    
 
     Engine::audioToUIQueue_t &audioToUI;
     Engine::mainToAudioQueue_T &mainToAudio;
     const clap_host_t *clapHost{nullptr};
 
     PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQueue_T &utoa,
-                   const clap_host_t *ch);
+                 const clap_host_t *ch);
     virtual ~PluginEditor();
 
     std::unique_ptr<sst::jucegui::style::LookAndFeelManager> lnf;
@@ -67,8 +67,7 @@ struct PluginEditor : jcmp::WindowPanel
     void idle();
     std::unique_ptr<juce::Timer> idleTimer;
 
-
-    std::unique_ptr<jcmp::NamedPanel> singlePanel;
+    std::unique_ptr<MainPanel> mainPanel;
     void doSinglePanelHamburger();
     void activateHamburger(bool b);
 
@@ -110,25 +109,20 @@ struct PluginEditor : jcmp::WindowPanel
 
     bool keyPressed(const juce::KeyPress &key) override;
 
-    void showNavigationMenu();
-
     void setZoomFactor(float zf);
     float zoomFactor{1.0f};
     std::function<void(float)> onZoomChanged{nullptr};
     bool toggleDebug();
 
-    static constexpr uint32_t edWidth{688}, edHeight{812};
+    static constexpr uint32_t edWidth{600}, edHeight{400};
 
     std::unique_ptr<jcmp::VUMeter> vuMeter;
 
-    // To turn this on, recompile with it on in six-sines-editor.cpp
     void visibilityChanged() override;
     void parentHierarchyChanged() override;
     std::unique_ptr<sst::jucegui::accessibility::FocusDebugger> focusDebugger;
 
-    std::unordered_map<juce::Component *, std::function<void()>> panelSelectGestureFor;
-
-    float engineSR{0}, hostSR{0};
+    float sampleRate{0};
 
     void requestParamsFlush();
     const clap_host_params_t *clapParamsExtension{nullptr};
@@ -142,5 +136,5 @@ struct HasEditor
     PluginEditor &editor;
     HasEditor(PluginEditor &e) : editor(e) {}
 };
-} // namespace baconpaul::six_sines::ui
+} // namespace baconpaul::sidequest_ns::ui
 #endif

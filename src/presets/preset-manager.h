@@ -1,7 +1,7 @@
 /*
- * Six Sines
+ * SideQuest Starting Point
  *
- * A Engine with audio rate modulation.
+ * Basically lets paul bootstrap his projects.
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,11 +10,11 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/six-sines
+ * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
  */
 
-#ifndef BACONPAUL_SIX_SINES_PRESETS_PRESET_MANAGER_H
-#define BACONPAUL_SIX_SINES_PRESETS_PRESET_MANAGER_H
+#ifndef BACONPAUL_SIDEQUEST_PRESETS_PRESET_MANAGER_H
+#define BACONPAUL_SIDEQUEST_PRESETS_PRESET_MANAGER_H
 
 #include <clap/clap.h>
 #include "filesystem/import.h"
@@ -65,5 +65,5 @@ struct PresetManager
                                        const std::string &name, const clap_host_t *,
                                        const clap_host_params_t *p = nullptr);
 };
-} // namespace baconpaul::six_sines::presets
+} // namespace baconpaul::sidequest_ns::presets
 #endif // PRESET_MANAGER_H

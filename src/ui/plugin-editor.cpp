@@ -1,7 +1,7 @@
 /*
- * Six Sines
+ * SideQuest Starting Point
  *
- * A synth with audio rate modulation.
+ * Basically lets paul bootstrap his projects.
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,7 +10,7 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/six-sines
+ * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
  */
 
 #include "plugin-editor.h"
@@ -23,6 +23,8 @@
 
 #include "presets/preset-manager.h"
 #include "preset-data-binding.h"
+#include "patch-data-bindings.h"
+#include "main-panel.h"
 
 namespace baconpaul::sidequest_ns::ui
 {
@@ -35,13 +37,13 @@ struct IdleTimer : juce::Timer
 
 namespace jstl = sst::jucegui::style;
 using sheet_t = jstl::StyleSheet;
-static constexpr sheet_t::Class PatchMenu("six-sines.patch-menu");
+static constexpr sheet_t::Class PatchMenu("sidequest.patch-menu");
 
 PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQueue_T &utoa,
-                               const clap_host_t *h)
+                           const clap_host_t *h)
     : jcmp::WindowPanel(true), audioToUI(atou), mainToAudio(utoa), clapHost(h)
 {
-    setTitle("Six Sines - an Audio Rate Modulation Synthesizer");
+    setTitle("Side Quest - Replace this");
     setAccessible(true);
     sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
 
@@ -56,13 +58,9 @@ PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQu
             ->getFont(jcmp::MenuButton::Styles::styleClass, jcmp::MenuButton::Styles::labelfont)
             .withHeight(18));
 
-    singlePanel = std::make_unique<jcmp::NamedPanel>("Edit");
-    singlePanel->hasHamburger = false;
-    singlePanel->onHamburger = [w = juce::Component::SafePointer(this)]()
-    {
-        if (w)
-            w->doSinglePanelHamburger();
-    };
+    mainPanel = std::make_unique<MainPanel>(*this);
+    mainPanel->hasHamburger = false;
+    addAndMakeVisible(*mainPanel);
 
     auto startMsg = Engine::MainToAudioMsg{Engine::MainToAudioMsg::REQUEST_REFRESH};
     mainToAudio.push(startMsg);
@@ -141,7 +139,7 @@ void PluginEditor::idle()
         }
         else if (aum->action == Engine::AudioToUIMsg::UPDATE_VOICE_COUNT)
         {
-            SQLOG("Implement update voice count");
+            SQLOG_ONCE("Implement update voice count");
         }
         else if (aum->action == Engine::AudioToUIMsg::SET_PATCH_NAME)
         {
@@ -169,8 +167,7 @@ void PluginEditor::idle()
         }
         else if (aum->action == Engine::AudioToUIMsg::SEND_SAMPLE_RATE)
         {
-            engineSR = aum->value2;
-            hostSR = aum->value;
+            sampleRate = aum->value;
             repaint();
         }
         else
@@ -191,29 +188,10 @@ void PluginEditor::paint(juce::Graphics &g)
     g.setColour(juce::Colours::white.withAlpha(0.9f));
     auto q = ft.withHeight(30);
     g.setFont(q);
-    // g.drawText("Six", getLocalBounds().reduced(3,1), juce::Justification::topLeft);
     auto xp = 3;
     auto ht = 30;
 
     int np{110};
-
-    for (int fr = 1; fr < 6; ++fr)
-    {
-        juce::Path p;
-        for (int i = 0; i < np; ++i)
-        {
-            auto sx = sin(2.0 * M_PI * fr * i / np);
-            if (i == 0)
-                p.startNewSubPath(xp + i, 0.45 * (-sx + 1) * ht + 4);
-            else
-                p.lineTo(xp + i, 0.45 * (-sx + 1) * ht + 4);
-        }
-        if (isLight)
-            g.setColour(juce::Colours::navy.withAlpha(0.9f - sqrt((fr - 1) / 7.0f)));
-        else
-            g.setColour(juce::Colours::white.withAlpha(0.9f - sqrt((fr - 1) / 7.0f)));
-        g.strokePath(p, juce::PathStrokeType(1));
-    }
 
     if (isLight)
         g.setColour(juce::Colours::navy);
@@ -221,8 +199,8 @@ void PluginEditor::paint(juce::Graphics &g)
         g.setColour(juce::Colours::white.withAlpha(0.5f));
     q = ft.withHeight(12);
     g.setFont(q);
-    g.drawText("https://github.com/baconpaul/six-sines", getLocalBounds().reduced(3, 3),
-               juce::Justification::bottomLeft);
+
+    g.drawText(PRODUCT_NAME, getLocalBounds().reduced(3, 3), juce::Justification::bottomLeft);
 
     std::string os = "";
 #if JUCE_MAC
@@ -236,23 +214,23 @@ void PluginEditor::paint(juce::Graphics &g)
 #endif
 
     auto bi = os + " " + sst::plugininfra::VersionInformation::git_commit_hash;
-    bi += fmt::format(" @ {:.1f}k", hostSR / 1000.0);
+    bi += fmt::format(" @ {:.1f}k", sampleRate / 1000.0);
     g.drawText(bi, getLocalBounds().reduced(3, 3), juce::Justification::bottomRight);
 
     g.drawText(sst::plugininfra::VersionInformation::git_implied_display_version,
                getLocalBounds().reduced(3, 3), juce::Justification::centredBottom);
 
-#if !defined(NDEBUG) || !NDEBUG
-    g.setColour(juce::Colours::red);
-    g.setFont(juce::FontOptions(30));
-    auto dr = juce::Rectangle<int>(0, 0, np, ht);
-    g.setColour(juce::Colours::black.withAlpha(0.5f));
-    g.fillRect(dr);
-
     g.setColour(juce::Colours::white);
-    g.drawRect(dr, 1);
+    g.setFont(juce::FontOptions(25));
+    auto dr = juce::Rectangle<int>(0, 0, np, ht);
+    g.drawText(PRODUCT_NAME, dr.reduced(2), juce::Justification::centredLeft);
+
+#if !defined(NDEBUG) || !NDEBUG
+    g.setFont(juce::FontOptions(30));
+
+    g.setColour(juce::Colours::white.withAlpha(0.6f));
     g.drawText("DEBUG", dr.translated(1, 1), juce::Justification::centred);
-    g.setColour(juce::Colours::red);
+    g.setColour(juce::Colours::red.withAlpha(0.6f));
     g.drawText("DEBUG", dr, juce::Justification::centred);
 #endif
 }
@@ -265,7 +243,7 @@ void PluginEditor::resized()
     auto presetArea = lb.withHeight(presetHeight);
     auto panelArea = lb.withTrimmedTop(presetHeight).withTrimmedBottom(footerHeight);
 
-    auto panelMargin{1};
+    auto panelMargin{3};
     auto uicMargin{4};
     // Preset button
     auto but = presetArea.reduced(110, 0).withTrimmedTop(uicMargin);
@@ -274,7 +252,7 @@ void PluginEditor::resized()
 
     vuMeter->setBounds(but);
 
-    singlePanel->setBounds(panelArea.reduced(panelMargin));
+    mainPanel->setBounds(panelArea.reduced(panelMargin));
 }
 
 void PluginEditor::showTooltipOn(juce::Component *c)
@@ -452,7 +430,7 @@ void PluginEditor::showPresetPopup()
         for (auto &e : ent)
         {
             auto noExt = e;
-            auto ps = noExt.find(".sxsnp");
+            auto ps = noExt.find(PATCH_EXTENSION);
             if (ps != std::string::npos)
             {
                 noExt = noExt.substr(0, ps);
@@ -596,20 +574,13 @@ void PluginEditor::showPresetPopup()
     p.addSubMenu("User Interface", uim);
 
     p.addSeparator();
-    p.addItem("Read the Manual",
-              []()
-              {
-                  juce::URL("https://github.com/baconpaul/six-sines/blob/main/doc/manual.md")
+    p.addItem("Read the Manual", false, false, []() {});
+    p.addItem("Get the Source",
+              []() {
+                  juce::URL("https://github.com/baconpaul/sidequest-startingpoint/")
                       .launchInDefaultBrowser();
               });
-    p.addItem("Get the Source", []()
-              { juce::URL("https://github.com/baconpaul/six-sines/").launchInDefaultBrowser(); });
-    p.addItem("Acknowledgements",
-              []()
-              {
-                  juce::URL("https://github.com/baconpaul/six-sines/blob/main/doc/ack.md")
-                      .launchInDefaultBrowser();
-              });
+    p.addItem("Acknowledgements", false, false, []() {});
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
 }
 
@@ -618,10 +589,10 @@ void PluginEditor::doSavePatch()
     auto svP = presetManager->userPatchesPath;
     if (strcmp(patchCopy.name, "Init") != 0)
     {
-        svP = (svP / patchCopy.name).replace_extension(".sxsnp");
+        svP = (svP / patchCopy.name).replace_extension(PATCH_EXTENSION);
     }
-    fileChooser =
-        std::make_unique<juce::FileChooser>("Save Patch", juce::File(svP.u8string()), "*.sxsnp");
+    fileChooser = std::make_unique<juce::FileChooser>("Save Patch", juce::File(svP.u8string()),
+                                                      juce::String("*") + PATCH_EXTENSION);
     fileChooser->launchAsync(juce::FileBrowserComponent::canSelectFiles |
                                  juce::FileBrowserComponent::saveMode |
                                  juce::FileBrowserComponent::warnAboutOverwriting,
@@ -660,7 +631,8 @@ void PluginEditor::setPatchNameTo(const std::string &s)
 void PluginEditor::doLoadPatch()
 {
     fileChooser = std::make_unique<juce::FileChooser>(
-        "Load Patch", juce::File(presetManager->userPatchesPath.u8string()), "*.sxsnp");
+        "Load Patch", juce::File(presetManager->userPatchesPath.u8string()),
+        juce::String("*") + PATCH_EXTENSION);
     fileChooser->launchAsync(
         juce::FileBrowserComponent::canSelectFiles | juce::FileBrowserComponent::openMode,
         [w = juce::Component::SafePointer(this)](const juce::FileChooser &c)
@@ -680,7 +652,7 @@ void PluginEditor::doLoadPatch()
 void PluginEditor::resetToDefault() { presetManager->loadInit(patchCopy, mainToAudio); }
 
 void PluginEditor::setAndSendParamValue(uint32_t paramId, float value, bool notifyAudio,
-                                          bool sendBeginEnd)
+                                        bool sendBeginEnd)
 {
     patchCopy.paramMap[paramId]->value = value;
 
@@ -722,51 +694,7 @@ void PluginEditor::postPatchChange(const std::string &s)
     repaint();
 }
 
-void PluginEditor::showNavigationMenu()
-{
-    auto p = juce::PopupMenu();
-    p.addSectionHeader("Navigation");
-    p.addSeparator();
-    p.addItem("Preset Browser",
-              [w = juce::Component::SafePointer(this)]()
-              {
-                  if (w)
-                  {
-                      w->presetButton->grabKeyboardFocus();
-                  }
-              });
-    p.addSeparator();
-
-
-    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
-}
-
-bool PluginEditor::keyPressed(const juce::KeyPress &key)
-{
-    if (key.getModifiers().isCommandDown() && (char)key.getKeyCode() == 'N')
-    {
-        showNavigationMenu();
-        return true;
-    }
-
-    if (key.getModifiers().isCommandDown() && (char)key.getKeyCode() == 'A')
-    {
-        auto c = getCurrentlyFocusedComponent();
-        auto psgf = panelSelectGestureFor.find(c);
-
-        if (psgf != panelSelectGestureFor.end())
-            psgf->second();
-        return true;
-    }
-
-    if (key.getModifiers().isCommandDown() && (char)key.getKeyCode() == 'J')
-    {
-        singlePanel->grabKeyboardFocus();
-        return true;
-    }
-
-    return false;
-}
+bool PluginEditor::keyPressed(const juce::KeyPress &key) { return false; }
 
 void PluginEditor::visibilityChanged()
 {
@@ -792,7 +720,7 @@ void PluginEditor::parentHierarchyChanged()
     {
         if (auto peer = getPeer())
         {
-            SXSNLOG("Enabling software rendering engine");
+            SQLOG("Enabling software rendering engine");
             peer->setCurrentRenderingEngine(0); // 0 for software mode, 1 for Direct2D mode
         }
     }
@@ -838,7 +766,7 @@ void PluginEditor::setZoomFactor(float zf)
 void PluginEditor::doSinglePanelHamburger()
 {
     juce::Component *vis;
-    for (auto c : singlePanel->getChildren())
+    for (auto c : mainPanel->getChildren())
     {
         if (c->isVisible())
         {
@@ -851,8 +779,8 @@ void PluginEditor::doSinglePanelHamburger()
 
 void PluginEditor::activateHamburger(bool b)
 {
-    singlePanel->hasHamburger = b;
-    singlePanel->repaint();
+    mainPanel->hasHamburger = b;
+    mainPanel->repaint();
 }
 
 void PluginEditor::requestParamsFlush()
@@ -898,4 +826,4 @@ void PluginEditor::onStyleChanged()
         lnf->setStyle(style());
 }
 
-} // namespace baconpaul::six_sines::ui
+} // namespace baconpaul::sidequest_ns::ui

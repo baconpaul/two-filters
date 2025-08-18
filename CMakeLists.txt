@@ -41,6 +41,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/clap/plugin-clap-entry-impl.cpp
 
         src/ui/plugin-editor.cpp
+        src/ui/main-panel.cpp
 
         src/presets/preset-manager.cpp
 
@@ -50,8 +51,10 @@ add_library(${PROJECT_NAME}-impl STATIC
 
 )
 target_include_directories(${PROJECT_NAME}-impl PUBLIC src)
+# Important setup variables
 target_compile_definitions(${PROJECT_NAME}-impl PRIVATE
         PRODUCT_NAME="${PRODUCT_NAME}"
+        PATCH_EXTENSION=".sqfix"
 )
 
 if (${BUILD_SINGLE_ONLY})
@@ -106,7 +109,7 @@ make_clapfirst_plugins(
         #   target-postfix output-name clap-id
         # This allows you to make multiple standalones from a multi-plugin clap
         STANDALONE_CONFIGURATIONS
-            standalone "${PRODUCT_NAME}" "org.baconpaul.three-oscillators"
+            standalone "${PRODUCT_NAME}" "org.baconpaul.sidequest"
 
         # STANDALONE_MACOS_ICON "${CMAKE_SOURCE_DIR}/resources/mac_installer/Icon.icns"
 )

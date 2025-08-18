@@ -1,7 +1,7 @@
 /*
- * Six Sines
+ * SideQuest Starting Point
  *
- * A synth with audio rate modulation.
+ * Basically lets paul bootstrap his projects.
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,7 +10,7 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/six-sines
+ * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
  */
 
 #include "configuration.h"
@@ -56,7 +56,6 @@ const clap_plugin_descriptor *getDescriptor()
     return &desc;
 }
 
-
 uint32_t clap_get_plugin_count(const clap_plugin_factory *) { return 1; };
 const clap_plugin_descriptor *clap_get_plugin_descriptor(const clap_plugin_factory *f, uint32_t w)
 {
@@ -75,7 +74,6 @@ const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const clap_h
     {
         return makePlugin(host, false);
     }
-
 
     return nullptr;
 }
@@ -96,7 +94,6 @@ static bool clap_get_auv2_info(const clap_plugin_factory_as_auv2 *factory, uint3
         strncpy(info->au_subt, "sqTP", 5);
     }
 
-
     return true;
 }
 
@@ -113,27 +110,27 @@ const void *get_factory(const char *factory_id)
 {
     if (strcmp(factory_id, CLAP_PLUGIN_FACTORY_ID) == 0)
     {
-        static const struct clap_plugin_factory six_sines_clap_factory = {
+        static const struct clap_plugin_factory sidequest_clap_factory = {
             clap_get_plugin_count,
             clap_get_plugin_descriptor,
             clap_create_plugin,
         };
-        return &six_sines_clap_factory;
+        return &sidequest_clap_factory;
     }
     if (strcmp(factory_id, CLAP_PLUGIN_FACTORY_INFO_AUV2) == 0)
     {
-        static const struct clap_plugin_factory_as_auv2 six_sines_auv2_factory = {
+        static const struct clap_plugin_factory_as_auv2 sidequest_auv2_factory = {
             "BcPL",      // manu
             "BaconPaul", // manu name
             clap_get_auv2_info};
-        return &six_sines_auv2_factory;
+        return &sidequest_auv2_factory;
     }
     if (strcmp(factory_id, CLAP_PLUGIN_FACTORY_INFO_VST3) == 0)
     {
-        static const struct clap_plugin_factory_as_vst3 six_sines_vst3_factory = {
+        static const struct clap_plugin_factory_as_vst3 sidequest_vst3_factory = {
             "BaconPaul", "https://baconpaul.org", "", clap_get_vst3_info};
 
-        return &six_sines_vst3_factory;
+        return &sidequest_vst3_factory;
     }
 
     return nullptr;
@@ -142,9 +139,9 @@ bool clap_init(const char *p)
 {
     // sst::plugininfra::misc_platform::allocateConsole();
     SQLOG("Initializing SideQuest "
-            << sst::plugininfra::VersionInformation::project_version_and_hash << " / "
-            << sst::plugininfra::VersionInformation::git_implied_display_version);
+          << sst::plugininfra::VersionInformation::project_version_and_hash << " / "
+          << sst::plugininfra::VersionInformation::git_implied_display_version);
     return true;
 }
 void clap_deinit() {}
-} // namespace baconpaul::six_sines
+} // namespace baconpaul::sidequest_ns

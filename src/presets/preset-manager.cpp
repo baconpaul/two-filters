@@ -1,7 +1,7 @@
 /*
- * Six Sines
+ * SideQuest Starting Point
  *
- * A synth with audio rate modulation.
+ * Basically lets paul bootstrap his projects.
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,7 +10,7 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/six-sines
+ * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
  */
 
 #include "preset-manager.h"
@@ -31,7 +31,8 @@ PresetManager::PresetManager(const clap_host_t *ch) : clapHost(ch)
 {
     try
     {
-        userPath = sst::plugininfra::paths::bestDocumentsFolderPathFor("SixSines");
+        userPath =
+            sst::plugininfra::paths::bestDocumentsVendorFolderPathFor("BaconPaul", "SideQuest");
         if (clapHost)
             fs::create_directories(userPath);
         userPatchesPath = userPath / "Patches";
@@ -104,7 +105,7 @@ void PresetManager::rescanUserPresets()
                     {
                         itd(elp);
                     }
-                    else if (fs::is_regular_file(elp) && elp.extension() == ".sxsnp")
+                    else if (fs::is_regular_file(elp) && elp.extension() == PATCH_EXTENSION)
                     {
                         auto pushP = elp.lexically_relative(userPatchesPath);
                         userPatches.push_back(pushP);
@@ -210,7 +211,7 @@ void PresetManager::loadFactoryPreset(Patch &patch, Engine::mainToAudioQueue_T &
         }
 
         auto noExt = pat;
-        auto ps = noExt.find(".sxsnp");
+        auto ps = noExt.find(PATCH_EXTENSION);
         if (ps != std::string::npos)
         {
             noExt = noExt.substr(0, ps);
@@ -284,4 +285,4 @@ void PresetManager::sendEntirePatchToAudio(Patch &patch, Engine::mainToAudioQueu
     }
 }
 
-} // namespace baconpaul::six_sines::presets
+} // namespace baconpaul::sidequest_ns::presets
