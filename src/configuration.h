@@ -22,6 +22,7 @@
 #include <cstring>
 #include <iostream>
 #include "sst/plugininfra/version_information.h"
+#include <fmt/core.h>
 
 namespace baconpaul::sidequest_ns
 {
@@ -45,6 +46,14 @@ inline std::string fileTrunc(const std::string &f)
 
 #define SQLOG(...)                                                                                 \
     std::cout << fileTrunc(__FILE__) << ":" << __LINE__ << " " << __VA_ARGS__ << std::endl;
+
+#define SQLOGFMT(...)                                                                              \
+    std::cout << fileTrunc(__FILE__) << ":" << __LINE__ << " " << fmt::format(__VA_ARGS__)         \
+              << std::endl;
+
+#define SQLOG_ERR(...)                                                                             \
+    std::cout << fileTrunc(__FILE__) << ":" << __LINE__ << " [ERROR] " << __VA_ARGS__ << std::endl;
+
 #define SQLOG_UNIMPL                                                                               \
     std::cout << fileTrunc(__FILE__) << ":" << __LINE__ << " Unimplemented " << __func__           \
               << std::endl;

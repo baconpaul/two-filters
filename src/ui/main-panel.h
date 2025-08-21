@@ -26,8 +26,9 @@ struct MainPanel : sst::jucegui::components::NamedPanel
 {
     MainPanel(PluginEditor &editor);
     void resized() override;
-    std::unique_ptr<sst::jucegui::components::Knob> pitchK, harmK;
-    std::unique_ptr<PatchContinuous> pitchA, harmA;
+
+    std::vector<std::unique_ptr<sst::jucegui::components::Knob>> knobs;
+    std::vector<std::unique_ptr<PatchContinuous>> knobAs;
 
     PluginEditor &editor;
 

@@ -11,6 +11,14 @@ find(
     'src'
 );
 
+find(
+    {
+        wanted => \&findfiles,
+    },
+    'tests'
+);
+
+
 
 
 sub findfiles

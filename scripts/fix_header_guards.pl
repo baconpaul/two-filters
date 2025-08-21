@@ -11,6 +11,13 @@ find(
     'src'
 );
 
+find(
+    {
+        wanted => \&findfiles,
+    },
+    'tests'
+);
+
 sub findfiles
 {
     $f = $File::Find::name;

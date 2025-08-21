@@ -20,9 +20,12 @@ add_subdirectory(sst/sst-plugininfra)
 add_library(mts-esp-client STATIC MTS-ESP/Client/libMTSClient.cpp)
 target_include_directories(mts-esp-client PUBLIC MTS-ESP/Client)
 
+
 set(CLAP_WRAPPER_DOWNLOAD_DEPENDENCIES TRUE CACHE BOOL "Get em")
 set(CLAP_WRAPPER_DONT_ADD_TARGETS TRUE CACHE BOOL "I'll targetize")
 set(CLAP_WRAPPER_BUILD_AUV2 TRUE CACHE BOOL "It's only logical")
+add_compile_definitions(CLAP_WRAPPER_LOGLEVEL=0)
+
 if (APPLE)
     # BaconPaul has jack kinda installed
     set(RTAUDIO_API_JACK FALSE CACHE BOOL "Not on apple")
@@ -30,3 +33,6 @@ endif()
 
 add_subdirectory(clap-libs/clap-wrapper)
 
+
+add_library(catch2 INTERFACE)
+target_include_directories(catch2 INTERFACE catch2/include)

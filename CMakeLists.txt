@@ -114,6 +114,7 @@ make_clapfirst_plugins(
         # STANDALONE_MACOS_ICON "${CMAKE_SOURCE_DIR}/resources/mac_installer/Icon.icns"
 )
 
+add_subdirectory(tests)
 
 
 

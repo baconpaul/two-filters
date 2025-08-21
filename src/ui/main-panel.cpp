@@ -19,20 +19,38 @@
 
 namespace baconpaul::sidequest_ns::ui
 {
+
 MainPanel::MainPanel(PluginEditor &e)
     : sst::jucegui::components::NamedPanel("Main Panel"), editor(e)
 {
-    createComponent(editor, *this, editor.patchCopy.sqParams.pitch, pitchK, pitchA);
-    addAndMakeVisible(*pitchK);
-
-    createComponent(editor, *this, editor.patchCopy.sqParams.harmlev, harmK, harmA);
-    addAndMakeVisible(*harmK);
+    knobs.resize(e.patchCopy.params.size());
+    knobAs.resize(e.patchCopy.params.size());
+    for (int i = 0; i < e.patchCopy.params.size(); i++)
+    {
+        createComponent(editor, *this, *editor.patchCopy.params[i], knobs[i], knobAs[i]);
+        addAndMakeVisible(*knobs[i]);
+    }
 }
 
 void MainPanel::resized()
 {
-    pitchK->setBounds(10, 50, 100, 150);
-    harmK->setBounds(115, 50, 100, 150);
+    auto b = getContentArea();
+    auto w = b.getWidth();
+    auto x = b.getX();
+    auto y = b.getY();
+    auto spw = 50;
+    auto sph = 70;
+
+    for (int i = 0; i < editor.patchCopy.params.size(); i++)
+    {
+        knobs[i]->setBounds(x, y, spw - 5, sph - 5);
+        x += spw;
+        if (x + spw > w)
+        {
+            x = b.getX();
+            y += sph;
+        }
+    }
 }
 
 } // namespace baconpaul::sidequest_ns::ui
