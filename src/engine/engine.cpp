@@ -43,11 +43,6 @@ void Engine::setSampleRate(double sr)
     }
     paramLagSet.removeAll();
 
-    // midi is a bit less frequent than param automation so a slightly slower smooth
-    midiCCLagCollection.setRateInMilliseconds(1000.0 * 128.0 / 48000.0, sampleRate,
-                                              1.0 / blockSize);
-    midiCCLagCollection.snapAllActiveToTarget();
-
     vuPeak.setSampleRate(sampleRate);
 
     audioToUi.push({AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
@@ -71,12 +66,10 @@ void Engine::processControl(const clap_output_events_t *outq)
         }
     }
 
-    midiCCLagCollection.processAll();
     lagHandler.process();
 
     if (isEditorAttached)
     {
-
         if (lastVuUpdate >= updateVuEvery)
         {
             AudioToUIMsg msg{AudioToUIMsg::UPDATE_VU, 0, vuPeak.vu_peak[0], vuPeak.vu_peak[1]};

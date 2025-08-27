@@ -40,7 +40,6 @@ namespace baconpaul::twofilters
 struct Engine
 {
     Patch patch;
-    sst::basic_blocks::dsp::LagCollection<130> midiCCLagCollection; // 130 for 128 + pitch + chanat
 
     Engine();
     ~Engine();
