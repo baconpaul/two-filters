@@ -34,6 +34,7 @@
 #include "engine/patch.h"
 
 #include "sst/basic-blocks/dsp/LagCollection.h"
+#include "sst/filters++.h"
 
 namespace baconpaul::twofilters
 {

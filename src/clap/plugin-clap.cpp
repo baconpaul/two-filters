@@ -28,7 +28,6 @@
 #include "sst/plugininfra/patch-support/patch_base_clap_adapter.h"
 #include "sst/plugininfra/cpufeatures.h"
 
-#include "sst/voicemanager/midi1_to_voicemanager.h"
 #include "sst/clap_juce_shim/clap_juce_shim.h"
 
 #include "ui/plugin-editor.h"
