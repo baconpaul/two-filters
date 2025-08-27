@@ -45,6 +45,8 @@ struct Engine
     Engine();
     ~Engine();
 
+    sst::filtersplusplus::Filter filterOne, filterTwo;
+
     bool audioRunning{true};
     int beginEndParamGestureCount{0};
 

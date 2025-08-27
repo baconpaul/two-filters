@@ -46,10 +46,24 @@ void Engine::setSampleRate(double sr)
     vuPeak.setSampleRate(sampleRate);
 
     audioToUi.push({AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
+
+    filterOne.setFilterModel(sst::filtersplusplus::FilterModel::CytomicSVF);
+    filterOne.setPassband(sst::filtersplusplus::Passband::LP);
+    filterOne.setStereo();
+    filterOne.setSampleRateAndBlockSize(sampleRate, blockSize);
+
+    if (!filterOne.prepareInstance())
+        throw std::runtime_error("Failed to prepare filter instance");
 }
 
 void Engine::processControl(const clap_output_events_t *outq)
 {
+    filterOne.concludeBlock();
+
+    filterOne.makeCoefficients(0, patch.sqParams.pitch, patch.sqParams.harmlev);
+    filterOne.copyCoefficientsFromVoiceToVoice(0, 1);
+    filterOne.prepareBlock();
+
     processUIQueue(outq);
 
     for (auto it = paramLagSet.begin(); it != paramLagSet.end();)
@@ -87,12 +101,13 @@ void Engine::processControl(const clap_output_events_t *outq)
 void Engine::processAudio(const float inL, const float inR, float &outL, float &outR)
 {
     if (!audioRunning)
+    {
+        outL = 0;
+        outR = 0;
         return;
+    }
 
-    float lv = patch.sqParams.harmlev;
-
-    outL = inL * lv;
-    outR = inR * lv;
+    filterOne.processStereoSample(inL, inR, outL, outR);
 
     if (isEditorAttached)
     {
