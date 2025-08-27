@@ -1,7 +1,5 @@
 # SideQuest Starting Point
 
-1. clone this excluding .git directory
-2. change the header in fix headers and run fix_code
 3. replace sidequest_ns with your namespace
 4. grep around for sidequest elsewhere and clean it up
 5. Change the target name in the github workflow

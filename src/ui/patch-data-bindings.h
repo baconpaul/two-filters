@@ -1,7 +1,7 @@
 /*
- * SideQuest Starting Point
+ * Two Filters
  *
- * Basically lets paul bootstrap his projects.
+ * Two Filters, and some controls thereof
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,11 +10,11 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
+ * The source code and license are at https://github.com/baconpaul/two-filters
  */
 
-#ifndef BACONPAUL_SIDEQUEST_UI_PATCH_DATA_BINDINGS_H
-#define BACONPAUL_SIDEQUEST_UI_PATCH_DATA_BINDINGS_H
+#ifndef BACONPAUL_TWOFILTERS_UI_PATCH_DATA_BINDINGS_H
+#define BACONPAUL_TWOFILTERS_UI_PATCH_DATA_BINDINGS_H
 
 #include <cstdint>
 #include "sst/jucegui/data/Continuous.h"
@@ -27,7 +27,7 @@
 
 #include "plugin-editor.h"
 
-namespace baconpaul::sidequest_ns::ui
+namespace baconpaul::twofilters::ui
 {
 struct PatchContinuous : jdat::Continuous
 {
@@ -277,5 +277,5 @@ void createRescaledComponent(PluginEditor &e, P &panel, const Param &parm, std::
     e.componentByID[id] = juce::Component::SafePointer<juce::Component>(cm.get());
 }
 
-} // namespace baconpaul::sidequest_ns::ui
+} // namespace baconpaul::twofilters::ui
 #endif // PATCH_CONTINUOUS_H

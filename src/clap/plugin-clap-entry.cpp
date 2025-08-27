@@ -1,7 +1,7 @@
 /*
- * SideQuest Starting Point
+ * Two Filters
  *
- * Basically lets paul bootstrap his projects.
+ * Two Filters, and some controls thereof
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,7 +10,7 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
+ * The source code and license are at https://github.com/baconpaul/two-filters
  */
 
 #include <clap/clap.h>
@@ -27,9 +27,9 @@ extern "C"
     // clang-format off
     const CLAP_EXPORT struct clap_plugin_entry clap_entry = {
         CLAP_VERSION,
-        baconpaul::sidequest_ns::clap_init,
-        baconpaul::sidequest_ns::clap_deinit,
-        baconpaul::sidequest_ns::get_factory
+        baconpaul::twofilters::clap_init,
+        baconpaul::twofilters::clap_deinit,
+        baconpaul::twofilters::get_factory
     };
     // clang-format on
 #ifdef __GNUC__

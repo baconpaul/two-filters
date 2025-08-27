@@ -29,7 +29,7 @@ sub findfiles
         $hg =~ s:/:_:g;
         $hg =~ s:\.:_:g;
         $hg =~ s:-:_:g;
-        $hg =~ s:src:baconpaul_sidequest:;
+        $hg =~ s:src:baconpaul_twofilters:;
         $hg = uc($hg);
         print "$f -> $hg\n";
 

@@ -1,7 +1,7 @@
 /*
- * SideQuest Starting Point
+ * Two Filters
  *
- * Basically lets paul bootstrap his projects.
+ * Two Filters, and some controls thereof
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,16 +10,16 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
+ * The source code and license are at https://github.com/baconpaul/two-filters
  */
 
-#ifndef BACONPAUL_SIDEQUEST_UI_UI_DEFAULTS_H
-#define BACONPAUL_SIDEQUEST_UI_UI_DEFAULTS_H
+#ifndef BACONPAUL_TWOFILTERS_UI_UI_DEFAULTS_H
+#define BACONPAUL_TWOFILTERS_UI_UI_DEFAULTS_H
 
 #include "configuration.h"
 #include <sst/plugininfra/userdefaults.h>
 
-namespace baconpaul::sidequest_ns::ui
+namespace baconpaul::twofilters::ui
 {
 enum Defaults
 {
@@ -49,6 +49,6 @@ inline std::string defaultName(Defaults d)
 }
 
 using defaultsProvder_t = sst::plugininfra::defaults::Provider<Defaults, Defaults::numDefaults>;
-} // namespace baconpaul::sidequest_ns::ui
+} // namespace baconpaul::twofilters::ui
 
 #endif // UI_DEFAULTS_H

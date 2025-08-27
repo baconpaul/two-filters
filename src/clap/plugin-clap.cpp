@@ -1,7 +1,7 @@
 /*
- * SideQuest Starting Point
+ * Two Filters
  *
- * Basically lets paul bootstrap his projects.
+ * Two Filters, and some controls thereof
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,7 +10,7 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
+ * The source code and license are at https://github.com/baconpaul/two-filters
  */
 
 #include "configuration.h"
@@ -35,7 +35,7 @@
 
 #include <clapwrapper/vst3.h>
 
-namespace baconpaul::sidequest_ns
+namespace baconpaul::twofilters
 {
 
 extern const clap_plugin_descriptor *getDescriptor();
@@ -49,9 +49,9 @@ static constexpr clap::helpers::CheckingLevel checkLevel = clap::helpers::Checki
 
 using plugHelper_t = clap::helpers::Plugin<misLevel, checkLevel>;
 
-template <bool multiOut> struct SideQuest : public plugHelper_t, sst::clap_juce_shim::EditorProvider
+struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 {
-    SideQuest(const clap_host *h) : plugHelper_t(getDescriptor(), h)
+    TwoFilters(const clap_host *h) : plugHelper_t(getDescriptor(), h)
     {
         engine = std::make_unique<Engine>();
 
@@ -60,7 +60,7 @@ template <bool multiOut> struct SideQuest : public plugHelper_t, sst::clap_juce_
         clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
         clapJuceShim->setResizable(true);
     }
-    virtual ~SideQuest(){};
+    virtual ~TwoFilters(){};
 
     std::unique_ptr<Engine> engine;
     size_t blockPos{0};
@@ -76,23 +76,17 @@ template <bool multiOut> struct SideQuest : public plugHelper_t, sst::clap_juce_
     void onMainThread() noexcept override { engine->onMainThread(); }
 
     bool implementsAudioPorts() const noexcept override { return true; }
-    uint32_t audioPortsCount(bool isInput) const noexcept override { return isInput ? 0 : 1; }
+    uint32_t audioPortsCount(bool isInput) const noexcept override { return 1; }
     bool audioPortsInfo(uint32_t index, bool isInput,
                         clap_audio_port_info *info) const noexcept override
     {
-        assert(!isInput);
-        if (isInput || index > (multiOut ? 6 : 0))
-            return false;
-        info->id = 75241 + index;
+        info->id = 75241 + index + (isInput ? 73 : 951);
         info->in_place_pair = CLAP_INVALID_ID;
-        if (index == 0)
+        if (isInput)
+            strncpy(info->name, "Main Input", sizeof(info->name));
+        else
             strncpy(info->name, "Main Out", sizeof(info->name));
-        else
-            snprintf(info->name, sizeof(info->name) - 1, "Operator %d", index);
-        if (index == 0)
-            info->flags = CLAP_AUDIO_PORT_IS_MAIN;
-        else
-            info->flags = 0;
+        info->flags = CLAP_AUDIO_PORT_IS_MAIN;
         info->channel_count = 2;
         info->port_type = CLAP_PORT_STEREO;
         return true;
@@ -106,21 +100,11 @@ template <bool multiOut> struct SideQuest : public plugHelper_t, sst::clap_juce_
     }
 
     bool implementsNotePorts() const noexcept override { return true; }
-    uint32_t notePortsCount(bool isInput) const noexcept override { return isInput ? 1 : 0; }
+    uint32_t notePortsCount(bool isInput) const noexcept override { return 0; }
     bool notePortsInfo(uint32_t index, bool isInput,
                        clap_note_port_info *info) const noexcept override
     {
-        assert(isInput);
-        assert(index == 0);
-        if (!isInput || index != 0)
-            return false;
-
-        info->id = 17252;
-        info->supported_dialects =
-            CLAP_NOTE_DIALECT_MIDI | CLAP_NOTE_DIALECT_MIDI_MPE | CLAP_NOTE_DIALECT_CLAP;
-        info->preferred_dialect = CLAP_NOTE_DIALECT_CLAP;
-        strncpy(info->name, "Note Input", CLAP_NAME_SIZE - 1);
-        return true;
+        return false;
     }
 
     clap_process_status process(const clap_process *process) noexcept override
@@ -199,39 +183,14 @@ template <bool multiOut> struct SideQuest : public plugHelper_t, sst::clap_juce_
         return CLAP_PROCESS_CONTINUE;
     }
 
-    void reset() noexcept override { engine->voiceManager->allSoundsOff(); }
+    void reset() noexcept override {}
 
     bool handleEvent(const clap_event_header_t *nextEvent)
     {
-        auto &vm = engine->voiceManager;
         if (nextEvent->space_id == CLAP_CORE_EVENT_SPACE_ID)
         {
             switch (nextEvent->type)
             {
-            case CLAP_EVENT_MIDI:
-            {
-                auto mevt = reinterpret_cast<const clap_event_midi *>(nextEvent);
-                sst::voicemanager::applyMidi1Message(*vm, mevt->port_index, mevt->data);
-            }
-            break;
-
-            case CLAP_EVENT_NOTE_ON:
-            {
-                auto nevt = reinterpret_cast<const clap_event_note *>(nextEvent);
-                vm->processNoteOnEvent(nevt->port_index, nevt->channel, nevt->key, nevt->note_id,
-                                       nevt->velocity, 0.f);
-            }
-            break;
-
-            case CLAP_EVENT_NOTE_OFF:
-            {
-                auto nevt = reinterpret_cast<const clap_event_note *>(nextEvent);
-                auto nid = nevt->note_id;
-                // nid = -1;
-                vm->processNoteOffEvent(nevt->port_index, nevt->channel, nevt->key, nid,
-                                        nevt->velocity);
-            }
-            break;
             case CLAP_EVENT_PARAM_VALUE:
             {
                 auto pevt = reinterpret_cast<const clap_event_param_value *>(nextEvent);
@@ -244,13 +203,6 @@ template <bool multiOut> struct SideQuest : public plugHelper_t, sst::clap_juce_
             }
             break;
 
-            case CLAP_EVENT_NOTE_EXPRESSION:
-            {
-                auto nevt = reinterpret_cast<const clap_event_note_expression *>(nextEvent);
-                vm->routeNoteExpression(nevt->port_index, nevt->channel, nevt->key, nevt->note_id,
-                                        nevt->expression_id, nevt->value);
-            }
-            break;
             default:
             {
                 SQLOG("Unknown inbound event of type " << nextEvent->type);
@@ -346,7 +298,7 @@ template <bool multiOut> struct SideQuest : public plugHelper_t, sst::clap_juce_
     ADD_SHIM_LINUX_TIMER(clapJuceShim)
     std::unique_ptr<juce::Component> createEditor() override
     {
-        auto res = std::make_unique<baconpaul::sidequest_ns::ui::PluginEditor>(
+        auto res = std::make_unique<baconpaul::twofilters::ui::PluginEditor>(
             engine->audioToUi, engine->mainToAudio, _host.host());
 
         res->onZoomChanged = [this](auto f)
@@ -355,10 +307,10 @@ template <bool multiOut> struct SideQuest : public plugHelper_t, sst::clap_juce_
             {
                 // SQLOG("onZoomChanged " << f);
                 auto s = f * clapJuceShim->getGuiScale();
-                guiSetSize(baconpaul::sidequest_ns::ui::PluginEditor::edWidth * s,
-                           baconpaul::sidequest_ns::ui::PluginEditor::edHeight * s);
-                _host.guiRequestResize(baconpaul::sidequest_ns::ui::PluginEditor::edWidth * s,
-                                       baconpaul::sidequest_ns::ui::PluginEditor::edHeight * s);
+                guiSetSize(baconpaul::twofilters::ui::PluginEditor::edWidth * s,
+                           baconpaul::twofilters::ui::PluginEditor::edHeight * s);
+                _host.guiRequestResize(baconpaul::twofilters::ui::PluginEditor::edWidth * s,
+                                       baconpaul::twofilters::ui::PluginEditor::edHeight * s);
             }
         };
 
@@ -413,23 +365,15 @@ template <bool multiOut> struct SideQuest : public plugHelper_t, sst::clap_juce_
 
 } // namespace clapimpl
 
-const clap_plugin *makePlugin(const clap_host *h, bool multiOut)
+const clap_plugin *makePlugin(const clap_host *h)
 {
-    if (multiOut)
-    {
-        auto res = new baconpaul::sidequest_ns::clapimpl::SideQuest<true>(h);
-        return res->clapPlugin();
-    }
-    else
-    {
-        auto res = new baconpaul::sidequest_ns::clapimpl::SideQuest<false>(h);
-        return res->clapPlugin();
-    }
+    auto res = new baconpaul::twofilters::clapimpl::TwoFilters(h);
+    return res->clapPlugin();
 }
-} // namespace baconpaul::sidequest_ns
+} // namespace baconpaul::twofilters
 
 namespace chlp = clap::helpers;
-namespace bpss = baconpaul::sidequest_ns::clapimpl;
+namespace bpss = baconpaul::twofilters::clapimpl;
 
 template class chlp::Plugin<bpss::misLevel, bpss::checkLevel>;
 template class chlp::HostProxy<bpss::misLevel, bpss::checkLevel>;

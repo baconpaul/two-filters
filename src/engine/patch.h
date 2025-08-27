@@ -1,7 +1,7 @@
 /*
- * SideQuest Starting Point
+ * Two Filters
  *
- * Basically lets paul bootstrap his projects.
+ * Two Filters, and some controls thereof
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,11 +10,11 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
+ * The source code and license are at https://github.com/baconpaul/two-filters
  */
 
-#ifndef BACONPAUL_SIDEQUEST_ENGINE_PATCH_H
-#define BACONPAUL_SIDEQUEST_ENGINE_PATCH_H
+#ifndef BACONPAUL_TWOFILTERS_ENGINE_PATCH_H
+#define BACONPAUL_TWOFILTERS_ENGINE_PATCH_H
 
 #include <vector>
 #include <array>
@@ -29,7 +29,7 @@
 #include "sst/basic-blocks/modulators/DAHDSREnvelope.h"
 #include "sst/plugininfra/patch-support/patch_base.h"
 
-namespace baconpaul::sidequest_ns
+namespace baconpaul::twofilters
 {
 namespace scpu = sst::cpputils;
 namespace pats = sst::plugininfra::patch_support;
@@ -153,5 +153,5 @@ struct Patch : pats::PatchBase<Patch, Param>
     float migrateParamValueFromVersion(Param *p, float value, uint32_t version);
     void migratePatchFromVersion(uint32_t version);
 };
-} // namespace baconpaul::sidequest_ns
+} // namespace baconpaul::twofilters
 #endif // PATCH_H

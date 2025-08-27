@@ -1,7 +1,7 @@
 /*
- * SideQuest Starting Point
+ * Two Filters
  *
- * Basically lets paul bootstrap his projects.
+ * Two Filters, and some controls thereof
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,7 +10,7 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
+ * The source code and license are at https://github.com/baconpaul/two-filters
  */
 
 #include "plugin-editor.h"
@@ -26,7 +26,7 @@
 #include "patch-data-bindings.h"
 #include "main-panel.h"
 
-namespace baconpaul::sidequest_ns::ui
+namespace baconpaul::twofilters::ui
 {
 struct IdleTimer : juce::Timer
 {
@@ -37,13 +37,13 @@ struct IdleTimer : juce::Timer
 
 namespace jstl = sst::jucegui::style;
 using sheet_t = jstl::StyleSheet;
-static constexpr sheet_t::Class PatchMenu("sidequest.patch-menu");
+static constexpr sheet_t::Class PatchMenu("twofilters.patch-menu");
 
 PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQueue_T &utoa,
                            const clap_host_t *h)
     : jcmp::WindowPanel(true), audioToUI(atou), mainToAudio(utoa), clapHost(h)
 {
-    setTitle("Side Quest - Replace this");
+    setTitle("Two Filters");
     setAccessible(true);
     sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
 
@@ -92,7 +92,7 @@ PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQu
 
     // this needs a cleanup
     defaultsProvider = std::make_unique<defaultsProvder_t>(
-        presetManager->userPath, "SideQuest", defaultName,
+        presetManager->userPath, "TwoFilters", defaultName,
         [](auto e, auto b) { SQLOG("[ERROR]" << e << " " << b); });
     setSkinFromDefaults();
 
@@ -136,10 +136,6 @@ void PluginEditor::idle()
         else if (aum->action == Engine::AudioToUIMsg::UPDATE_VU)
         {
             vuMeter->setLevels(aum->value, aum->value2);
-        }
-        else if (aum->action == Engine::AudioToUIMsg::UPDATE_VOICE_COUNT)
-        {
-            SQLOG_ONCE("Implement update voice count");
         }
         else if (aum->action == Engine::AudioToUIMsg::SET_PATCH_NAME)
         {
@@ -575,11 +571,8 @@ void PluginEditor::showPresetPopup()
 
     p.addSeparator();
     p.addItem("Read the Manual", false, false, []() {});
-    p.addItem("Get the Source",
-              []() {
-                  juce::URL("https://github.com/baconpaul/sidequest-startingpoint/")
-                      .launchInDefaultBrowser();
-              });
+    p.addItem("Get the Source", []()
+              { juce::URL("https://github.com/baconpaul/two-filters/").launchInDefaultBrowser(); });
     p.addItem("Acknowledgements", false, false, []() {});
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
 }
@@ -826,4 +819,4 @@ void PluginEditor::onStyleChanged()
         lnf->setStyle(style());
 }
 
-} // namespace baconpaul::sidequest_ns::ui
+} // namespace baconpaul::twofilters::ui

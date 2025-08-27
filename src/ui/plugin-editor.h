@@ -1,7 +1,7 @@
 /*
- * SideQuest Starting Point
+ * Two Filters
  *
- * Basically lets paul bootstrap his projects.
+ * Two Filters, and some controls thereof
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,11 +10,11 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
+ * The source code and license are at https://github.com/baconpaul/two-filters
  */
 
-#ifndef BACONPAUL_SIDEQUEST_UI_PLUGIN_EDITOR_H
-#define BACONPAUL_SIDEQUEST_UI_PLUGIN_EDITOR_H
+#ifndef BACONPAUL_TWOFILTERS_UI_PLUGIN_EDITOR_H
+#define BACONPAUL_TWOFILTERS_UI_PLUGIN_EDITOR_H
 
 #include <functional>
 #include <utility>
@@ -41,7 +41,7 @@
 namespace jcmp = sst::jucegui::components;
 namespace jdat = sst::jucegui::data;
 
-namespace baconpaul::sidequest_ns::ui
+namespace baconpaul::twofilters::ui
 {
 
 struct MainPanel;
@@ -136,5 +136,5 @@ struct HasEditor
     PluginEditor &editor;
     HasEditor(PluginEditor &e) : editor(e) {}
 };
-} // namespace baconpaul::sidequest_ns::ui
+} // namespace baconpaul::twofilters::ui
 #endif

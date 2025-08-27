@@ -1,7 +1,7 @@
 /*
- * SideQuest Starting Point
+ * Two Filters
  *
- * Basically lets paul bootstrap his projects.
+ * Two Filters, and some controls thereof
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,7 +10,7 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
+ * The source code and license are at https://github.com/baconpaul/two-filters
  */
 
 #include "engine/engine.h"
@@ -20,7 +20,7 @@
 
 #include "libMTSClient.h"
 
-namespace baconpaul::sidequest_ns
+namespace baconpaul::twofilters
 {
 
 int debugLevel{0};
@@ -28,12 +28,7 @@ int debugLevel{0};
 namespace mech = sst::basic_blocks::mechanics;
 namespace sdsp = sst::basic_blocks::dsp;
 
-Engine::Engine()
-    : responder(*this), monoResponder(*this),
-      voices(sst::cpputils::make_array<Voice, VMConfig::maxVoiceCount>(patch))
-{
-    voiceManager = std::make_unique<voiceManager_t>(responder, monoResponder);
-}
+Engine::Engine() {}
 
 Engine::~Engine() {}
 
@@ -88,39 +83,7 @@ void Engine::process(const clap_output_events_t *outq)
 
     memset(output, 0, sizeof(output));
 
-    auto cvoice = head;
-    Voice *removeVoice{nullptr};
-
     memset(output, 0, sizeof(output));
-    while (cvoice)
-    {
-        assert(!cvoice->finished());
-        cvoice->renderBlock();
-
-        mech::accumulate_from_to<blockSize>(cvoice->output[0], output[0]);
-        mech::accumulate_from_to<blockSize>(cvoice->output[1], output[1]);
-
-        if (cvoice->finished())
-        {
-            auto rvoice = cvoice;
-            cvoice = removeFromVoiceList(cvoice);
-            rvoice->next = removeVoice;
-            removeVoice = rvoice;
-        }
-        else
-        {
-            cvoice = cvoice->next;
-        }
-    }
-
-    while (removeVoice)
-    {
-        responder.doVoiceEndCallback(removeVoice);
-        auto v = removeVoice;
-        removeVoice = removeVoice->next;
-        v->next = nullptr;
-        assert(!v->next && !v->prior);
-    }
 
     if (isEditorAttached)
     {
@@ -134,61 +97,12 @@ void Engine::process(const clap_output_events_t *outq)
             AudioToUIMsg msg{AudioToUIMsg::UPDATE_VU, 0, vuPeak.vu_peak[0], vuPeak.vu_peak[1]};
             audioToUi.push(msg);
 
-            AudioToUIMsg msg2{AudioToUIMsg::UPDATE_VOICE_COUNT, (uint32_t)voiceCount};
-            audioToUi.push(msg2);
             lastVuUpdate = 0;
         }
         else
         {
             lastVuUpdate++;
         }
-    }
-}
-
-void Engine::addToVoiceList(Voice *v)
-{
-    v->prior = nullptr;
-    v->next = head;
-    if (v->next)
-    {
-        v->next->prior = v;
-    }
-    head = v;
-    voiceCount++;
-}
-
-Voice *Engine::removeFromVoiceList(Voice *cvoice)
-{
-    if (cvoice->prior)
-    {
-        cvoice->prior->next = cvoice->next;
-    }
-    if (cvoice->next)
-    {
-        cvoice->next->prior = cvoice->prior;
-    }
-    if (cvoice == head)
-    {
-        head = cvoice->next;
-    }
-    auto nv = cvoice->next;
-    cvoice->cleanup();
-    cvoice->next = nullptr;
-    cvoice->prior = nullptr;
-    voiceCount--;
-
-    return nv;
-}
-
-void Engine::dumpVoiceList()
-{
-    SQLOG("DUMP VOICE LIST : head=" << std::hex << head << std::dec);
-    auto c = head;
-    while (c)
-    {
-        // SQLOG("   c=" << std::hex << c << std::dec << " key=" << c->voiceValues.key
-        //                 << " u=" << c->used);
-        c = c->next;
     }
 }
 
@@ -293,7 +207,6 @@ void Engine::processUIQueue(const clap_output_events_t *outq)
         {
             if (lagHandler.active)
                 lagHandler.instantlySnap();
-            voiceManager->allSoundsOff();
             audioRunning = false;
         }
         break;
@@ -337,11 +250,7 @@ void Engine::processUIQueue(const clap_output_events_t *outq)
             isEditorAttached = uiM->paramId;
         }
         break;
-        case MainToAudioMsg::PANIC_STOP_VOICES:
-        {
-            voiceManager->allSoundsOff();
-        }
-        break;
+            break;
         }
         uiM = mainToAudio.pop();
     }
@@ -388,4 +297,4 @@ void Engine::onMainThread()
     }
 }
 
-} // namespace baconpaul::sidequest_ns
+} // namespace baconpaul::twofilters

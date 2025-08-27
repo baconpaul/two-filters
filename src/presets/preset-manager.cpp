@@ -1,7 +1,7 @@
 /*
- * SideQuest Starting Point
+ * Two Filters
  *
- * Basically lets paul bootstrap his projects.
+ * Two Filters, and some controls thereof
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,7 +10,7 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
+ * The source code and license are at https://github.com/baconpaul/two-filters
  */
 
 #include "preset-manager.h"
@@ -22,9 +22,9 @@
 
 #include <cmrc/cmrc.hpp>
 
-CMRC_DECLARE(sidequest_patches);
+CMRC_DECLARE(twofilters_patches);
 
-namespace baconpaul::sidequest_ns::presets
+namespace baconpaul::twofilters::presets
 {
 
 PresetManager::PresetManager(const clap_host_t *ch) : clapHost(ch)
@@ -32,7 +32,7 @@ PresetManager::PresetManager(const clap_host_t *ch) : clapHost(ch)
     try
     {
         userPath =
-            sst::plugininfra::paths::bestDocumentsVendorFolderPathFor("BaconPaul", "SideQuest");
+            sst::plugininfra::paths::bestDocumentsVendorFolderPathFor("BaconPaul", "twofilters");
         if (clapHost)
             fs::create_directories(userPath);
         userPatchesPath = userPath / "Patches";
@@ -46,7 +46,7 @@ PresetManager::PresetManager(const clap_host_t *ch) : clapHost(ch)
 
     try
     {
-        auto fs = cmrc::sidequest_patches::get_filesystem();
+        auto fs = cmrc::twofilters_patches::get_filesystem();
         for (const auto &d : fs.iterate_directory(factoryPath))
         {
             if (d.is_directory())
@@ -192,7 +192,7 @@ void PresetManager::loadFactoryPreset(Patch &patch, Engine::mainToAudioQueue_T &
 {
     try
     {
-        auto fs = cmrc::sidequest_patches::get_filesystem();
+        auto fs = cmrc::twofilters_patches::get_filesystem();
         auto f = fs.open(std::string() + factoryPath + "/" + cat + "/" + pat);
         auto pb = std::string(f.begin(), f.end());
         patch.fromState(pb);
@@ -285,4 +285,4 @@ void PresetManager::sendEntirePatchToAudio(Patch &patch, Engine::mainToAudioQueu
     }
 }
 
-} // namespace baconpaul::sidequest_ns::presets
+} // namespace baconpaul::twofilters::presets

@@ -13,8 +13,8 @@ string(TIMESTAMP YEAR "%Y")
 math(EXPR PART0 "${YEAR}-2025 + 5")
 math(EXPR PART1 "${DAY_OF_YEAR} + 1")
 
-project(sidequest-startingpoint VERSION 0.${PART0}.${PART1} LANGUAGES C CXX)
-set(PRODUCT_NAME "SideQuest")
+project(two-filters VERSION 0.${PART0}.${PART1} LANGUAGES C CXX)
+set(PRODUCT_NAME "Two Filters")
 
 
 option(USE_SANITIZER "Build and link with ASAN" FALSE)
@@ -29,9 +29,11 @@ version_from_versionfile_or_git()
 message(STATUS "DISPLAY_VERSION=${GIT_IMPLIED_DISPLAY_VERSION}; COMMIT_HASH=${GIT_COMMIT_HASH}; BRANCH=${GIT_BRANCH}")
 
 
+add_compile_definitions(CLAP_WRAPPER_LOGLEVEL=0)
+
 include(cmake/CmakeRC.cmake)
-file(GLOB_RECURSE PATCHES  "resources/factory_patches/*.sxsnp")
-cmrc_add_resource_library(${PROJECT_NAME}-patches NAMESPACE sidequest_patches ${PATCHES})
+file(GLOB_RECURSE PATCHES  "resources/factory_patches/*.twofl")
+cmrc_add_resource_library(${PROJECT_NAME}-patches NAMESPACE twofilters_patches ${PATCHES})
 
 set(JUCE_PATH "${CMAKE_SOURCE_DIR}/libs/JUCE")
 add_subdirectory(libs)
@@ -46,7 +48,6 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/presets/preset-manager.cpp
 
         src/engine/engine.cpp
-        src/engine/voice.cpp
         src/engine/patch.cpp
 
 )
@@ -54,7 +55,7 @@ target_include_directories(${PROJECT_NAME}-impl PUBLIC src)
 # Important setup variables
 target_compile_definitions(${PROJECT_NAME}-impl PRIVATE
         PRODUCT_NAME="${PRODUCT_NAME}"
-        PATCH_EXTENSION=".sqfix"
+        PATCH_EXTENSION=".twofl"
 )
 
 if (${BUILD_SINGLE_ONLY})
@@ -96,7 +97,7 @@ make_clapfirst_plugins(
 
         ENTRY_SOURCE src/clap/plugin-clap-entry.cpp
 
-        BUNDLE_IDENTIFER "org.baconpaul.sidequest"
+        BUNDLE_IDENTIFER "org.baconpaul.twofilters"
         BUNDLE_VERSION ${PROJECT_VERSION}
 
         COPY_AFTER_BUILD ${COPY_AFTER_BUILD}
@@ -109,7 +110,7 @@ make_clapfirst_plugins(
         #   target-postfix output-name clap-id
         # This allows you to make multiple standalones from a multi-plugin clap
         STANDALONE_CONFIGURATIONS
-            standalone "${PRODUCT_NAME}" "org.baconpaul.sidequest"
+            standalone "${PRODUCT_NAME}" "org.baconpaul.twofilters"
 
         # STANDALONE_MACOS_ICON "${CMAKE_SOURCE_DIR}/resources/mac_installer/Icon.icns"
 )

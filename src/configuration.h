@@ -1,7 +1,7 @@
 /*
- * SideQuest Starting Point
+ * Two Filters
  *
- * Basically lets paul bootstrap his projects.
+ * Two Filters, and some controls thereof
  *
  * Copyright 2024-2025, Paul Walker and Various authors, as described in the github
  * transaction log.
@@ -10,11 +10,11 @@
  * GPL3 dependencies, as such the combined work will be
  * released under GPL3.
  *
- * The source code and license are at https://github.com/baconpaul/sidequest-startingpoint
+ * The source code and license are at https://github.com/baconpaul/two-filters
  */
 
-#ifndef BACONPAUL_SIDEQUEST_CONFIGURATION_H
-#define BACONPAUL_SIDEQUEST_CONFIGURATION_H
+#ifndef BACONPAUL_TWOFILTERS_CONFIGURATION_H
+#define BACONPAUL_TWOFILTERS_CONFIGURATION_H
 
 #include <stddef.h>
 #include <cstdint>
@@ -24,7 +24,7 @@
 #include "sst/plugininfra/version_information.h"
 #include <fmt/core.h>
 
-namespace baconpaul::sidequest_ns
+namespace baconpaul::twofilters
 {
 
 static constexpr size_t blockSize{8};
@@ -32,7 +32,7 @@ static constexpr size_t maxVoices{128};
 
 extern int debugLevel;
 
-} // namespace baconpaul::sidequest_ns
+} // namespace baconpaul::twofilters
 
 inline std::string fileTrunc(const std::string &f)
 {
