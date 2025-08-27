@@ -53,15 +53,9 @@ void Engine::setSampleRate(double sr)
     audioToUi.push({AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
 }
 
-void Engine::process(const clap_output_events_t *outq)
+void Engine::processControl(const clap_output_events_t *outq)
 {
     processUIQueue(outq);
-
-    if (!audioRunning)
-    {
-        memset(output, 0, sizeof(output));
-        return;
-    }
 
     for (auto it = paramLagSet.begin(); it != paramLagSet.end();)
     {
@@ -78,19 +72,10 @@ void Engine::process(const clap_output_events_t *outq)
     }
 
     midiCCLagCollection.processAll();
-
     lagHandler.process();
-
-    memset(output, 0, sizeof(output));
-
-    memset(output, 0, sizeof(output));
 
     if (isEditorAttached)
     {
-        for (int i = 0; i < blockSize; ++i)
-        {
-            vuPeak.process(output[0][i], output[1][i]);
-        }
 
         if (lastVuUpdate >= updateVuEvery)
         {
@@ -103,6 +88,22 @@ void Engine::process(const clap_output_events_t *outq)
         {
             lastVuUpdate++;
         }
+    }
+}
+
+void Engine::processAudio(const float inL, const float inR, float &outL, float &outR)
+{
+    if (!audioRunning)
+        return;
+
+    float lv = patch.sqParams.harmlev;
+
+    outL = inL * lv;
+    outR = inR * lv;
+
+    if (isEditorAttached)
+    {
+        vuPeak.process(outL, outR);
     }
 }
 

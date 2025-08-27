@@ -39,8 +39,6 @@ namespace baconpaul::twofilters
 {
 struct Engine
 {
-    float output alignas(16)[2][blockSize];
-
     Patch patch;
     sst::basic_blocks::dsp::LagCollection<130> midiCCLagCollection; // 130 for 128 + pitch + chanat
 
@@ -53,9 +51,8 @@ struct Engine
     double sampleRate{1}, sampleRateInv{1};
     void setSampleRate(double sampleRate);
 
-    template <bool multiOut> void processInternal(const clap_output_events_t *);
-
-    void process(const clap_output_events_t *);
+    void processControl(const clap_output_events_t *);
+    void processAudio(const float inL, const float inR, float &outL, float &outR);
     void processUIQueue(const clap_output_events_t *);
 
     void handleParamValue(Param *p, uint32_t pid, float value);

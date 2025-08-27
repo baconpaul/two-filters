@@ -131,15 +131,8 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             // engine->monoValues.tempoSyncRatio = 1.f;
         }
 
-        static constexpr int outBus{1};
-        static constexpr int outChan{2};
-        float *out[outChan];
-        for (auto i = 0; i < outBus; ++i)
-        {
-            auto lo = process->audio_outputs[i].data32;
-            out[2 * i] = lo[0];
-            out[2 * i + 1] = lo[1];
-        }
+        auto inD = process->audio_inputs->data32;
+        auto outD = process->audio_outputs->data32;
 
         for (auto s = 0U; s < process->frames_count; ++s)
         {
@@ -156,19 +149,13 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                         nextEvent = nullptr;
                 }
 
-                engine->process(outq);
+                engine->processControl(outq);
             }
 
-            for (auto i = 0; i < outChan; ++i)
-            {
-                out[i][s] = engine->output[i][blockPos];
-            }
+            engine->processAudio(inD[0][s], inD[1][s], outD[0][s], outD[1][s]);
 
-            blockPos++;
-            if (blockPos == blockSize)
-            {
-                blockPos = 0;
-            }
+            blockPos = (blockPos + 1) & (blockSize - 1);
+            ;
         }
 
         while (nextEvent)
