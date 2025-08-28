@@ -39,7 +39,8 @@ struct FilterCurve : juce::Component
     void rebuild()
     {
         auto &fn = panel.editor.patchCopy.filterNodes[panel.instance];
-        auto crv = plotter.plotFilterMagnitudeResponse(fn.model, fn.config, 0, 0.99, 0, 0, 0);
+        auto crv = plotter.plotFilterMagnitudeResponse(fn.model, fn.config, fn.cutoff, fn.resonance,
+                                                       0, 0, 0);
         cX = crv.first;
         for (auto &x : cX)
             x = log10(x);
@@ -60,6 +61,15 @@ FilterPanel::FilterPanel(PluginEditor &editor, int ins)
 {
     curve = std::make_unique<FilterCurve>(*this);
     addAndMakeVisible(*curve);
+
+    auto &fn = editor.patchCopy.filterNodes[instance];
+    createComponent(editor, *this, fn.cutoff, cutoffK, cutoffD);
+    cutoffD->onGuiSetValue = [this]() { curve->rebuild(); };
+    addAndMakeVisible(*cutoffK);
+
+    createComponent(editor, *this, fn.resonance, resonanceK, resonanceD);
+    addAndMakeVisible(*resonanceK);
+    resonanceD->onGuiSetValue = [this]() { curve->rebuild(); };
 }
 
 FilterPanel::~FilterPanel() = default;
@@ -68,6 +78,13 @@ void FilterPanel::resized()
 {
     auto b = getContentArea().withHeight(150);
     curve->setBounds(b);
+
+    auto rs = getContentArea().withTrimmedTop(160);
+    auto q = rs.getHeight() - 30;
+
+    auto bk = rs.withWidth(q);
+    cutoffK->setBounds(bk);
+    resonanceK->setBounds(bk.translated(q, 0));
 }
 
 void FilterPanel::onModelChanged()
