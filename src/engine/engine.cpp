@@ -47,22 +47,19 @@ void Engine::setSampleRate(double sr)
 
     audioToUi.push({AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
 
-    filterOne.setFilterModel(sst::filtersplusplus::FilterModel::CytomicSVF);
-    filterOne.setPassband(sst::filtersplusplus::Passband::LP);
-    filterOne.setStereo();
-    filterOne.setSampleRateAndBlockSize(sampleRate, blockSize);
-
-    if (!filterOne.prepareInstance())
-        throw std::runtime_error("Failed to prepare filter instance");
+    for (int i = 0; i < numFilters; ++i)
+    {
+        setupFilter(i);
+    }
 }
 
 void Engine::processControl(const clap_output_events_t *outq)
 {
-    filterOne.concludeBlock();
+    filters[0].concludeBlock();
 
-    filterOne.makeCoefficients(0, patch.filterNodes[0].cutoff, patch.filterNodes[0].resonance);
-    filterOne.copyCoefficientsFromVoiceToVoice(0, 1);
-    filterOne.prepareBlock();
+    filters[0].makeCoefficients(0, patch.filterNodes[0].cutoff, patch.filterNodes[0].resonance);
+    filters[0].copyCoefficientsFromVoiceToVoice(0, 1);
+    filters[0].prepareBlock();
 
     processUIQueue(outq);
 
@@ -107,7 +104,7 @@ void Engine::processAudio(const float inL, const float inR, float &outL, float &
         return;
     }
 
-    filterOne.processStereoSample(inL, inR, outL, outR);
+    filters[0].processStereoSample(inL, inR, outL, outR);
 
     if (isEditorAttached)
     {
@@ -259,7 +256,20 @@ void Engine::processUIQueue(const clap_output_events_t *outq)
             isEditorAttached = uiM->paramId;
         }
         break;
-            break;
+        case MainToAudioMsg::SET_FILTER_MODEL:
+        {
+            auto fn = patch.filterNodes[uiM->paramId];
+            fn.model = (sst::filtersplusplus::FilterModel)uiM->uintValues[0];
+            fn.config.pt = (sst::filtersplusplus::Passband)uiM->uintValues[1];
+            fn.config.st = (sst::filtersplusplus::Slope)uiM->uintValues[2];
+            fn.config.dt = (sst::filtersplusplus::DriveMode)uiM->uintValues[3];
+            fn.config.mt = (sst::filtersplusplus::FilterSubModel)uiM->uintValues[4];
+
+            setupFilter(uiM->paramId);
+
+            SQLOG("Filter Model Engine Update");
+        }
+        break;
         }
         uiM = mainToAudio.pop();
     }
@@ -319,4 +329,15 @@ void Engine::onMainThread()
     }
 }
 
+void Engine::setupFilter(int f)
+{
+    auto &fn = patch.filterNodes[f];
+    filters[f].setFilterModel(fn.model);
+    filters[f].setModelConfiguration(fn.config);
+    filters[f].setStereo();
+    filters[f].setSampleRateAndBlockSize(sampleRate, blockSize);
+    if (!filters[f].prepareInstance())
+        throw std::runtime_error("Failed to prepare filter instance");
+    filters[f].reset();
+}
 } // namespace baconpaul::twofilters

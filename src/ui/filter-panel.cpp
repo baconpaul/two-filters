@@ -70,6 +70,13 @@ FilterPanel::FilterPanel(PluginEditor &editor, int ins)
     createComponent(editor, *this, fn.resonance, resonanceK, resonanceD);
     addAndMakeVisible(*resonanceK);
     resonanceD->onGuiSetValue = [this]() { curve->rebuild(); };
+
+    modelMenu = std::make_unique<sst::jucegui::components::MenuButton>();
+    addAndMakeVisible(*modelMenu);
+    modelMenu->setOnCallback([this]() { showModelMenu(); });
+    configMenu = std::make_unique<sst::jucegui::components::MenuButton>();
+    addAndMakeVisible(*configMenu);
+    configMenu->setOnCallback([this]() { showConfigMenu(); });
 }
 
 FilterPanel::~FilterPanel() = default;
@@ -85,20 +92,76 @@ void FilterPanel::resized()
     auto bk = rs.withWidth(q);
     cutoffK->setBounds(bk);
     resonanceK->setBounds(bk.translated(q, 0));
+
+    auto rest = rs.withTrimmedLeft(2 * q + 10);
+    modelMenu->setBounds(rest.withHeight(20));
+    configMenu->setBounds(rest.withHeight(20).translated(0, 22));
 }
 
 void FilterPanel::onModelChanged()
 {
-    SQLOG("FilterPanel[" << instance << "]::onModelChanged ");
     auto mn = sst::filtersplusplus::toString(editor.patchCopy.filterNodes[instance].model);
     auto cn = editor.patchCopy.filterNodes[instance].config.toString();
-    SQLOG("  model  : " << mn);
-    SQLOG("  config : " << cn);
 
     auto tl = mn + " " + cn;
+    SQLOG("FilterPanel[" << instance << "] -> " << tl);
     setName("Filter " + std::to_string(instance + 1) + ": " + tl);
     curve->rebuild();
+
+    modelMenu->setLabel(mn);
+    configMenu->setLabel(cn);
     repaint();
+}
+
+void FilterPanel::showModelMenu()
+{
+    auto p = juce::PopupMenu();
+    p.addSectionHeader("Filter Models");
+    p.addSeparator();
+
+    namespace sfpp = sst::filtersplusplus;
+
+    for (auto &m : sfpp::Filter::availableModels())
+    {
+        p.addItem(sfpp::toString(m),
+                  [this, m]()
+                  {
+                      auto configs = sfpp::Filter::availableModelConfigurations(m, true);
+                      editor.patchCopy.filterNodes[instance].model = m;
+                      if (configs.empty())
+                          editor.patchCopy.filterNodes[instance].config = {};
+                      else
+                          editor.patchCopy.filterNodes[instance].config = configs.front();
+                      editor.pushFilterSetup(instance);
+                      onModelChanged();
+                  });
+    }
+
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor));
+}
+
+void FilterPanel::showConfigMenu()
+{
+    auto p = juce::PopupMenu();
+    p.addSectionHeader("Filter Models");
+    p.addSeparator();
+
+    namespace sfpp = sst::filtersplusplus;
+
+    auto cfgs = sfpp::Filter::availableModelConfigurations(
+        editor.patchCopy.filterNodes[instance].model, true);
+    for (auto &c : cfgs)
+    {
+        p.addItem(c.toString(),
+                  [this, c]()
+                  {
+                      editor.patchCopy.filterNodes[instance].config = c;
+                      editor.pushFilterSetup(instance);
+                      onModelChanged();
+                  });
+    }
+
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor));
 }
 
 } // namespace baconpaul::twofilters::ui

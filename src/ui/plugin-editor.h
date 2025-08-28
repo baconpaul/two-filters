@@ -84,6 +84,7 @@ struct PluginEditor : jcmp::WindowPanel
     void resetToDefault();
     void setPatchNameDisplay();
     void setPatchNameTo(const std::string &);
+    void pushFilterSetup(int instance);
     std::unique_ptr<juce::FileChooser> fileChooser;
 
     std::unique_ptr<defaultsProvder_t> defaultsProvider;

@@ -842,4 +842,20 @@ void PluginEditor::onStyleChanged()
         lnf->setStyle(style());
 }
 
+void PluginEditor::pushFilterSetup(int instance)
+{
+    SQLOG("Updating filter instance " << instance);
+    auto &fn = patchCopy.filterNodes[instance];
+
+    Engine::MainToAudioMsg msg;
+    msg.action = Engine::MainToAudioMsg::SET_FILTER_MODEL;
+    msg.paramId = instance;
+    msg.uintValues[0] = (uint32_t)fn.model;
+    msg.uintValues[1] = (uint32_t)fn.config.pt;
+    msg.uintValues[2] = (uint32_t)fn.config.st;
+    msg.uintValues[3] = (uint32_t)fn.config.dt;
+    msg.uintValues[4] = (uint32_t)fn.config.mt;
+    mainToAudio.push(msg);
+}
+
 } // namespace baconpaul::twofilters::ui

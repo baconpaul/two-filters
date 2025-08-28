@@ -45,7 +45,7 @@ struct Engine
     Engine();
     ~Engine();
 
-    sst::filtersplusplus::Filter filterOne, filterTwo;
+    std::array<sst::filtersplusplus::Filter, numFilters> filters;
 
     bool audioRunning{true};
     int beginEndParamGestureCount{0};
@@ -86,6 +86,7 @@ struct Engine
             SET_PARAM_WITHOUT_NOTIFYING,
             BEGIN_EDIT,
             END_EDIT,
+            SET_FILTER_MODEL,
             STOP_AUDIO,
             START_AUDIO,
             SEND_PATCH_NAME,
@@ -98,7 +99,7 @@ struct Engine
         uint32_t paramId{0};
         float value{0};
         const char *uiManagedPointer{nullptr};
-        uint32_t intValues[5]{0, 0, 0, 0, 0};
+        uint32_t uintValues[5]{0, 0, 0, 0, 0};
     };
     using audioToUIQueue_t = sst::cpputils::SimpleRingBuffer<AudioToUIMsg, 1024 * 16>;
     using mainToAudioQueue_T = sst::cpputils::SimpleRingBuffer<MainToAudioMsg, 1024 * 64>;
@@ -137,6 +138,8 @@ struct Engine
             p->lag.snapTo(p->value);
         }
     }
+
+    void setupFilter(int instance);
 
     std::atomic<bool> onMainRescanParams{false};
     void onMainThread();

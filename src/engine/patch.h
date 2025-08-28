@@ -86,8 +86,8 @@ struct Patch : pats::PatchBase<Patch, Param>
         filterNodes[0].model = sst::filtersplusplus::FilterModel::CytomicSVF;
         filterNodes[0].config.pt = sst::filtersplusplus::Passband::LP;
 
-        filterNodes[1].model = sst::filtersplusplus::FilterModel::CytomicSVF;
-        filterNodes[1].config.pt = sst::filtersplusplus::Passband::HP;
+        filterNodes[1].model = sst::filtersplusplus::FilterModel::None;
+        filterNodes[1].config = {};
 
         pushParams(filterNodes[0]);
         pushParams(filterNodes[1]);
@@ -153,7 +153,7 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         Param cutoff, resonance;
 
-        sst::filtersplusplus::FilterModel model{sst::filtersplusplus::FilterModel::Off};
+        sst::filtersplusplus::FilterModel model{sst::filtersplusplus::FilterModel::None};
         sst::filtersplusplus::ModelConfig config{};
 
         std::vector<Param *> params()
