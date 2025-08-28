@@ -293,10 +293,9 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             {
                 // SQLOG("onZoomChanged " << f);
                 auto s = f * clapJuceShim->getGuiScale();
-                guiSetSize(baconpaul::twofilters::ui::PluginEditor::edWidth * s,
-                           baconpaul::twofilters::ui::PluginEditor::edHeight * s);
-                _host.guiRequestResize(baconpaul::twofilters::ui::PluginEditor::edWidth * s,
-                                       baconpaul::twofilters::ui::PluginEditor::edHeight * s);
+                guiSetSize(baconpaul::twofilters::edWidth * s, baconpaul::twofilters::edHeight * s);
+                _host.guiRequestResize(baconpaul::twofilters::edWidth * s,
+                                       baconpaul::twofilters::edHeight * s);
             }
         };
 

@@ -69,11 +69,13 @@ struct Engine
             SET_PATCH_NAME,
             SET_PATCH_DIRTY_STATE,
             DO_PARAM_RESCAN,
-            SEND_SAMPLE_RATE
+            SEND_SAMPLE_RATE,
+            SEND_FILTER_CONFIG,
         } action;
         uint32_t paramId{0};
         float value{0}, value2{0};
         const char *patchNamePointer{0};
+        uint32_t uintValues[5]{0, 0, 0, 0, 0};
     };
     struct MainToAudioMsg
     {
@@ -96,6 +98,7 @@ struct Engine
         uint32_t paramId{0};
         float value{0};
         const char *uiManagedPointer{nullptr};
+        uint32_t intValues[5]{0, 0, 0, 0, 0};
     };
     using audioToUIQueue_t = sst::cpputils::SimpleRingBuffer<AudioToUIMsg, 1024 * 16>;
     using mainToAudioQueue_T = sst::cpputils::SimpleRingBuffer<MainToAudioMsg, 1024 * 64>;

@@ -26,8 +26,8 @@
 #include "sst/cpputils/active_set_overlay.h"
 #include "sst/basic-blocks/params/ParamMetadata.h"
 #include "sst/basic-blocks/dsp/Lag.h"
-#include "sst/basic-blocks/modulators/DAHDSREnvelope.h"
 #include "sst/plugininfra/patch-support/patch_base.h"
+#include "sst/filters++.h"
 
 namespace baconpaul::twofilters
 {
@@ -64,8 +64,8 @@ struct Param : pats::ParamBase, sst::cpputils::active_set_overlay<Param>::partic
 
 struct Patch : pats::PatchBase<Patch, Param>
 {
-    static constexpr uint32_t patchVersion{9};
-    static constexpr const char *id{"org.baconpaul.six-sines"};
+    static constexpr uint32_t patchVersion{1};
+    static constexpr const char *id{"org.baconpaul.two-filters"};
 
     static constexpr uint32_t floatFlags{CLAP_PARAM_IS_AUTOMATABLE};
     static constexpr uint32_t boolFlags{CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_STEPPED};
@@ -83,7 +83,14 @@ struct Patch : pats::PatchBase<Patch, Param>
     {
         auto pushParams = [this](auto &from) { this->pushMultipleParams(from.params()); };
 
-        pushParams(sqParams);
+        filterNodes[0].model = sst::filtersplusplus::FilterModel::CytomicSVF;
+        filterNodes[0].config.pt = sst::filtersplusplus::Passband::LP;
+
+        filterNodes[1].model = sst::filtersplusplus::FilterModel::CytomicSVF;
+        filterNodes[1].config.pt = sst::filtersplusplus::Passband::HP;
+
+        pushParams(filterNodes[0]);
+        pushParams(filterNodes[1]);
 
         std::sort(params.begin(), params.end(),
                   [](const Param *a, const Param *b)
@@ -117,36 +124,44 @@ struct Patch : pats::PatchBase<Patch, Param>
 
                       return a->meta.name < b->meta.name;
                   });
+
+        additionalToState = [this](auto &state) { SQLOG("To State"); };
+        additionalFromState = [this](auto *state, auto ver) { SQLOG("From State " << ver); };
     }
 
-    struct SidequestNode
+    struct FilterNode
     {
         static constexpr uint32_t idBase{500};
+        static constexpr uint32_t idStride{100};
 
-        SidequestNode()
-            : pitch(floatMd()
-                        .asSemitoneRange(-24, 24)
-                        .withDefault(0)
-                        .withName("Pitch Offset")
-                        .withID(id(0))),
-              harmlev(floatMd().asPercent().withDefault(0.f).withName("Harmonic 2").withID(id(1)))
-
+        FilterNode(int instance)
+            : cutoff(floatMd()
+                         .asAudibleFrequency()
+                         .withGroupName(groupName(instance))
+                         .withName("Cutoff " + std::to_string(instance + 1))
+                         .withID(id(instance, 0))),
+              resonance(floatMd()
+                            .asPercent()
+                            .withGroupName(groupName(instance))
+                            .withName("Resonance " + std::to_string(instance + 1))
+                            .withID(id(instance, 1)))
         {
         }
 
-        std::string name() const { return "SideQuest"; }
-        uint32_t id(int f) const { return idBase + f; }
+        std::string groupName(int i) const { return "Filter " + std::to_string(i + 1); }
+        uint32_t id(int instance, int f) const { return idBase + f + idStride * instance; }
 
-        Param pitch, harmlev;
+        Param cutoff, resonance;
+
+        sst::filtersplusplus::FilterModel model{sst::filtersplusplus::FilterModel::Off};
+        sst::filtersplusplus::ModelConfig config{};
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&pitch, &harmlev};
+            std::vector<Param *> res{&cutoff, &resonance};
             return res;
         }
-    };
-
-    SidequestNode sqParams;
+    } filterNodes[numFilters]{0, 1};
 
     char name[256]{"Init"};
 

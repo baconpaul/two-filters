@@ -53,4 +53,33 @@ void MainPanel::resized()
     }
 }
 
+/*
+void MainPanel::paint(juce::Graphics &g)
+{
+    sst::jucegui::components::NamedPanel::paint(g);
+    g.setColour(juce::Colours::white);
+    g.drawLine(0,0,getWidth(),getHeight(), 1);
+
+    // shitty hack
+    static sst::filters::FilterPlotter plotter;
+
+    auto crv = plotter.plotFilterMagnitudeResponse(sst::filters::FilterType::fut_obxd_4pole,
+sst::filters::FilterSubType::st_obxd4pole_24dB, 0, 0.99, 0, 0, 0);
+
+    auto xs = crv.first;
+    for (auto &x : xs)
+        x = log10(x);
+
+    auto ys = crv.second;;
+    auto xsc = 1.0 / log10(20000) * getWidth();
+    auto ysc = 3.0;
+    int yoff = 100;
+    for (int i=1; i<xs.size(); i++)
+    {
+        g.drawLine(xs[i-1] * xsc, yoff - ysc * ys[i-1], xs[i] * xsc, yoff - ysc * ys[i], 1);
+
+    }
+}
+*/
+
 } // namespace baconpaul::twofilters::ui

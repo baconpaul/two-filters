@@ -24,7 +24,9 @@
 #include "presets/preset-manager.h"
 #include "preset-data-binding.h"
 #include "patch-data-bindings.h"
+
 #include "main-panel.h"
+#include "filter-panel.h"
 
 namespace baconpaul::twofilters::ui
 {
@@ -61,6 +63,12 @@ PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQu
     mainPanel = std::make_unique<MainPanel>(*this);
     mainPanel->hasHamburger = false;
     addAndMakeVisible(*mainPanel);
+
+    for (int i = 0; i < numFilters; ++i)
+    {
+        filterPanel[i] = std::make_unique<FilterPanel>(*this, i);
+        addAndMakeVisible(*filterPanel[i]);
+    }
 
     auto startMsg = Engine::MainToAudioMsg{Engine::MainToAudioMsg::REQUEST_REFRESH};
     mainToAudio.push(startMsg);
@@ -166,6 +174,17 @@ void PluginEditor::idle()
             sampleRate = aum->value;
             repaint();
         }
+        else if (aum->action == Engine::AudioToUIMsg::SEND_FILTER_CONFIG)
+        {
+            namespace sfpp = sst::filtersplusplus;
+            auto fid = aum->paramId;
+            patchCopy.filterNodes[fid].model = (sfpp::FilterModel)aum->uintValues[0];
+            patchCopy.filterNodes[fid].config.pt = (sfpp::Passband)aum->uintValues[1];
+            patchCopy.filterNodes[fid].config.st = (sfpp::Slope)aum->uintValues[2];
+            patchCopy.filterNodes[fid].config.dt = (sfpp::DriveMode)aum->uintValues[3];
+            patchCopy.filterNodes[fid].config.mt = (sfpp::FilterSubModel)aum->uintValues[4];
+            filterPanel[fid]->onModelChanged();
+        }
         else
         {
             SQLOG("Ignored patch message " << aum->action);
@@ -248,7 +267,11 @@ void PluginEditor::resized()
 
     vuMeter->setBounds(but);
 
-    mainPanel->setBounds(panelArea.reduced(panelMargin));
+    auto fa = panelArea.withHeight(300).withWidth(panelArea.getWidth() / 2);
+    filterPanel[0]->setBounds(fa.reduced(panelMargin));
+    filterPanel[1]->setBounds(fa.translated(fa.getWidth(), 0).reduced(panelMargin));
+    auto ma = panelArea.withTrimmedTop(300);
+    mainPanel->setBounds(ma.reduced(panelMargin));
 }
 
 void PluginEditor::showTooltipOn(juce::Component *c)

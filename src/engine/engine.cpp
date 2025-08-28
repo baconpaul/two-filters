@@ -60,7 +60,7 @@ void Engine::processControl(const clap_output_events_t *outq)
 {
     filterOne.concludeBlock();
 
-    filterOne.makeCoefficients(0, patch.sqParams.pitch, patch.sqParams.harmlev);
+    filterOne.makeCoefficients(0, patch.filterNodes[0].cutoff, patch.filterNodes[0].resonance);
     filterOne.copyCoefficientsFromVoiceToVoice(0, 1);
     filterOne.prepareBlock();
 
@@ -286,6 +286,19 @@ void Engine::pushFullUIRefresh()
     {
         AudioToUIMsg au = {AudioToUIMsg::UPDATE_PARAM, p->meta.id, p->value};
         audioToUi.push(au);
+    }
+
+    for (int i = 0; i < numFilters; ++i)
+    {
+        AudioToUIMsg fm;
+        fm.action = AudioToUIMsg::SEND_FILTER_CONFIG;
+        fm.paramId = i;
+        fm.uintValues[0] = (uint32_t)patch.filterNodes[i].model;
+        fm.uintValues[1] = (uint32_t)patch.filterNodes[i].config.pt;
+        fm.uintValues[2] = (uint32_t)patch.filterNodes[i].config.st;
+        fm.uintValues[3] = (uint32_t)patch.filterNodes[i].config.dt;
+        fm.uintValues[4] = (uint32_t)patch.filterNodes[i].config.mt;
+        audioToUi.push(fm);
     }
     audioToUi.push({AudioToUIMsg::SET_PATCH_NAME, 0, 0, 0, patch.name});
     audioToUi.push({AudioToUIMsg::SET_PATCH_DIRTY_STATE, patch.dirty});

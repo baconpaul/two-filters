@@ -45,6 +45,7 @@ namespace baconpaul::twofilters::ui
 {
 
 struct MainPanel;
+struct FilterPanel;
 
 struct PluginEditor : jcmp::WindowPanel
 {
@@ -68,6 +69,8 @@ struct PluginEditor : jcmp::WindowPanel
     std::unique_ptr<juce::Timer> idleTimer;
 
     std::unique_ptr<MainPanel> mainPanel;
+    std::array<std::unique_ptr<FilterPanel>, numFilters> filterPanel;
+
     void doSinglePanelHamburger();
     void activateHamburger(bool b);
 
@@ -113,8 +116,6 @@ struct PluginEditor : jcmp::WindowPanel
     float zoomFactor{1.0f};
     std::function<void(float)> onZoomChanged{nullptr};
     bool toggleDebug();
-
-    static constexpr uint32_t edWidth{600}, edHeight{400};
 
     std::unique_ptr<jcmp::VUMeter> vuMeter;
 

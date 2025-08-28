@@ -44,6 +44,7 @@ add_library(${PROJECT_NAME}-impl STATIC
 
         src/ui/plugin-editor.cpp
         src/ui/main-panel.cpp
+        src/ui/filter-panel.cpp
 
         src/presets/preset-manager.cpp
 
@@ -78,7 +79,7 @@ target_link_libraries(${PROJECT_NAME}-impl PRIVATE
         clap-helpers clap-wrapper-extensions
         mts-esp-client
         fmt-header-only
-        sst-basic-blocks sst-jucegui sst-cpputils sst-filters sst-waveshapers
+        sst-basic-blocks sst-jucegui sst-cpputils sst-filters sst-filters-extras sst-waveshapers
         sst-plugininfra
         sst-plugininfra::filesystem
         sst-plugininfra::tinyxml
@@ -86,6 +87,7 @@ target_link_libraries(${PROJECT_NAME}-impl PRIVATE
         sst-plugininfra::patchbase
         sst-plugininfra::version_information
         sst::clap_juce_shim sst::clap_juce_shim_headers
+        juce::juce_dsp
         ${PROJECT_NAME}-patches
 )
 
