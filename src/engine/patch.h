@@ -146,11 +146,11 @@ struct Patch : pats::PatchBase<Patch, Param>
                             .withGroupName(groupName(instance))
                             .withName("Resonance " + std::to_string(instance + 1))
                             .withID(id(instance, 1))),
-        morph(floatMd()
-                            .asPercent()
-                            .withGroupName(groupName(instance))
-                            .withName("Morph " + std::to_string(instance + 1))
-                            .withID(id(instance, 2)))
+              morph(floatMd()
+                        .asPercent()
+                        .withGroupName(groupName(instance))
+                        .withName("Morph " + std::to_string(instance + 1))
+                        .withID(id(instance, 2)))
         {
         }
 

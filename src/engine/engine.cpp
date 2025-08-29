@@ -57,7 +57,8 @@ void Engine::processControl(const clap_output_events_t *outq)
 {
     filters[0].concludeBlock();
 
-    filters[0].makeCoefficients(0, patch.filterNodes[0].cutoff, patch.filterNodes[0].resonance, patch.filterNodes[0].morph);
+    filters[0].makeCoefficients(0, patch.filterNodes[0].cutoff, patch.filterNodes[0].resonance,
+                                patch.filterNodes[0].morph);
     filters[0].copyCoefficientsFromVoiceToVoice(0, 1);
     filters[0].prepareBlock();
 

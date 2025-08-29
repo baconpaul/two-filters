@@ -70,7 +70,8 @@ struct FilterCurve : juce::Component
                                                                fn.resonance, fn.morph, 0, 0);
                 auto tcX = crv.first;
                 for (auto &x : tcX)
-                    x = log10(x);
+                    x = (x > 0 ? log10(x) : 0);
+
                 {
                     std::unique_lock<std::mutex> l(dataM);
                     cX = tcX;
@@ -84,12 +85,40 @@ struct FilterCurve : juce::Component
     {
         std::unique_lock<std::mutex> l(dataM);
         auto xsc = 1.0 / log10(20000) * getWidth();
-        auto ysc = 3.0;
-        int yoff = getHeight() * .3;
+        auto xoff = -log10(20);
+
+        float dbMax{24}, dbMin{-48 - 12};
+        auto ysc = 1.0 / (dbMax - dbMin) * getHeight();
+        int yoff = dbMax / (dbMax - dbMin) * getHeight();
+
+        auto tx = [=](float x) { return xoff + x * xsc; };
+        auto ty = [=](float y) { return yoff - y * ysc; };
+
+        g.setColour(juce::Colour(100, 100, 100));
+        g.setFont(juce::FontOptions(10));
+        for (int i = 1; i < 5; ++i)
+        {
+            g.drawVerticalLine(tx(i), 0, getHeight());
+            auto hz = pow(10.0, i);
+            auto txt = fmt::format("{:.0f} Hz", hz);
+            if (hz >= 1000)
+                txt = fmt::format("{:.0f} kHz", hz / 1000);
+
+            g.drawText(txt, tx(i) + 2, getHeight() - 22, 100, 20, juce::Justification::bottomLeft);
+        }
+
+        for (int db = dbMax; db >= dbMin; db -= 24)
+        {
+            g.drawHorizontalLine(ty(db), 0, getWidth());
+            auto txt = fmt::format("{:.0f} dB", (float)db);
+            g.drawText(txt, 2, ty(db) + 2, 100, 20, juce::Justification::topLeft);
+        }
+        g.drawRect(getLocalBounds(), 1.0f);
+
         g.setColour(juce::Colours::white);
         for (int i = 1; i < cX.size(); i++)
         {
-            g.drawLine(cX[i - 1] * xsc, yoff - ysc * cY[i - 1], cX[i] * xsc, yoff - ysc * cY[i], 1);
+            g.drawLine(tx(cX[i - 1]), ty(cY[i - 1]), tx(cX[i]), ty(cY[i]), 1.5f);
         }
     }
     void resized() override {}
@@ -161,7 +190,7 @@ void FilterPanel::resized()
     auto bk = rs.withWidth(q);
     cutoffK->setBounds(bk);
     resonanceK->setBounds(bk.translated(q, 0));
-    morphK->setBounds(bk.translated(2*q, 0));
+    morphK->setBounds(bk.translated(2 * q, 0));
 
     auto rest = rs.withTrimmedLeft(3 * q + 10);
     modelMenu->setBounds(rest.withHeight(20));
@@ -178,7 +207,6 @@ void FilterPanel::onModelChanged()
     morphK->setEnabled(xtra > 0);
 
     auto tl = mn + " " + cn;
-    SQLOG("FilterPanel[" << instance << "] -> " << tl << " Get this off thread!");
     setName("Filter " + std::to_string(instance + 1) + ": " + tl);
     curve->rebuild();
 
