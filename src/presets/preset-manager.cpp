@@ -279,6 +279,21 @@ void PresetManager::sendEntirePatchToAudio(Patch &patch, Engine::mainToAudioQueu
     mainToAudio.push({Engine::MainToAudioMsg::SEND_POST_LOAD, true});
     mainToAudio.push({Engine::MainToAudioMsg::SEND_REQUEST_RESCAN, true});
 
+    for (int instance = 0; instance < numFilters; ++instance)
+    {
+        auto &fn = patch.filterNodes[instance];
+        Engine::MainToAudioMsg msg;
+        msg.action = Engine::MainToAudioMsg::SET_FILTER_MODEL;
+        msg.paramId = instance;
+        msg.uintValues[0] = (uint32_t)fn.model;
+        msg.uintValues[1] = (uint32_t)fn.config.pt;
+        msg.uintValues[2] = (uint32_t)fn.config.st;
+        msg.uintValues[3] = (uint32_t)fn.config.dt;
+        msg.uintValues[4] = (uint32_t)fn.config.mt;
+
+        mainToAudio.push(msg);
+    }
+
     if (hostPar)
     {
         hostPar->request_flush(h);

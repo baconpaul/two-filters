@@ -258,7 +258,7 @@ void Engine::processUIQueue(const clap_output_events_t *outq)
         break;
         case MainToAudioMsg::SET_FILTER_MODEL:
         {
-            auto fn = patch.filterNodes[uiM->paramId];
+            auto &fn = patch.filterNodes[uiM->paramId];
             fn.model = (sst::filtersplusplus::FilterModel)uiM->uintValues[0];
             fn.config.pt = (sst::filtersplusplus::Passband)uiM->uintValues[1];
             fn.config.st = (sst::filtersplusplus::Slope)uiM->uintValues[2];
@@ -266,8 +266,6 @@ void Engine::processUIQueue(const clap_output_events_t *outq)
             fn.config.mt = (sst::filtersplusplus::FilterSubModel)uiM->uintValues[4];
 
             setupFilter(uiM->paramId);
-
-            SQLOG("Filter Model Engine Update");
         }
         break;
         }

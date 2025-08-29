@@ -125,8 +125,9 @@ struct Patch : pats::PatchBase<Patch, Param>
                       return a->meta.name < b->meta.name;
                   });
 
-        additionalToState = [this](auto &state) { SQLOG("To State"); };
-        additionalFromState = [this](auto *state, auto ver) { SQLOG("From State " << ver); };
+        additionalToState = [this](auto &state) { additionalToStateImpl(state); };
+        additionalFromState = [this](auto *state, auto ver)
+        { additionalFromStateImpl(state, ver); };
     }
 
     struct FilterNode
@@ -167,6 +168,9 @@ struct Patch : pats::PatchBase<Patch, Param>
 
     float migrateParamValueFromVersion(Param *p, float value, uint32_t version);
     void migratePatchFromVersion(uint32_t version);
+
+    void additionalToStateImpl(TiXmlElement &root);
+    void additionalFromStateImpl(TiXmlElement *root, uint32_t version);
 };
 } // namespace baconpaul::twofilters
 #endif // PATCH_H

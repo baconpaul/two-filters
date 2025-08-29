@@ -83,6 +83,9 @@ PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQu
     presetManager = std::make_unique<presets::PresetManager>(clapHost);
     presetManager->onPresetLoaded = [this](auto s)
     {
+        for (auto &f : filterPanel)
+            f->onModelChanged();
+
         this->postPatchChange(s);
         repaint();
     };

@@ -104,7 +104,7 @@ void FilterPanel::onModelChanged()
     auto cn = editor.patchCopy.filterNodes[instance].config.toString();
 
     auto tl = mn + " " + cn;
-    SQLOG("FilterPanel[" << instance << "] -> " << tl);
+    SQLOG("FilterPanel[" << instance << "] -> " << tl << " Get this off thread!");
     setName("Filter " + std::to_string(instance + 1) + ": " + tl);
     curve->rebuild();
 

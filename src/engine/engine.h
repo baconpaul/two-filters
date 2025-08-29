@@ -112,7 +112,6 @@ struct Engine
     std::atomic<bool> readyForStream{false};
     void prepForStream()
     {
-        SQLOG("Ready for Stream");
         if (lagHandler.active)
             lagHandler.instantlySnap();
 
