@@ -50,8 +50,11 @@ struct PatchContinuous : jdat::Continuous
     }
     ~PatchContinuous() override = default;
 
+    std::string labelOverride{};
     std::string getLabel() const override
     {
+        if (!labelOverride.empty())
+            return labelOverride;
         auto r = p->meta.name;
         return r;
     }

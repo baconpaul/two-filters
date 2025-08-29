@@ -159,15 +159,18 @@ FilterPanel::FilterPanel(PluginEditor &editor, int ins)
     auto &fn = editor.patchCopy.filterNodes[instance];
     createComponent(editor, *this, fn.cutoff, cutoffK, cutoffD);
     cutoffD->onGuiSetValue = [this]() { curve->rebuild(); };
+    cutoffD->labelOverride = "Cutoff";
     addAndMakeVisible(*cutoffK);
 
     createComponent(editor, *this, fn.resonance, resonanceK, resonanceD);
     addAndMakeVisible(*resonanceK);
+    resonanceD->labelOverride = "Resonance";
     resonanceD->onGuiSetValue = [this]() { curve->rebuild(); };
 
     createComponent(editor, *this, fn.morph, morphK, morphD);
     addAndMakeVisible(*morphK);
     morphD->onGuiSetValue = [this]() { curve->rebuild(); };
+    morphD->labelOverride = "Morph";
 
     modelMenu = std::make_unique<sst::jucegui::components::MenuButton>();
     addAndMakeVisible(*modelMenu);
@@ -181,18 +184,19 @@ FilterPanel::~FilterPanel() = default;
 
 void FilterPanel::resized()
 {
-    auto b = getContentArea().withHeight(150);
+    auto b = getContentArea().withHeight(170);
     curve->setBounds(b);
 
-    auto rs = getContentArea().withTrimmedTop(160);
-    auto q = rs.getHeight() - 30;
+    auto rs = getContentArea().withTrimmedTop(180);
+    auto q = 70;
+    auto pad = 5;
 
-    auto bk = rs.withWidth(q);
+    auto bk = rs.withWidth(q).withTrimmedLeft(5).withTrimmedRight(5);
     cutoffK->setBounds(bk);
-    resonanceK->setBounds(bk.translated(q, 0));
-    morphK->setBounds(bk.translated(2 * q, 0));
+    resonanceK->setBounds(bk.translated(q + pad, 0));
+    morphK->setBounds(bk.translated(2 * q + 2 * pad, 0));
 
-    auto rest = rs.withTrimmedLeft(3 * q + 10);
+    auto rest = rs.withTrimmedLeft(3 * q + 3 * pad);
     modelMenu->setBounds(rest.withHeight(20));
     configMenu->setBounds(rest.withHeight(20).translated(0, 22));
 }
