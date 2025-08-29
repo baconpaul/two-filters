@@ -85,7 +85,7 @@ struct FilterCurve : juce::Component
     void paint(juce::Graphics &g) override
     {
         std::unique_lock<std::mutex> l(dataM);
-        auto xsc = 1.0 / (log10(20000)) * getWidth();
+        auto xsc = 1.0 / (log10(20000) - log10(6)) * getWidth();
         auto xoff = -log10(6);
 
         float dbMax{24}, dbMin{-48 - 12};
@@ -116,11 +116,32 @@ struct FilterCurve : juce::Component
         }
         g.drawRect(getLocalBounds(), 1.0f);
 
-        g.setColour(juce::Colours::white);
+        if (cX.empty() || cY.empty())
+            return;
+
+        auto p = juce::Path();
+        p.startNewSubPath(tx(cX[0]), ty(cY[0]));
+        auto my = std::min(cY[0], dbMin);
         for (int i = 1; i < cX.size(); i++)
         {
-            g.drawLine(tx(cX[i - 1]), ty(cY[i - 1]), tx(cX[i]), ty(cY[i]), 1.5f);
+            p.lineTo(tx(cX[i]), ty(cY[i]));
+            if (cY[i] < my)
+                my = cY[i];
         }
+        auto fillpath = p;
+
+        auto c = juce::Colour(0xFF, 0x90, 0x00);
+        auto gr = juce::ColourGradient::vertical(c.withAlpha(0.6f), ty(6),
+            c.withAlpha(0.1f), ty(-48));
+
+        fillpath.lineTo(tx(cX.back()), ty(my));
+        fillpath.lineTo(tx(cX[0]), ty(my));
+        fillpath.closeSubPath();
+        g.setGradientFill(gr);
+        g.fillPath(fillpath);
+
+        g.setColour(juce::Colours::white);
+        g.strokePath(p, juce::PathStrokeType(1.5));
     }
     void resized() override {}
 
