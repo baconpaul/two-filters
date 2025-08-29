@@ -46,8 +46,8 @@ struct FilterPanel : sst::jucegui::components::NamedPanel
 
     std::unique_ptr<FilterCurve> curve;
 
-    std::unique_ptr<PatchContinuous> cutoffD, resonanceD;
-    std::unique_ptr<sst::jucegui::components::Knob> cutoffK, resonanceK;
+    std::unique_ptr<PatchContinuous> cutoffD, resonanceD, morphD;
+    std::unique_ptr<sst::jucegui::components::Knob> cutoffK, resonanceK, morphK;
 
     std::unique_ptr<sst::jucegui::components::MenuButton> modelMenu, configMenu;
 

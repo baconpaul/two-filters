@@ -67,7 +67,7 @@ struct FilterCurve : juce::Component
                 // TODO - really we should snap these values on audio thread in lock
                 auto &fn = panel.editor.patchCopy.filterNodes[panel.instance];
                 auto crv = plotter.plotFilterMagnitudeResponse(fn.model, fn.config, fn.cutoff,
-                                                               fn.resonance, 0, 0, 0);
+                                                               fn.resonance, fn.morph, 0, 0);
                 auto tcX = crv.first;
                 for (auto &x : tcX)
                     x = log10(x);
@@ -79,7 +79,6 @@ struct FilterCurve : juce::Component
                 }
             }
         }
-        SQLOG("Done");
     }
     void paint(juce::Graphics &g) override
     {
@@ -137,6 +136,10 @@ FilterPanel::FilterPanel(PluginEditor &editor, int ins)
     addAndMakeVisible(*resonanceK);
     resonanceD->onGuiSetValue = [this]() { curve->rebuild(); };
 
+    createComponent(editor, *this, fn.morph, morphK, morphD);
+    addAndMakeVisible(*morphK);
+    morphD->onGuiSetValue = [this]() { curve->rebuild(); };
+
     modelMenu = std::make_unique<sst::jucegui::components::MenuButton>();
     addAndMakeVisible(*modelMenu);
     modelMenu->setOnCallback([this]() { showModelMenu(); });
@@ -158,16 +161,21 @@ void FilterPanel::resized()
     auto bk = rs.withWidth(q);
     cutoffK->setBounds(bk);
     resonanceK->setBounds(bk.translated(q, 0));
+    morphK->setBounds(bk.translated(2*q, 0));
 
-    auto rest = rs.withTrimmedLeft(2 * q + 10);
+    auto rest = rs.withTrimmedLeft(3 * q + 10);
     modelMenu->setBounds(rest.withHeight(20));
     configMenu->setBounds(rest.withHeight(20).translated(0, 22));
 }
 
 void FilterPanel::onModelChanged()
 {
-    auto mn = sst::filtersplusplus::toString(editor.patchCopy.filterNodes[instance].model);
-    auto cn = editor.patchCopy.filterNodes[instance].config.toString();
+    auto &fn = editor.patchCopy.filterNodes[instance];
+    auto mn = sst::filtersplusplus::toString(fn.model);
+    auto cn = fn.config.toString();
+
+    auto xtra = sst::filtersplusplus::Filter::coefficientsExtraCount(fn.model, fn.config);
+    morphK->setEnabled(xtra > 0);
 
     auto tl = mn + " " + cn;
     SQLOG("FilterPanel[" << instance << "] -> " << tl << " Get this off thread!");
