@@ -194,6 +194,9 @@ void PluginEditor::idle()
         }
         aum = audioToUI.pop();
     }
+
+    for (auto &f : filterPanel)
+        f->onIdle();
 }
 
 void PluginEditor::paint(juce::Graphics &g)
@@ -847,7 +850,6 @@ void PluginEditor::onStyleChanged()
 
 void PluginEditor::pushFilterSetup(int instance)
 {
-    SQLOG("Updating filter instance " << instance);
     auto &fn = patchCopy.filterNodes[instance];
 
     Engine::MainToAudioMsg msg;

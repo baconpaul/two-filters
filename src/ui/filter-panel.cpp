@@ -22,9 +22,68 @@ namespace baconpaul::twofilters::ui
 
 struct FilterCurve : juce::Component
 {
-    FilterCurve(FilterPanel &p) : panel(p) {}
+    // put the thread here waiting and have rebuild trigger it and onilde poll it
+    std::unique_ptr<std::thread> thread;
+    std::mutex sendM, dataM;
+    std::condition_variable sendCV;
+    std::atomic<bool> running{true};
+    int updateRequest{0};
+    int repaintReq{0}, lastRepaintReq{0};
+    FilterCurve(FilterPanel &p) : panel(p)
+    {
+        thread = std::make_unique<std::thread>([this]() { run(); });
+    }
+    ~FilterCurve()
+    {
+        running = false;
+        {
+            std::unique_lock<std::mutex> l(sendM);
+            sendCV.notify_one();
+        }
+        thread->join();
+    }
+
+    void run()
+    {
+        int lur{0};
+        while (running)
+        {
+            int nur{lur};
+            {
+                std::unique_lock<std::mutex> l(sendM);
+                if (nur != updateRequest)
+                {
+                    nur = updateRequest;
+                }
+                else
+                {
+                    sendCV.wait(l);
+                }
+            }
+            if (running && nur != lur)
+            {
+                lur = nur;
+
+                // TODO - really we should snap these values on audio thread in lock
+                auto &fn = panel.editor.patchCopy.filterNodes[panel.instance];
+                auto crv = plotter.plotFilterMagnitudeResponse(fn.model, fn.config, fn.cutoff,
+                                                               fn.resonance, 0, 0, 0);
+                auto tcX = crv.first;
+                for (auto &x : tcX)
+                    x = log10(x);
+                {
+                    std::unique_lock<std::mutex> l(dataM);
+                    cX = tcX;
+                    cY = crv.second;
+                    repaintReq++;
+                }
+            }
+        }
+        SQLOG("Done");
+    }
     void paint(juce::Graphics &g) override
     {
+        std::unique_lock<std::mutex> l(dataM);
         auto xsc = 1.0 / log10(20000) * getWidth();
         auto ysc = 3.0;
         int yoff = getHeight() * .3;
@@ -36,16 +95,23 @@ struct FilterCurve : juce::Component
     }
     void resized() override {}
 
+    void onIdle()
+    {
+        bool rp{false};
+        {
+            std::unique_lock<std::mutex> l(dataM);
+            rp = lastRepaintReq == repaintReq;
+            lastRepaintReq = repaintReq;
+        }
+        if (rp)
+            repaint();
+    }
+
     void rebuild()
     {
-        auto &fn = panel.editor.patchCopy.filterNodes[panel.instance];
-        auto crv = plotter.plotFilterMagnitudeResponse(fn.model, fn.config, fn.cutoff, fn.resonance,
-                                                       0, 0, 0);
-        cX = crv.first;
-        for (auto &x : cX)
-            x = log10(x);
-        cY = crv.second;
-        repaint();
+        std::unique_lock<std::mutex> l(sendM);
+        updateRequest++;
+        sendCV.notify_one();
     }
 
     FilterPanel &panel;
@@ -163,5 +229,7 @@ void FilterPanel::showConfigMenu()
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor));
 }
+
+void FilterPanel::onIdle() { curve->onIdle(); }
 
 } // namespace baconpaul::twofilters::ui

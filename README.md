@@ -1,7 +1,7 @@
 # SideQuest Starting Point
 
 - morph types and morph param
-- render curve to off ui thread
+- render thread snaps values at a better time not from patch on other thread
 - feedback
 - a step sequencer and envelope to trigger each with an impact
 
