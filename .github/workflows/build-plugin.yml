@@ -11,8 +11,8 @@ on:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  TARGET_NAME: sidequest-startingpoint
-  PLUGIN_NAME: SideQuest
+  TARGET_NAME: two-filters
+  PLUGIN_NAME: "Two Filters"
   
 defaults:
   run:

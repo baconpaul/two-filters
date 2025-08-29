@@ -32,7 +32,7 @@ PresetManager::PresetManager(const clap_host_t *ch) : clapHost(ch)
     try
     {
         userPath =
-            sst::plugininfra::paths::bestDocumentsVendorFolderPathFor("BaconPaul", "twofilters");
+            sst::plugininfra::paths::bestDocumentsVendorFolderPathFor("BaconPaul", "Two Filters");
         if (clapHost)
             fs::create_directories(userPath);
         userPatchesPath = userPath / "Patches";
