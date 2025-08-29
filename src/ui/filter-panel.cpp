@@ -84,14 +84,14 @@ struct FilterCurve : juce::Component
     void paint(juce::Graphics &g) override
     {
         std::unique_lock<std::mutex> l(dataM);
-        auto xsc = 1.0 / log10(20000) * getWidth();
-        auto xoff = -log10(20);
+        auto xsc = 1.0 / (log10(20000)) * getWidth();
+        auto xoff = -log10(6);
 
         float dbMax{24}, dbMin{-48 - 12};
         auto ysc = 1.0 / (dbMax - dbMin) * getHeight();
         int yoff = dbMax / (dbMax - dbMin) * getHeight();
 
-        auto tx = [=](float x) { return xoff + x * xsc; };
+        auto tx = [=](float x) { return (xoff + x) * xsc; };
         auto ty = [=](float y) { return yoff - y * ysc; };
 
         g.setColour(juce::Colour(100, 100, 100));
