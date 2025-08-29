@@ -45,6 +45,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/ui/plugin-editor.cpp
         src/ui/main-panel.cpp
         src/ui/filter-panel.cpp
+        src/ui/routing-panel.cpp
 
         src/presets/preset-manager.cpp
 

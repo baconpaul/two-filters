@@ -42,10 +42,21 @@ struct Engine
 {
     Patch patch;
 
+    enum struct RoutingModes
+    {
+        Serial_Post2 = 0,
+        Serial_Post1 = 1,
+        Parallel_FBBoth = 2,
+        Parallel_FBOne = 3,
+        Parallel_FBEach = 4
+    };
+
     Engine();
     ~Engine();
 
     std::array<sst::filtersplusplus::Filter, numFilters> filters;
+    bool useFeedback{false};
+    float fbL{0}, fbR{0}, fb2L{0}, fb2R{0};
 
     bool audioRunning{true};
     int beginEndParamGestureCount{0};
@@ -54,7 +65,158 @@ struct Engine
     void setSampleRate(double sampleRate);
 
     void processControl(const clap_output_events_t *);
-    void processAudio(const float inL, const float inR, float &outL, float &outR);
+
+    template <RoutingModes mode, bool fb>
+    void processAudio(float inL, float inR, float &outL, float &outR)
+    {
+        if (!audioRunning)
+        {
+            outL = 0;
+            outR = 0;
+            return;
+        }
+
+        if constexpr (mode == RoutingModes::Serial_Post2)
+        {
+            if constexpr (fb)
+            {
+                inL += fbL;
+                inR += fbR;
+            }
+
+            filters[0].processStereoSample(inL, inR, outL, outR);
+            filters[1].processStereoSample(outL, outR, outL, outR);
+
+            if constexpr (fb)
+            {
+                float fblev = patch.routingNode.feedback;
+                fblev = fblev * fblev * fblev;
+
+                // y = x * ( 27 + x * x ) / ( 27 + 9 * x * x );
+                auto sat = [](float x) { return x * (27 + x * x) / (27 + 9 * x * x); };
+                fbL = sat(fblev * outL);
+                fbR = sat(fblev * outR);
+            }
+        }
+        else if constexpr (mode == RoutingModes::Serial_Post1)
+        {
+            if constexpr (fb)
+            {
+                inL += fbL;
+                inR += fbR;
+            }
+
+            filters[0].processStereoSample(inL, inR, outL, outR);
+
+            if constexpr (fb)
+            {
+                // Only need to run 1 if we have feedback
+                float tmpL, tmpR;
+                filters[1].processStereoSample(outL, outR, tmpL, tmpR);
+
+                float fblev = patch.routingNode.feedback;
+                fblev = fblev * fblev * fblev;
+
+                // y = x * ( 27 + x * x ) / ( 27 + 9 * x * x );
+                auto sat = [](float x) { return x * (27 + x * x) / (27 + 9 * x * x); };
+                fbL = sat(fblev * tmpL);
+                fbR = sat(fblev * tmpR);
+            }
+        }
+        else if constexpr (mode == RoutingModes::Parallel_FBBoth)
+        {
+            if constexpr (fb)
+            {
+                inL += fbL;
+                inR += fbR;
+            }
+
+            float t0L, t0R, t1L, t1R;
+            filters[0].processStereoSample(inL, inR, t0L, t0R);
+            filters[1].processStereoSample(inL, inR, t1L, t1R);
+
+            outL = t0L + t1L;
+            outR = t0R + t1R;
+            if constexpr (fb)
+            {
+                // Only need to run 1 if we have feedback
+                float fblev = patch.routingNode.feedback;
+                fblev = fblev * fblev * fblev;
+
+                // y = x * ( 27 + x * x ) / ( 27 + 9 * x * x );
+                auto sat = [](float x) { return x * (27 + x * x) / (27 + 9 * x * x); };
+                fbL = sat(fblev * outL);
+                fbR = sat(fblev * outR);
+            }
+        }
+        else if constexpr (mode == RoutingModes::Parallel_FBOne)
+        {
+            float t0L, t0R, t1L, t1R;
+            filters[1].processStereoSample(inL, inR, t1L, t1R);
+
+            if constexpr (fb)
+            {
+                inL += fbL;
+                inR += fbR;
+            }
+            filters[0].processStereoSample(inL, inR, t0L, t0R);
+
+            outL = t0L + t1L;
+            outR = t0R + t1R;
+            if constexpr (fb)
+            {
+                // Only need to run 1 if we have feedback
+                float fblev = patch.routingNode.feedback;
+                fblev = fblev * fblev * fblev;
+
+                // y = x * ( 27 + x * x ) / ( 27 + 9 * x * x );
+                auto sat = [](float x) { return x * (27 + x * x) / (27 + 9 * x * x); };
+                fbL = sat(fblev * t0L);
+                fbR = sat(fblev * t0R);
+            }
+        }
+        else if constexpr (mode == RoutingModes::Parallel_FBEach)
+        {
+            float t0L, t0R, t1L, t1R;
+            float i1L{inL}, i1R{inR}, i2L{inL}, i2R{inR};
+
+            if constexpr (fb)
+            {
+                i1L += fbL;
+                i1R += fbR;
+            }
+            filters[0].processStereoSample(i1L, i1R, t0L, t0R);
+
+            if constexpr (fb)
+            {
+                i2L += fb2L;
+                i2R += fb2R;
+            }
+            filters[1].processStereoSample(i2L, i2R, t1L, t1R);
+
+            outL = t0L + t1L;
+            outR = t0R + t1R;
+            if constexpr (fb)
+            {
+                // Only need to run 1 if we have feedback
+                float fblev = patch.routingNode.feedback;
+                fblev = fblev * fblev * fblev;
+
+                // y = x * ( 27 + x * x ) / ( 27 + 9 * x * x );
+                auto sat = [](float x) { return x * (27 + x * x) / (27 + 9 * x * x); };
+                fbL = sat(fblev * t0L);
+                fbR = sat(fblev * t0R);
+                fb2L = sat(fblev * t1L);
+                fb2R = sat(fblev * t1R);
+            }
+        }
+
+        if (isEditorAttached)
+        {
+            vuPeak.process(outL, outR);
+        }
+    }
+
     void processUIQueue(const clap_output_events_t *);
 
     void handleParamValue(Param *p, uint32_t pid, float value);

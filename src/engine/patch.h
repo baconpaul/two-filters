@@ -91,6 +91,7 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         pushParams(filterNodes[0]);
         pushParams(filterNodes[1]);
+        pushParams(routingNode);
 
         std::sort(params.begin(), params.end(),
                   [](const Param *a, const Param *b)
@@ -168,6 +169,47 @@ struct Patch : pats::PatchBase<Patch, Param>
             return res;
         }
     } filterNodes[numFilters]{0, 1};
+
+    struct RoutingNode
+    {
+        static constexpr uint32_t idBase{1000};
+
+        RoutingNode()
+            : feedback(floatMd()
+                           .asCubicDecibelAttenuation()
+                           .withGroupName("Routing")
+                           .withName("Feedback")
+                           .withID(id(0))),
+              feedbackPower(intMd()
+                                .asOnOffBool()
+                                .withGroupName("Routing")
+                                .withName("Feedback Power")
+                                .withID(id(1))),
+              routingMode(intMd()
+                              .withRange(0, 4)
+                              .withGroupName("Routing")
+                              .withName("Mode")
+                              .withID(3)
+                              .withUnorderedMapFormatting({{0, "Serial"},
+                                                           {1, "Serial (Post 1)"},
+                                                           {2, "Parallel"},
+                                                           {3, "Parallel (FB 1)"},
+                                                           {4, "Parallel (FB Each)"}}))
+
+        {
+        }
+
+        uint32_t id(int f) const { return idBase + f; }
+
+        Param feedback, feedbackPower;
+        Param routingMode;
+
+        std::vector<Param *> params()
+        {
+            std::vector<Param *> res{&feedback, &feedbackPower, &routingMode};
+            return res;
+        }
+    } routingNode;
 
     char name[256]{"Init"};
 

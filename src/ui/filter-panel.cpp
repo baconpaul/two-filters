@@ -131,8 +131,8 @@ struct FilterCurve : juce::Component
         auto fillpath = p;
 
         auto c = juce::Colour(0xFF, 0x90, 0x00);
-        auto gr = juce::ColourGradient::vertical(c.withAlpha(0.6f), ty(6),
-            c.withAlpha(0.1f), ty(-48));
+        auto gr =
+            juce::ColourGradient::vertical(c.withAlpha(0.6f), ty(6), c.withAlpha(0.1f), ty(-48));
 
         fillpath.lineTo(tx(cX.back()), ty(my));
         fillpath.lineTo(tx(cX[0]), ty(my));
@@ -289,7 +289,7 @@ void FilterPanel::showConfigMenu()
     std::map<sst::filtersplusplus::Passband, int> countByBand;
     for (const auto &c : cfgs)
     {
-        countByBand[c.pt] ++;
+        countByBand[c.pt]++;
     }
 
     auto priorPassType = cfgs[0].pt;

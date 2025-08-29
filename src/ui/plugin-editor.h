@@ -46,6 +46,7 @@ namespace baconpaul::twofilters::ui
 
 struct MainPanel;
 struct FilterPanel;
+struct RoutingPanel;
 
 struct PluginEditor : jcmp::WindowPanel
 {
@@ -70,6 +71,7 @@ struct PluginEditor : jcmp::WindowPanel
 
     std::unique_ptr<MainPanel> mainPanel;
     std::array<std::unique_ptr<FilterPanel>, numFilters> filterPanel;
+    std::unique_ptr<RoutingPanel> routingPanel;
 
     void doSinglePanelHamburger();
     void activateHamburger(bool b);

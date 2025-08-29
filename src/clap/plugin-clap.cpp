@@ -108,6 +108,29 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
     clap_process_status process(const clap_process *process) noexcept override
     {
+        auto useFeedback = engine->patch.routingNode.feedbackPower > 0.5;
+        auto mode = (Engine::RoutingModes)std::round(engine->patch.routingNode.routingMode);
+
+        switch (mode)
+        {
+#define CSRM(x)                                                                                    \
+    case x:                                                                                        \
+        if (useFeedback)                                                                           \
+            return processForRouting<x, true>(process);                                            \
+        else                                                                                       \
+            return processForRouting<x, false>(process);
+            CSRM(Engine::RoutingModes::Serial_Post1)
+            CSRM(Engine::RoutingModes::Serial_Post2)
+            CSRM(Engine::RoutingModes::Parallel_FBOne)
+            CSRM(Engine::RoutingModes::Parallel_FBBoth)
+            CSRM(Engine::RoutingModes::Parallel_FBEach)
+#undef CSRM
+        }
+    }
+
+    template <Engine::RoutingModes routingMode, bool withFeedback>
+    clap_process_status processForRouting(const clap_process *process) noexcept
+    {
         auto fpuguard = sst::plugininfra::cpufeatures::FPUStateGuard();
 
         auto ev = process->in_events;
@@ -151,10 +174,10 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 engine->processControl(outq);
             }
 
-            engine->processAudio(inD[0][s], inD[1][s], outD[0][s], outD[1][s]);
+            engine->processAudio<routingMode, withFeedback>(inD[0][s], inD[1][s], outD[0][s],
+                                                            outD[1][s]);
 
             blockPos = (blockPos + 1) & (blockSize - 1);
-            ;
         }
 
         while (nextEvent)

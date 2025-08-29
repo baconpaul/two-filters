@@ -55,12 +55,17 @@ void Engine::setSampleRate(double sr)
 
 void Engine::processControl(const clap_output_events_t *outq)
 {
-    filters[0].concludeBlock();
+    for (int i = 0; i < numFilters; ++i)
+    {
+        filters[i].concludeBlock();
 
-    filters[0].makeCoefficients(0, patch.filterNodes[0].cutoff, patch.filterNodes[0].resonance,
-                                patch.filterNodes[0].morph);
-    filters[0].copyCoefficientsFromVoiceToVoice(0, 1);
-    filters[0].prepareBlock();
+        filters[i].makeCoefficients(0, patch.filterNodes[i].cutoff, patch.filterNodes[i].resonance,
+                                    patch.filterNodes[i].morph);
+        filters[i].copyCoefficientsFromVoiceToVoice(0, 1);
+        filters[i].prepareBlock();
+    }
+
+    useFeedback = patch.routingNode.feedbackPower > 0.5;
 
     processUIQueue(outq);
 
@@ -93,23 +98,6 @@ void Engine::processControl(const clap_output_events_t *outq)
         {
             lastVuUpdate++;
         }
-    }
-}
-
-void Engine::processAudio(const float inL, const float inR, float &outL, float &outR)
-{
-    if (!audioRunning)
-    {
-        outL = 0;
-        outR = 0;
-        return;
-    }
-
-    filters[0].processStereoSample(inL, inR, outL, outR);
-
-    if (isEditorAttached)
-    {
-        vuPeak.process(outL, outR);
     }
 }
 
@@ -336,7 +324,11 @@ void Engine::setupFilter(int f)
     filters[f].setStereo();
     filters[f].setSampleRateAndBlockSize(sampleRate, blockSize);
     if (!filters[f].prepareInstance())
-        throw std::runtime_error("Failed to prepare filter instance");
+        SQLOG("Failed to prepare filter instance");
     filters[f].reset();
+    fbL = 0;
+    fbR = 0;
+    fb2L = 0;
+    fb2R = 0;
 }
 } // namespace baconpaul::twofilters

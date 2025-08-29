@@ -27,6 +27,7 @@
 
 #include "main-panel.h"
 #include "filter-panel.h"
+#include "routing-panel.h"
 
 namespace baconpaul::twofilters::ui
 {
@@ -69,6 +70,9 @@ PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQu
         filterPanel[i] = std::make_unique<FilterPanel>(*this, i);
         addAndMakeVisible(*filterPanel[i]);
     }
+
+    routingPanel = std::make_unique<RoutingPanel>(*this);
+    addAndMakeVisible(*routingPanel);
 
     auto startMsg = Engine::MainToAudioMsg{Engine::MainToAudioMsg::REQUEST_REFRESH};
     mainToAudio.push(startMsg);
@@ -273,9 +277,12 @@ void PluginEditor::resized()
 
     vuMeter->setBounds(but);
 
-    auto fa = panelArea.withHeight(300).withWidth(panelArea.getWidth() / 2);
+    auto ta = panelArea.withHeight(300).withWidth(panelArea.getWidth() / 2);
+    auto fa = ta.withTrimmedRight(60);
     filterPanel[0]->setBounds(fa.reduced(panelMargin));
     filterPanel[1]->setBounds(fa.translated(fa.getWidth(), 0).reduced(panelMargin));
+    auto ra = fa.translated(fa.getWidth() * 2, 0).withWidth(120);
+    routingPanel->setBounds(ra.reduced(panelMargin));
     auto ma = panelArea.withTrimmedTop(300);
     mainPanel->setBounds(ma.reduced(panelMargin));
 }
