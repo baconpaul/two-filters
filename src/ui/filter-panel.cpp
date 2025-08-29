@@ -14,6 +14,7 @@
  */
 
 #include "filter-panel.h"
+#include <map>
 
 #include "sst/filters/FilterPlotter.h"
 
@@ -256,8 +257,28 @@ void FilterPanel::showConfigMenu()
 
     auto cfgs = sfpp::Filter::availableModelConfigurations(
         editor.patchCopy.filterNodes[instance].model, true);
+
+    if (cfgs.empty() || (cfgs.size() == 1 && cfgs[0] == sst::filtersplusplus::ModelConfig()))
+    {
+        p.addSectionHeader("No Sub-Configurations");
+        p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor));
+        return;
+    }
+
+    std::map<sst::filtersplusplus::Passband, int> countByBand;
+    for (const auto &c : cfgs)
+    {
+        countByBand[c.pt] ++;
+    }
+
+    auto priorPassType = cfgs[0].pt;
     for (auto &c : cfgs)
     {
+        if (c.pt != priorPassType && (countByBand[c.pt] > 1 || countByBand[priorPassType] > 1))
+        {
+            priorPassType = c.pt;
+            p.addSeparator();
+        }
         p.addItem(c.toString(),
                   [this, c]()
                   {
