@@ -55,7 +55,6 @@ void RoutingPanel::resized()
 
 void RoutingPanel::enableFB()
 {
-    SQLOG("Enable FB " << editor.patchCopy.routingNode.feedbackPower.value);
     feedbackK->setEnabled(editor.patchCopy.routingNode.feedbackPower.value > 0.5f);
     feedbackK->repaint();
 }

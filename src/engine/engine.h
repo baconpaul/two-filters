@@ -24,6 +24,7 @@
 #include <clap/clap.h>
 #include "sst/basic-blocks/dsp/Lag.h"
 #include "sst/basic-blocks/dsp/VUPeak.h"
+#include "sst/basic-blocks/dsp/RNG.h"
 #include "sst/basic-blocks/tables/EqualTuningProvider.h"
 #include "sst/basic-blocks/modulators/StepLFO.h"
 #include "sst/cpputils/ring_buffer.h"
@@ -59,7 +60,9 @@ struct Engine
     bool useFeedback{false};
     float fbL{0}, fbR{0}, fb2L{0}, fb2R{0};
 
+    sst::basic_blocks::dsp::RNG rng;
     std::array<sst::basic_blocks::modulators::StepLFO<blockSize>, numStepLFOs> lfos;
+    std::array<sst::basic_blocks::modulators::StepLFO<blockSize>::Storage, numStepLFOs> lfoStorage;
     sst::basic_blocks::tables::EqualTuningProvider tuningProvider;
 
     bool audioRunning{true};

@@ -44,7 +44,7 @@ namespace jdat = sst::jucegui::data;
 namespace baconpaul::twofilters::ui
 {
 
-struct MainPanel;
+struct DebugPanel;
 struct FilterPanel;
 struct RoutingPanel;
 
@@ -69,12 +69,9 @@ struct PluginEditor : jcmp::WindowPanel
     void idle();
     std::unique_ptr<juce::Timer> idleTimer;
 
-    std::unique_ptr<MainPanel> mainPanel;
+    std::unique_ptr<DebugPanel> debugPanel;
     std::array<std::unique_ptr<FilterPanel>, numFilters> filterPanel;
     std::unique_ptr<RoutingPanel> routingPanel;
-
-    void doSinglePanelHamburger();
-    void activateHamburger(bool b);
 
     std::unique_ptr<presets::PresetManager> presetManager;
     std::unique_ptr<PresetDataBinding> presetDataBinding;

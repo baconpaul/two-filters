@@ -13,26 +13,30 @@
  * The source code and license are at https://github.com/baconpaul/two-filters
  */
 
-#include "main-panel.h"
+#include "debug-panel.h"
 #include "plugin-editor.h"
 #include "patch-data-bindings.h"
 
 namespace baconpaul::twofilters::ui
 {
 
-MainPanel::MainPanel(PluginEditor &e)
-    : sst::jucegui::components::NamedPanel("Main Panel"), editor(e)
+DebugPanel::DebugPanel(PluginEditor &e)
+    : sst::jucegui::components::NamedPanel("Debug Leftovers Panel"), editor(e)
 {
     knobs.resize(e.patchCopy.params.size());
     knobAs.resize(e.patchCopy.params.size());
     for (int i = 0; i < e.patchCopy.params.size(); i++)
     {
+        auto &p = editor.patchCopy.params[i];
+        if (p->meta.groupName == "Routing" || p->meta.groupName == "Filter 1" ||
+            p->meta.groupName == "Filter 2")
+            continue;
         createComponent(editor, *this, *editor.patchCopy.params[i], knobs[i], knobAs[i]);
         addAndMakeVisible(*knobs[i]);
     }
 }
 
-void MainPanel::resized()
+void DebugPanel::resized()
 {
     auto b = getContentArea();
     auto w = b.getWidth();
@@ -43,6 +47,8 @@ void MainPanel::resized()
 
     for (int i = 0; i < editor.patchCopy.params.size(); i++)
     {
+        if (!knobs[i])
+            continue;
         knobs[i]->setBounds(x, y, spw - 5, sph - 5);
         x += spw;
         if (x + spw > w)

@@ -31,7 +31,7 @@ static constexpr size_t blockSize{8};
 static constexpr size_t numFilters{2};
 static constexpr size_t numStepLFOs{2};
 
-constexpr uint32_t edWidth{920}, edHeight{700};
+constexpr uint32_t edWidth{920}, edHeight{750};
 
 extern int debugLevel;
 

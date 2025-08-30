@@ -10,6 +10,8 @@ Soon it will have a bit of modulation and then it will be done
 
 - a step sequencer pair
 - an envelope with gate sequencer
+- get those on screen with fixed mod matrix to cutoffs, resonances, morphs, mix and feedback
+- show the modulated response in the ui also 
 
 Details:
 - render thread snaps values at a better time not from patch on other thread

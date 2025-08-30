@@ -25,7 +25,7 @@
 #include "preset-data-binding.h"
 #include "patch-data-bindings.h"
 
-#include "main-panel.h"
+#include "debug-panel.h"
 #include "filter-panel.h"
 #include "routing-panel.h"
 
@@ -61,9 +61,9 @@ PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQu
             ->getFont(jcmp::MenuButton::Styles::styleClass, jcmp::MenuButton::Styles::labelfont)
             .withHeight(18));
 
-    mainPanel = std::make_unique<MainPanel>(*this);
-    mainPanel->hasHamburger = false;
-    addAndMakeVisible(*mainPanel);
+    debugPanel = std::make_unique<DebugPanel>(*this);
+    debugPanel->hasHamburger = false;
+    addAndMakeVisible(*debugPanel);
 
     for (int i = 0; i < numFilters; ++i)
     {
@@ -281,7 +281,7 @@ void PluginEditor::resized()
     auto ra = fa.translated(fa.getWidth() * 2, 0).withWidth(120);
     routingPanel->setBounds(ra.reduced(panelMargin));
     auto ma = panelArea.withTrimmedTop(300);
-    mainPanel->setBounds(ma.reduced(panelMargin));
+    debugPanel->setBounds(ma.reduced(panelMargin).withTrimmedTop(250));
 }
 
 void PluginEditor::showTooltipOn(juce::Component *c)
@@ -790,26 +790,6 @@ void PluginEditor::setZoomFactor(float zf)
     defaultsProvider->updateUserDefaultValue(Defaults::zoomLevel, zoomFactor * 100);
     if (onZoomChanged)
         onZoomChanged(zoomFactor);
-}
-
-void PluginEditor::doSinglePanelHamburger()
-{
-    juce::Component *vis;
-    for (auto c : mainPanel->getChildren())
-    {
-        if (c->isVisible())
-        {
-            vis = c;
-        }
-    }
-    if (!vis)
-        return;
-}
-
-void PluginEditor::activateHamburger(bool b)
-{
-    mainPanel->hasHamburger = b;
-    mainPanel->repaint();
 }
 
 void PluginEditor::requestParamsFlush()

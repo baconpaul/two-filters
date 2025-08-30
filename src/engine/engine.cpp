@@ -28,7 +28,13 @@ int debugLevel{0};
 namespace mech = sst::basic_blocks::mechanics;
 namespace sdsp = sst::basic_blocks::dsp;
 
-Engine::Engine() : lfos{tuningProvider, tuningProvider} { tuningProvider.init(); }
+Engine::Engine() : lfos{tuningProvider, tuningProvider}
+{
+    tuningProvider.init();
+    for (int i = 0; i < 16; ++i)
+        lfoStorage[0].data[i] = rng.unifPM1();
+    lfoStorage[0].rateIsForSingleStep = true;
+}
 
 Engine::~Engine() {}
 
@@ -47,6 +53,9 @@ void Engine::setSampleRate(double sr)
 
     audioToUi.push({AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
 
+    lfos[0].assign(&lfoStorage[0], 2.0, nullptr, rng, false);
+    lfos[0].setSampleRate(sampleRate, sampleRateInv);
+
     for (int i = 0; i < numFilters; ++i)
     {
         setupFilter(i);
@@ -55,6 +64,8 @@ void Engine::setSampleRate(double sr)
 
 void Engine::processControl(const clap_output_events_t *outq)
 {
+    lfos[0].process(2.0, 0, false, false, blockSize);
+
     for (int i = 0; i < numFilters; ++i)
     {
         filters[i].concludeBlock();

@@ -13,8 +13,8 @@
  * The source code and license are at https://github.com/baconpaul/two-filters
  */
 
-#ifndef BACONPAUL_TWOFILTERS_UI_MAIN_PANEL_H
-#define BACONPAUL_TWOFILTERS_UI_MAIN_PANEL_H
+#ifndef BACONPAUL_TWOFILTERS_UI_DEBUG_PANEL_H
+#define BACONPAUL_TWOFILTERS_UI_DEBUG_PANEL_H
 
 #include "sst/jucegui/components/NamedPanel.h"
 #include "patch-data-bindings.h"
@@ -22,9 +22,9 @@
 
 namespace baconpaul::twofilters::ui
 {
-struct MainPanel : sst::jucegui::components::NamedPanel
+struct DebugPanel : sst::jucegui::components::NamedPanel
 {
-    MainPanel(PluginEditor &editor);
+    DebugPanel(PluginEditor &editor);
     void resized() override;
 
     std::vector<std::unique_ptr<sst::jucegui::components::Knob>> knobs;
