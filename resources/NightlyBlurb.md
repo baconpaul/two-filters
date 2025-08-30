@@ -1,2 +1,2 @@
-This is the nightly build of the side quest starting point. 
-You do not want this. Its a test pre-plugin.
+This is the nightly build of two filters.
+not signed yet on mac. not even close to finished. come back later 
