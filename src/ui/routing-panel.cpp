@@ -40,7 +40,6 @@ RoutingPanel::RoutingPanel(PluginEditor &editor)
 void RoutingPanel::resized()
 {
     auto ca = getContentArea().reduced(2, 0);
-    ;
 
     routingModeS->setBounds(ca.withHeight(100));
     ca = ca.withTrimmedTop(120);

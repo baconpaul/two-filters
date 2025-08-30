@@ -318,11 +318,14 @@ void Engine::onMainThread()
 
 void Engine::setupFilter(int f)
 {
+    memset(combDelays[f], 0, sizeof(combDelays[f]));
     auto &fn = patch.filterNodes[f];
     filters[f].setFilterModel(fn.model);
     filters[f].setModelConfiguration(fn.config);
     filters[f].setStereo();
     filters[f].setSampleRateAndBlockSize(sampleRate, blockSize);
+    for (int i=0; i<4; ++i)
+        filters[f].provideDelayLine(i, combDelays[f][i]);
     if (!filters[f].prepareInstance())
         SQLOG("Failed to prepare filter instance");
     filters[f].reset();

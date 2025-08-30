@@ -315,6 +315,8 @@ struct Engine
     int32_t updateVuEvery{(int32_t)(48000 * 2.5 / 60 / blockSize)}; // approx
     int32_t lastVuUpdate{updateVuEvery};
 
+    float combDelays[2][4][sst::filters::utilities::MAX_FB_COMB + sst::filters::utilities::SincTable::FIRipol_N];
+
     const clap_host_t *clapHost{nullptr};
 };
 } // namespace baconpaul::twofilters
