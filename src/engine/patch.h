@@ -192,7 +192,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                               .withID(3)
                               .withUnorderedMapFormatting({{0, "Serial"},
                                                            {1, "Serial (Post 1)"},
-                                                           {2, "Parallel"},
+                                                           {2, "Parallel (FB Both)"},
                                                            {3, "Parallel (FB 1)"},
                                                            {4, "Parallel (FB Each)"}}))
 

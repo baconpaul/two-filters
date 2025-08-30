@@ -93,7 +93,11 @@ struct Engine
                 fblev = fblev * fblev * fblev;
 
                 // y = x * ( 27 + x * x ) / ( 27 + 9 * x * x );
-                auto sat = [](float x) { return x * (27 + x * x) / (27 + 9 * x * x); };
+                auto sat = [](float x)
+                {
+                    x = std::clamp(x, -2.f, 2.f);
+                    return x * (27 + x * x) / (27 + 9 * x * x);
+                };
                 fbL = sat(fblev * outL);
                 fbR = sat(fblev * outR);
             }

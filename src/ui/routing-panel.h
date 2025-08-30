@@ -19,6 +19,8 @@
 #include "sst/jucegui/components/NamedPanel.h"
 #include "patch-data-bindings.h"
 #include "plugin-editor.h"
+#include "sst/jucegui/components/MultiSwitch.h"
+#include "sst/jucegui/components/ToggleButton.h"
 
 namespace baconpaul::twofilters::ui
 {
@@ -28,6 +30,15 @@ struct RoutingPanel : sst::jucegui::components::NamedPanel
     void resized() override;
 
     PluginEditor &editor;
+
+    std::unique_ptr<PatchDiscrete> routingModeD, fbPowerD;
+    std::unique_ptr<PatchContinuous> feedbackD;
+
+    std::unique_ptr<sst::jucegui::components::Knob> feedbackK;
+    std::unique_ptr<sst::jucegui::components::MultiSwitch> routingModeS;
+    std::unique_ptr<sst::jucegui::components::ToggleButton> fbPowerT;
+
+    void enableFB();
 
     void beginEdit() {}
     void endEdit() {}
