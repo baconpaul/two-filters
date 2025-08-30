@@ -25,6 +25,7 @@
 #include "sst/basic-blocks/dsp/Lag.h"
 #include "sst/basic-blocks/dsp/VUPeak.h"
 #include "sst/basic-blocks/tables/EqualTuningProvider.h"
+#include "sst/basic-blocks/modulators/StepLFO.h"
 #include "sst/cpputils/ring_buffer.h"
 
 #include "filesystem/import.h"
@@ -58,6 +59,9 @@ struct Engine
     bool useFeedback{false};
     float fbL{0}, fbR{0}, fb2L{0}, fb2R{0};
 
+    std::array<sst::basic_blocks::modulators::StepLFO<blockSize>, numStepLFOs> lfos;
+    sst::basic_blocks::tables::EqualTuningProvider tuningProvider;
+
     bool audioRunning{true};
     int beginEndParamGestureCount{0};
 
@@ -75,6 +79,9 @@ struct Engine
             outR = 0;
             return;
         }
+
+        auto origL = inL;
+        auto origR = inR;
 
         if constexpr (mode == RoutingModes::Serial_Post2)
         {
@@ -215,6 +222,10 @@ struct Engine
             }
         }
 
+        float mx = patch.routingNode.mix;
+        outL = mx * outL + (1 - mx) * origL;
+        outR = mx * outR + (1 - mx) * origR;
+
         if (isEditorAttached)
         {
             vuPeak.process(outL, outR);
@@ -315,7 +326,8 @@ struct Engine
     int32_t updateVuEvery{(int32_t)(48000 * 2.5 / 60 / blockSize)}; // approx
     int32_t lastVuUpdate{updateVuEvery};
 
-    float combDelays[2][4][sst::filters::utilities::MAX_FB_COMB + sst::filters::utilities::SincTable::FIRipol_N];
+    float combDelays[2][4][sst::filters::utilities::MAX_FB_COMB +
+                           sst::filters::utilities::SincTable::FIRipol_N];
 
     const clap_host_t *clapHost{nullptr};
 };

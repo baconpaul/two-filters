@@ -1,8 +1,17 @@
-# SideQuest Starting Point
+# Two Filters
 
-- a step sequencer and envelope to trigger each with an impact
-- and maybe a little lfo and an input envelope follower
+Work in progress
 
+It currently has two filters
+
+Soon it will have a bit of modulation and then it will be done
+
+## BP Todo
+
+- a step sequencer pair
+- an envelope with gate sequencer
+
+Details:
 - render thread snaps values at a better time not from patch on other thread
 
 Then:

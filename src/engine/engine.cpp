@@ -28,7 +28,7 @@ int debugLevel{0};
 namespace mech = sst::basic_blocks::mechanics;
 namespace sdsp = sst::basic_blocks::dsp;
 
-Engine::Engine() {}
+Engine::Engine() : lfos{tuningProvider, tuningProvider} { tuningProvider.init(); }
 
 Engine::~Engine() {}
 
@@ -324,7 +324,7 @@ void Engine::setupFilter(int f)
     filters[f].setModelConfiguration(fn.config);
     filters[f].setStereo();
     filters[f].setSampleRateAndBlockSize(sampleRate, blockSize);
-    for (int i=0; i<4; ++i)
+    for (int i = 0; i < 4; ++i)
         filters[f].provideDelayLine(i, combDelays[f][i]);
     if (!filters[f].prepareInstance())
         SQLOG("Failed to prepare filter instance");

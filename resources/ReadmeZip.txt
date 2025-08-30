@@ -1,8 +1,8 @@
-SideQuest
-Source: (fill in)
-Manual: (fill in)
+Two Filters
+Source: https://github.com/baconpaul/two-filters
+Manual: There's no manual yet.
 
-Insert a blurb here
+Testing our filter library by making a little two filter step sequencer plugin
 
 You've downloaded the zip file for either windows or linux (both have this same README) containing a clap,
 a vst3, and a standalone executable.
@@ -18,6 +18,6 @@ in your environment.
 If you have feedback ideas etc open a github issue or drop into the #baconpaul-sidequests channel
 of surge discord.
 
-The [PRODUCT] source code is released under the MIT license, but the final product contains GPL3 dependencies
+The Two Filters source code is released under the MIT license, but the final product contains GPL3 dependencies
 so this release is released under the GNU General Public License, 3 or later. You can read that license in the
 file License.txt included here.

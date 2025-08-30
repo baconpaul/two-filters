@@ -194,7 +194,13 @@ struct Patch : pats::PatchBase<Patch, Param>
                                                            {1, "Serial (Post 1)"},
                                                            {2, "Parallel (FB Both)"},
                                                            {3, "Parallel (FB 1)"},
-                                                           {4, "Parallel (FB Each)"}}))
+                                                           {4, "Parallel (FB Each)"}})),
+              mix(floatMd()
+                      .asPercent()
+                      .withGroupName("Routing")
+                      .withName("Mix")
+                      .withDefault(1)
+                      .withID(2))
 
         {
         }
@@ -202,11 +208,12 @@ struct Patch : pats::PatchBase<Patch, Param>
         uint32_t id(int f) const { return idBase + f; }
 
         Param feedback, feedbackPower;
+        Param mix;
         Param routingMode;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&feedback, &feedbackPower, &routingMode};
+            std::vector<Param *> res{&feedback, &feedbackPower, &routingMode, &mix};
             return res;
         }
     } routingNode;

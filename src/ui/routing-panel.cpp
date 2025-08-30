@@ -28,6 +28,9 @@ RoutingPanel::RoutingPanel(PluginEditor &editor)
     createComponent(editor, *this, rn.feedback, feedbackK, feedbackD);
     addAndMakeVisible(*feedbackK);
 
+    createComponent(editor, *this, rn.mix, mixK, mixD);
+    addAndMakeVisible(*mixK);
+
     createComponent(editor, *this, rn.feedbackPower, fbPowerT, fbPowerD);
     fbPowerT->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
     fbPowerT->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
@@ -42,10 +45,11 @@ void RoutingPanel::resized()
     auto ca = getContentArea().reduced(2, 0);
 
     routingModeS->setBounds(ca.withHeight(100));
-    ca = ca.withTrimmedTop(120);
-    auto kr = ca.withHeight(100).reduced(20, 0);
+    ca = ca.withTrimmedTop(110);
+    auto kr = ca.withHeight(75).reduced(25, 0);
     feedbackK->setBounds(kr);
-    auto tr = kr.withWidth(15).withHeight(15).translated(-10, -10);
+    mixK->setBounds(kr.translated(0, 80));
+    auto tr = kr.withWidth(15).withHeight(15).translated(-10, -4);
     fbPowerT->setBounds(tr);
 }
 
