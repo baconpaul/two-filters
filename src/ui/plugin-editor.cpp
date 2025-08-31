@@ -28,6 +28,7 @@
 #include "debug-panel.h"
 #include "filter-panel.h"
 #include "routing-panel.h"
+#include "steplfo-panel.h"
 
 namespace baconpaul::twofilters::ui
 {
@@ -69,6 +70,12 @@ PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQu
     {
         filterPanel[i] = std::make_unique<FilterPanel>(*this, i);
         addAndMakeVisible(*filterPanel[i]);
+    }
+
+    for (int i = 0; i < numStepLFOs; ++i)
+    {
+        stepLFOPanel[i] = std::make_unique<StepLFOPanel>(*this, i);
+        addAndMakeVisible(*stepLFOPanel[i]);
     }
 
     routingPanel = std::make_unique<RoutingPanel>(*this);
@@ -213,7 +220,7 @@ void PluginEditor::paint(juce::Graphics &g)
     auto xp = 3;
     auto ht = 30;
 
-    int np{110};
+    int np{121};
 
     if (isLight)
         g.setColour(juce::Colours::navy);
@@ -265,10 +272,10 @@ void PluginEditor::resized()
     auto presetArea = lb.withHeight(presetHeight);
     auto panelArea = lb.withTrimmedTop(presetHeight).withTrimmedBottom(footerHeight);
 
-    auto panelMargin{3};
+    auto panelMargin{2};
     auto uicMargin{4};
     // Preset button
-    auto but = presetArea.reduced(110, 0).withTrimmedTop(uicMargin);
+    auto but = presetArea.reduced(121, 0).withTrimmedTop(uicMargin);
     presetButton->setBounds(but);
     but = but.withLeft(presetButton->getRight() + uicMargin).withRight(getWidth() - uicMargin);
 
@@ -281,6 +288,12 @@ void PluginEditor::resized()
     auto ra = fa.translated(fa.getWidth() * 2, 0).withWidth(120);
     routingPanel->setBounds(ra.reduced(panelMargin));
     auto ma = panelArea.withTrimmedTop(300);
+
+    auto sp = ma.withHeight(250).withWidth(ma.getWidth() / 2);
+    stepLFOPanel[0]->setBounds(sp.reduced(panelMargin));
+    sp = sp.translated(sp.getWidth(), 0);
+    stepLFOPanel[1]->setBounds(sp.reduced(panelMargin));
+
     debugPanel->setBounds(ma.reduced(panelMargin).withTrimmedTop(250));
 }
 

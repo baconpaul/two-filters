@@ -47,6 +47,7 @@ namespace baconpaul::twofilters::ui
 struct DebugPanel;
 struct FilterPanel;
 struct RoutingPanel;
+struct StepLFOPanel;
 
 struct PluginEditor : jcmp::WindowPanel
 {
@@ -71,6 +72,7 @@ struct PluginEditor : jcmp::WindowPanel
 
     std::unique_ptr<DebugPanel> debugPanel;
     std::array<std::unique_ptr<FilterPanel>, numFilters> filterPanel;
+    std::array<std::unique_ptr<StepLFOPanel>, numStepLFOs> stepLFOPanel;
     std::unique_ptr<RoutingPanel> routingPanel;
 
     std::unique_ptr<presets::PresetManager> presetManager;

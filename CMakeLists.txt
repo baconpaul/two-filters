@@ -46,6 +46,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/ui/debug-panel.cpp
         src/ui/filter-panel.cpp
         src/ui/routing-panel.cpp
+        src/ui/steplfo-panel.cpp
 
         src/presets/preset-manager.cpp
 
