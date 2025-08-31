@@ -221,7 +221,64 @@ struct Patch : pats::PatchBase<Patch, Param>
         }
     } routingNode;
 
-    struct StepLFONode
+    struct MorphTargetMixin
+    {
+        MorphTargetMixin(const std::string gn, int id0) :
+        toCO{
+            floatMd().asSemitoneRange(-36, 36).withDefault(0)
+            .withGroupName(gn).withName("To F1 CO")
+            .withID(id0),
+
+            floatMd().asSemitoneRange(-36, 36).withDefault(0)
+            .withGroupName(gn).withName("To F2 CO")
+            .withID(id0 + 5),
+        },
+        toRes{
+            floatMd().asPercentBipolar()
+            .withGroupName(gn).withName("To F1 Res")
+            .withID(id0 + 1),
+
+            floatMd().asPercentBipolar()
+            .withGroupName(gn).withName("To F2 Res")
+            .withID(id0 + 6),
+        },
+
+        toMorph{
+            floatMd().asPercentBipolar()
+            .withGroupName(gn).withName("To F1 Morph")
+            .withID(id0 + 2),
+
+            floatMd().asPercentBipolar()
+            .withGroupName(gn).withName("To F2 Morph")
+            .withID(id0 + 7),
+        },
+        toFB(floatMd().asPercentBipolar()
+            .withGroupName(gn).withName("To FB")
+            .withID(id0 + 10)),
+
+        toMix(floatMd().asPercentBipolar()
+            .withGroupName(gn).withName("To Mix")
+            .withID(id0 + 11))
+        {
+        }
+
+        Param toCO[numFilters], toRes[numFilters], toMorph[numFilters];
+        Param toFB, toMix;
+
+        std::vector<Param *> params()
+        {
+            std::vector<Param *> res = {&toFB, &toMix};
+            res.push_back(&toCO[0]);
+            res.push_back(&toCO[1]);
+            res.push_back(&toRes[0]);
+            res.push_back(&toRes[1]);
+            res.push_back(&toMorph[0]);
+            res.push_back(&toMorph[1]);
+
+            return res;
+        }
+    };
+    struct StepLFONode : MorphTargetMixin
     {
         static constexpr uint32_t idBase{5000};
         static constexpr uint32_t idStride{200};
@@ -240,10 +297,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                             .withGroupName(gn(i))
                             .withName("Steps")
                             .withID(id(2, i))),
-              toF1Co(makeMorph("To F1 CO", 20, i)), toF1Res(makeMorph("To F1 Res", 21, i)),
-              toF1Morph(makeMorph("To F1 Morph", 22, i)), toF2Co(makeMorph("To F2 CO", 25, i)),
-              toF2Res(makeMorph("To F2 Res", 26, i)), toF2Morph(makeMorph("To F2 Morph", 27, i)),
-              toFB(makeMorph("To F/B", 30, i)), toMix(makeMorph("To Mix", 31, i))
+              MorphTargetMixin(gn(i), id(20, i))
         {
         }
 
@@ -253,21 +307,12 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param rate, smooth, stepCount;
         // std::array<Param, maxSteps> steps;
 
-        Param makeMorph(std::string nm, int idv, int inst)
-        {
-            return floatMd()
-                .asPercentBipolar()
-                .withGroupName(gn(inst))
-                .withID(id(idv, inst))
-                .withName(nm)
-                .withDefault(0);
-        }
-        Param toF1Co, toF1Res, toF1Morph, toF2Co, toF2Res, toF2Morph, toFB, toMix;
-
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&rate,   &smooth,  &stepCount, &toF1Co, &toF1Res, &toF1Morph,
-                                     &toF2Co, &toF2Res, &toF2Morph, &toFB,   &toMix};
+            auto res = MorphTargetMixin::params();
+            std::vector<Param *> lres{&rate, &smooth, &stepCount};
+            for (auto &p : lres)
+                res.push_back(p);
             return res;
         }
     } stepLfoNodes[numStepLFOs]{0, 1};

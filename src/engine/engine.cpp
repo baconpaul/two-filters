@@ -32,8 +32,13 @@ Engine::Engine() : lfos{tuningProvider, tuningProvider}
 {
     tuningProvider.init();
     for (int i = 0; i < 16; ++i)
+    {
         lfoStorage[0].data[i] = rng.unifPM1();
+        lfoStorage[1].data[i] = (i / 15.0) * 2 - 1;
+    }
+
     lfoStorage[0].rateIsForSingleStep = true;
+    lfoStorage[1].rateIsForSingleStep = true;
 }
 
 Engine::~Engine() {}
@@ -56,6 +61,9 @@ void Engine::setSampleRate(double sr)
     lfos[0].assign(&lfoStorage[0], 2.0, nullptr, rng, false);
     lfos[0].setSampleRate(sampleRate, sampleRateInv);
 
+    lfos[1].assign(&lfoStorage[1], 2.0, nullptr, rng, false);
+    lfos[1].setSampleRate(sampleRate, sampleRateInv);
+
     for (int i = 0; i < numFilters; ++i)
     {
         setupFilter(i);
@@ -65,13 +73,25 @@ void Engine::setSampleRate(double sr)
 void Engine::processControl(const clap_output_events_t *outq)
 {
     lfos[0].process(2.0, 0, false, false, blockSize);
+    lfos[1].process(2.0, 0, false, false, blockSize);
 
     for (int i = 0; i < numFilters; ++i)
     {
         filters[i].concludeBlock();
 
-        filters[i].makeCoefficients(0, patch.filterNodes[i].cutoff, patch.filterNodes[i].resonance,
-                                    patch.filterNodes[i].morph);
+        auto &fn = patch.filterNodes[i];
+        auto &sn = patch.stepLfoNodes[i];
+
+        float co = fn.cutoff;
+        float re = fn.res;
+        float mo = fn.morph;
+        for (int j = 0; j < numStepLFOs; ++j)
+        {
+            co += lfos[j].output * patch.stepLfoNodes[j].toCO[i];
+            re += lfos[j].output * patch.stepLfoNodes[j].toRes[i];
+            mo += lfos[j].output * patch.stepLfoNodes[j].toMorph[i];
+        }
+        filters[i].makeCoefficients(0, co, re, mo);
         filters[i].copyCoefficientsFromVoiceToVoice(0, 1);
         filters[i].prepareBlock();
     }
