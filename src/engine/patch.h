@@ -303,7 +303,8 @@ struct Patch : pats::PatchBase<Patch, Param>
                       return Param(floatMd()
                                        .asPercentBipolar()
                                        .withGroupName(gn(i))
-                                       .withName("Step " + std::to_string(idx + 1))
+                                       .withName("Step " + std::to_string(i + 1) + "." +
+                                                 std::to_string(idx + 1))
                                        .withID(id(100 + idx, i)));
                   })),
               MorphTargetMixin(gn(i), id(20, i))

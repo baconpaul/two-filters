@@ -14,6 +14,7 @@ Soon it will have a bit of modulation and then it will be done
 - reset phase at beat zero of a bar
 - show current position in each step
 - Remove debug panel
+- CLAP non-destructive modulation
 
 Then:
 6. Set up your signing certs and undo the commented out bit in wf

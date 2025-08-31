@@ -31,10 +31,10 @@ namespace sdsp = sst::basic_blocks::dsp;
 Engine::Engine() : lfos{tuningProvider, tuningProvider}
 {
     tuningProvider.init();
-    for (int i = 0; i < 16; ++i)
+    for (int i = 0; i < maxSteps; ++i)
     {
-        lfoStorage[0].data[i] = rng.unifPM1();
-        lfoStorage[1].data[i] = (i / 15.0) * 2 - 1;
+        lfoStorage[0].data[i] = 0;
+        lfoStorage[1].data[i] = 0;
     }
 
     lfoStorage[0].rateIsForSingleStep = true;
@@ -72,6 +72,12 @@ void Engine::setSampleRate(double sr)
 
 void Engine::processControl(const clap_output_events_t *outq)
 {
+    for (int i = 0; i < maxSteps; ++i)
+    {
+        lfoStorage[0].data[i] = patch.stepLfoNodes[0].steps[i];
+        lfoStorage[1].data[i] = patch.stepLfoNodes[1].steps[i];
+    }
+
     lfos[0].process(2.0, 0, false, false, blockSize);
     lfos[1].process(2.0, 0, false, false, blockSize);
 

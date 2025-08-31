@@ -62,7 +62,7 @@ struct Engine
 
     sst::basic_blocks::dsp::RNG rng;
     using stepLfo_t = sst::basic_blocks::modulators::StepLFO<blockSize>;
-    static_assert(maxSteps == stepLfo_t::Storage::stepLfoSteps);
+    static_assert(maxSteps <= stepLfo_t::Storage::stepLfoSteps);
     std::array<stepLfo_t, numStepLFOs> lfos;
     std::array<stepLfo_t::Storage, numStepLFOs> lfoStorage;
     sst::basic_blocks::tables::EqualTuningProvider tuningProvider;

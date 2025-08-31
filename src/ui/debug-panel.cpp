@@ -29,7 +29,7 @@ DebugPanel::DebugPanel(PluginEditor &e)
     {
         auto &p = editor.patchCopy.params[i];
         if (p->meta.groupName == "Routing" || p->meta.groupName == "Filter 1" ||
-            p->meta.groupName == "Filter 2")
+            p->meta.groupName == "Filter 2" || p->meta.name.find("Step ") != std::string::npos)
             continue;
         createComponent(editor, *this, *editor.patchCopy.params[i], knobs[i], knobAs[i]);
         addAndMakeVisible(*knobs[i]);
