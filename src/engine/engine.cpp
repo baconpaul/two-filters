@@ -83,7 +83,7 @@ void Engine::processControl(const clap_output_events_t *outq)
         auto &sn = patch.stepLfoNodes[i];
 
         float co = fn.cutoff;
-        float re = fn.res;
+        float re = fn.resonance;
         float mo = fn.morph;
         for (int j = 0; j < numStepLFOs; ++j)
         {
