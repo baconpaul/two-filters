@@ -63,12 +63,20 @@ struct FilterCurve : juce::Component
             }
             if (running && nur != lur)
             {
+                float lco, lre, lmo;
+
                 lur = nur;
 
+                {
+                    std::unique_lock<std::mutex> l(dataM);
+                    lco = co;
+                    lre = res;
+                    lmo = morph;
+                }
                 // TODO - really we should snap these values on audio thread in lock
                 auto &fn = panel.editor.patchCopy.filterNodes[panel.instance];
-                auto crv = plotter.plotFilterMagnitudeResponse(fn.model, fn.config, fn.cutoff,
-                                                               fn.resonance, fn.morph, 0, 0);
+                auto crv =
+                    plotter.plotFilterMagnitudeResponse(fn.model, fn.config, lco, lre, lmo, 0, 0);
                 auto tcX = crv.first;
                 for (auto &x : tcX)
                     x = (x > 0 ? log10(x) : 0);
@@ -161,8 +169,14 @@ struct FilterCurve : juce::Component
     {
         std::unique_lock<std::mutex> l(sendM);
         updateRequest++;
+        auto &fn = panel.editor.patchCopy.filterNodes[panel.instance];
+        co = fn.cutoff;
+        res = fn.resonance;
+        morph = fn.morph;
         sendCV.notify_one();
     }
+
+    float co, res, morph;
 
     FilterPanel &panel;
 
@@ -182,15 +196,18 @@ FilterPanel::FilterPanel(PluginEditor &editor, int ins)
     createComponent(editor, *this, fn.cutoff, cutoffK, cutoffD);
     cutoffD->onGuiSetValue = [this]() { curve->rebuild(); };
     cutoffD->labelOverride = "Cutoff";
+    editor.componentRefreshByID[fn.cutoff.meta.id] = [this]() { curve->rebuild(); };
     addAndMakeVisible(*cutoffK);
 
     createComponent(editor, *this, fn.resonance, resonanceK, resonanceD);
     addAndMakeVisible(*resonanceK);
     resonanceD->labelOverride = "Resonance";
+    editor.componentRefreshByID[fn.resonance.meta.id] = [this]() { curve->rebuild(); };
     resonanceD->onGuiSetValue = [this]() { curve->rebuild(); };
 
     createComponent(editor, *this, fn.morph, morphK, morphD);
     addAndMakeVisible(*morphK);
+    editor.componentRefreshByID[fn.morph.meta.id] = [this]() { curve->rebuild(); };
     morphD->onGuiSetValue = [this]() { curve->rebuild(); };
     morphD->labelOverride = "Morph";
 

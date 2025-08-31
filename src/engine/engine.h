@@ -61,8 +61,10 @@ struct Engine
     float fbL{0}, fbR{0}, fb2L{0}, fb2R{0};
 
     sst::basic_blocks::dsp::RNG rng;
-    std::array<sst::basic_blocks::modulators::StepLFO<blockSize>, numStepLFOs> lfos;
-    std::array<sst::basic_blocks::modulators::StepLFO<blockSize>::Storage, numStepLFOs> lfoStorage;
+    using stepLfo_t = sst::basic_blocks::modulators::StepLFO<blockSize>;
+    static_assert(maxSteps == stepLfo_t::Storage::stepLfoSteps);
+    std::array<stepLfo_t, numStepLFOs> lfos;
+    std::array<stepLfo_t::Storage, numStepLFOs> lfoStorage;
     sst::basic_blocks::tables::EqualTuningProvider tuningProvider;
 
     bool audioRunning{true};
@@ -228,6 +230,9 @@ struct Engine
         float mx = patch.routingNode.mix;
         outL = mx * outL + (1 - mx) * origL;
         outR = mx * outR + (1 - mx) * origR;
+
+        outL = std::clamp(outL, -1.5f, 1.5f);
+        outR = std::clamp(outR, -1.5f, 1.5f);
 
         if (isEditorAttached)
         {

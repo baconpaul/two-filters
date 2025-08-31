@@ -93,6 +93,9 @@ struct Patch : pats::PatchBase<Patch, Param>
         pushParams(filterNodes[1]);
         pushParams(routingNode);
 
+        pushParams(stepLfoNodes[0]);
+        pushParams(stepLfoNodes[1]);
+
         std::sort(params.begin(), params.end(),
                   [](const Param *a, const Param *b)
                   {
@@ -217,6 +220,57 @@ struct Patch : pats::PatchBase<Patch, Param>
             return res;
         }
     } routingNode;
+
+    struct StepLFONode
+    {
+        static constexpr uint32_t idBase{5000};
+        static constexpr uint32_t idStride{200};
+
+        StepLFONode(int i)
+            : rate(floatMd().asLfoRate().withGroupName(gn(i)).withName("Rate").withID(id(0, i))),
+              smooth(floatMd()
+                         .withRange(0, 2)
+                         .withDefault(0)
+                         .withGroupName(gn(i))
+                         .withName("Smooth")
+                         .withID(id(1, i))),
+              stepCount(intMd()
+                            .withRange(1, maxSteps)
+                            .withDefault(16)
+                            .withGroupName(gn(i))
+                            .withName("Steps")
+                            .withID(id(2, i))),
+              toF1Co(makeMorph("To F1 CO", 20, i)), toF1Res(makeMorph("To F1 Res", 21, i)),
+              toF1Morph(makeMorph("To F1 Morph", 22, i)), toF2Co(makeMorph("To F2 CO", 25, i)),
+              toF2Res(makeMorph("To F2 Res", 26, i)), toF2Morph(makeMorph("To F2 Morph", 27, i)),
+              toFB(makeMorph("To F/B", 30, i)), toMix(makeMorph("To Mix", 31, i))
+        {
+        }
+
+        std::string gn(int i) const { return "Step LFO " + std::to_string(i + 1); }
+        uint32_t id(int f, int i) const { return idBase + f + i * idStride; }
+
+        Param rate, smooth, stepCount;
+        // std::array<Param, maxSteps> steps;
+
+        Param makeMorph(std::string nm, int idv, int inst)
+        {
+            return floatMd()
+                .asPercentBipolar()
+                .withGroupName(gn(inst))
+                .withID(id(idv, inst))
+                .withName(nm)
+                .withDefault(0);
+        }
+        Param toF1Co, toF1Res, toF1Morph, toF2Co, toF2Res, toF2Morph, toFB, toMix;
+
+        std::vector<Param *> params()
+        {
+            std::vector<Param *> res{&rate,   &smooth,  &stepCount, &toF1Co, &toF1Res, &toF1Morph,
+                                     &toF2Co, &toF2Res, &toF2Morph, &toFB,   &toMix};
+            return res;
+        }
+    } stepLfoNodes[numStepLFOs]{0, 1};
 
     char name[256]{"Init"};
 
