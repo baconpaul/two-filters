@@ -297,6 +297,15 @@ struct Patch : pats::PatchBase<Patch, Param>
                             .withGroupName(gn(i))
                             .withName("Steps")
                             .withID(id(2, i))),
+              steps(sst::cpputils::make_array_lambda<Param, maxSteps>(
+                  [i, this](auto idx)
+                  {
+                      return Param(floatMd()
+                                       .asPercentBipolar()
+                                       .withGroupName(gn(i))
+                                       .withName("Step " + std::to_string(idx + 1))
+                                       .withID(id(100 + idx, i)));
+                  })),
               MorphTargetMixin(gn(i), id(20, i))
         {
         }
@@ -305,7 +314,7 @@ struct Patch : pats::PatchBase<Patch, Param>
         uint32_t id(int f, int i) const { return idBase + f + i * idStride; }
 
         Param rate, smooth, stepCount;
-        // std::array<Param, maxSteps> steps;
+        std::array<Param, maxSteps> steps;
 
         std::vector<Param *> params()
         {
@@ -313,6 +322,8 @@ struct Patch : pats::PatchBase<Patch, Param>
             std::vector<Param *> lres{&rate, &smooth, &stepCount};
             for (auto &p : lres)
                 res.push_back(p);
+            for (auto &p : steps)
+                res.push_back(&p);
             return res;
         }
     } stepLfoNodes[numStepLFOs]{0, 1};
