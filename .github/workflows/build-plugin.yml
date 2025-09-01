@@ -179,3 +179,13 @@ jobs:
           reuse_tag: false
           create_tag: true
           token: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Post to Discord
+        uses: surge-synthesizer/sst-githubactions/discord-release-notify@main
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          tag: ${{ github.ref_name }}
+          title: "A New Two Filters Release is Available"
+          subtitle: "But its only two filters. Don't get too excited."
+
