@@ -1,6 +1,6 @@
 # Two Filters
 
-Two Filers, Two Step Sequencers, and some fixed mod paths.
+Two Filters, Two Step Sequencers, and some fixed mod paths.
 
 Really, its a test bed for our new Filter API. But you may find it fun.
 
