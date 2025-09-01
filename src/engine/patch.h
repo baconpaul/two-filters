@@ -81,6 +81,14 @@ struct Patch : pats::PatchBase<Patch, Param>
     Patch() : pats::PatchBase<Patch, Param>()
 
     {
+        onResetToInit = [](auto &patch)
+        {
+            for (auto &fn : patch.filterNodes)
+            {
+                fn.model = sst::filtersplusplus::FilterModel::None;
+                fn.config = {};
+            }
+        };
         auto pushParams = [this](auto &from) { this->pushMultipleParams(from.params()); };
 
         filterNodes[0].model = sst::filtersplusplus::FilterModel::CytomicSVF;
@@ -287,7 +295,7 @@ struct Patch : pats::PatchBase<Patch, Param>
             : rate(floatMd()
                        .asLfoRate()
                        .withGroupName(gn(i))
-                       .withDefault(i == 0 ? 0 : 1)
+                       .withDefault(i == 0 ? 2 : 3)
                        .withName("Rate")
                        .withID(id(0, i))),
               smooth(floatMd()

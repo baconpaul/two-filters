@@ -68,6 +68,8 @@ struct Engine
     sst::basic_blocks::tables::EqualTuningProvider tuningProvider;
     sst::basic_blocks::modulators::Transport transport;
 
+    void restartLfos();
+
     bool audioRunning{true};
     int beginEndParamGestureCount{0};
 

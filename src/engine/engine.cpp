@@ -62,7 +62,10 @@ void Engine::setSampleRate(double sr)
     {
         lfos[i].assign(&lfoStorage[i], patch.stepLfoNodes[i].rate, &transport, rng, true);
         lfos[i].setSampleRate(sampleRate, sampleRateInv);
+        lfos[i].retrigger();
     }
+    audioToUi.push({AudioToUIMsg::UPDATE_LFOSTEP, 0, (float)lfos[0].getCurrentStep(),
+                    (float)lfos[1].getCurrentStep()});
 
     for (int i = 0; i < numFilters; ++i)
     {
@@ -78,7 +81,7 @@ void Engine::processControl(const clap_output_events_t *outq)
         lfoStorage[1].data[i] = patch.stepLfoNodes[1].steps[i];
     }
 
-    for (int i = 0; i < numFilters; ++i)
+    for (int i = 0; i < numStepLFOs; ++i)
     {
         lfos[i].process(patch.stepLfoNodes[i].rate, 0, true, false, blockSize);
     }
@@ -376,4 +379,13 @@ void Engine::setupFilter(int f)
     fb2L = 0;
     fb2R = 0;
 }
+
+void Engine::restartLfos()
+{
+    lfos[0].retrigger();
+    lfos[1].retrigger();
+    audioToUi.push({AudioToUIMsg::UPDATE_LFOSTEP, 0, (float)lfos[0].getCurrentStep(),
+                    (float)lfos[1].getCurrentStep()});
+}
+
 } // namespace baconpaul::twofilters

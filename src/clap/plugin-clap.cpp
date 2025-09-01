@@ -130,12 +130,31 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         }
     }
 
+    int priorBarNumber{-1};
     template <Engine::RoutingModes routingMode, bool withFeedback>
     clap_process_status processForRouting(const clap_process *process) noexcept
     {
         auto fpuguard = sst::plugininfra::cpufeatures::FPUStateGuard();
 
         sst::basic_blocks::modulators::fromClapTransport(engine->transport, process->transport);
+
+        if (process->transport)
+        {
+            SQLOG_ONCE("*** SLOPPY BAR CHANGE*** - make sample accurate")
+            if (process->transport->bar_number != priorBarNumber)
+            {
+                engine->restartLfos();
+                priorBarNumber = process->transport->bar_number;
+            }
+        }
+        else
+        {
+            if (priorBarNumber < 0)
+            {
+                engine->restartLfos();
+                priorBarNumber = 0;
+            }
+        }
 
         auto ev = process->in_events;
         auto outq = process->out_events;
