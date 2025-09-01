@@ -83,6 +83,7 @@ void Engine::processControl(const clap_output_events_t *outq)
 
     for (int i = 0; i < numStepLFOs; ++i)
     {
+        lfoStorage[i].repeat = (int)std::round(patch.stepLfoNodes[i].stepCount);
         lfos[i].process(patch.stepLfoNodes[i].rate, 0, true, false, blockSize);
     }
 

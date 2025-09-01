@@ -18,6 +18,7 @@
 
 #include "sst/jucegui/components/NamedPanel.h"
 #include "sst/jucegui/components/Knob.h"
+#include "sst/jucegui/components/JogUpDownButton.h"
 #include "sst/jucegui/components/MenuButton.h"
 #include "patch-data-bindings.h"
 #include "plugin-editor.h"
@@ -53,6 +54,8 @@ struct StepLFOPanel : sst::jucegui::components::NamedPanel
 
     std::unique_ptr<StepEditor> stepEditor;
     std::array<std::unique_ptr<PatchContinuous>, maxSteps> stepDs;
+    std::unique_ptr<sst::jucegui::components::JogUpDownButton> stepCount;
+    std::unique_ptr<PatchDiscrete> stepCountD;
     int instance;
 };
 } // namespace baconpaul::twofilters::ui

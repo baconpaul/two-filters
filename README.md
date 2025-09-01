@@ -10,7 +10,6 @@ Soon it will have a bit of modulation and then it will be done
 
 - get those on screen with fixed mod matrix to cutoffs, resonances, morphs, mix and feedback
 - show the modulated response in the ui also 
-- Handle step count
 - Remove debug panel
 - CLAP non-destructive modulation
 

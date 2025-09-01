@@ -44,7 +44,13 @@ struct StepEditor : juce::Component
         auto lFt = panel.style()->getFont(bst::BaseLabel::styleClass, bst::BaseLabel::labelfont);
         hCol = hCol.withAlpha(0.5f);
 
-        g.fillAll(gCol);
+        auto &sn = panel.editor.patchCopy.stepLfoNodes[panel.instance];
+        auto fullArea = getLocalBounds().withWidth(sn.stepCount * bw);
+        auto restArea = getLocalBounds().withTrimmedLeft(sn.stepCount * bw);
+        g.setColour(gCol);
+        g.fillRect(fullArea);
+        g.setColour(gCol.withAlpha(0.3f));
+        g.fillRect(restArea);
 
         int mg{2};
         for (int i = 0; i < maxSteps; i++)
@@ -52,6 +58,8 @@ struct StepEditor : juce::Component
             float val = panel.stepDs[i]->getValue();
 
             g.setColour(vCol);
+            if (i >= (int)sn.stepCount)
+                g.setColour(vCol.withAlpha(0.3f));
 
             if (val < 0)
             {
@@ -65,8 +73,8 @@ struct StepEditor : juce::Component
             }
         }
         g.setColour(oCol);
-        g.drawRect(0, 0, getWidth(), getHeight(), 1);
-        for (int i = 1; i < maxSteps; i++)
+        g.drawRect(0, 0, (int)(sn.stepCount * bw), getHeight(), 1);
+        for (int i = 1; i < (int)sn.stepCount; i++)
             g.drawVerticalLine(i * bw, 0, getHeight());
         g.drawHorizontalLine(getHeight() / 2, 0, getWidth());
 
@@ -149,11 +157,19 @@ StepLFOPanel::StepLFOPanel(PluginEditor &editor, int instance)
     }
     stepEditor = std::make_unique<StepEditor>(*this);
     addAndMakeVisible(*stepEditor);
+
+    createComponent(editor, *this, sn.stepCount, stepCount, stepCountD);
+    addAndMakeVisible(*stepCount);
+    stepCountD->onGuiSetValue = [this]() { stepEditor->repaint(); };
 }
 StepLFOPanel::~StepLFOPanel() = default;
 void StepLFOPanel::resized()
 {
-    auto q = getContentArea().withTrimmedRight(90).withTrimmedBottom(90);
+    auto rPad{90}, bPad{90};
+    auto q = getContentArea().withTrimmedRight(rPad).withTrimmedBottom(bPad);
+    auto rA = getContentArea().withWidth(rPad).translated(q.getWidth(), 0).withTrimmedBottom(bPad);
+    stepCount->setBounds(rA.withHeight(20));
+    rA = rA.withTrimmedTop(22);
 
     stepEditor->setBounds(q);
 }
