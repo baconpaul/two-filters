@@ -58,11 +58,11 @@ void Engine::setSampleRate(double sr)
 
     audioToUi.push({AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
 
-    lfos[0].assign(&lfoStorage[0], 2.0, nullptr, rng, false);
-    lfos[0].setSampleRate(sampleRate, sampleRateInv);
-
-    lfos[1].assign(&lfoStorage[1], 2.0, nullptr, rng, false);
-    lfos[1].setSampleRate(sampleRate, sampleRateInv);
+    for (int i = 0; i < numFilters; ++i)
+    {
+        lfos[i].assign(&lfoStorage[i], patch.stepLfoNodes[i].rate, &transport, rng, true);
+        lfos[i].setSampleRate(sampleRate, sampleRateInv);
+    }
 
     for (int i = 0; i < numFilters; ++i)
     {
@@ -78,8 +78,10 @@ void Engine::processControl(const clap_output_events_t *outq)
         lfoStorage[1].data[i] = patch.stepLfoNodes[1].steps[i];
     }
 
-    lfos[0].process(2.0, 0, false, false, blockSize);
-    lfos[1].process(2.0, 0, false, false, blockSize);
+    for (int i = 0; i < numFilters; ++i)
+    {
+        lfos[i].process(patch.stepLfoNodes[i].rate, 0, true, false, blockSize);
+    }
 
     for (int i = 0; i < numFilters; ++i)
     {
@@ -127,7 +129,10 @@ void Engine::processControl(const clap_output_events_t *outq)
         if (lastVuUpdate >= updateVuEvery)
         {
             AudioToUIMsg msg{AudioToUIMsg::UPDATE_VU, 0, vuPeak.vu_peak[0], vuPeak.vu_peak[1]};
+            AudioToUIMsg lmsg{AudioToUIMsg::UPDATE_LFOSTEP, 0, (float)lfos[0].getCurrentStep(),
+                              (float)lfos[1].getCurrentStep()};
             audioToUi.push(msg);
+            audioToUi.push(lmsg);
 
             lastVuUpdate = 0;
         }

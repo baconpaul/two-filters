@@ -66,6 +66,7 @@ struct Engine
     std::array<stepLfo_t, numStepLFOs> lfos;
     std::array<stepLfo_t::Storage, numStepLFOs> lfoStorage;
     sst::basic_blocks::tables::EqualTuningProvider tuningProvider;
+    sst::basic_blocks::modulators::Transport transport;
 
     bool audioRunning{true};
     int beginEndParamGestureCount{0};
@@ -251,6 +252,7 @@ struct Engine
         {
             UPDATE_PARAM,
             UPDATE_VU,
+            UPDATE_LFOSTEP,
             SET_PATCH_NAME,
             SET_PATCH_DIRTY_STATE,
             DO_PARAM_RESCAN,

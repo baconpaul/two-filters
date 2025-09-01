@@ -284,7 +284,12 @@ struct Patch : pats::PatchBase<Patch, Param>
         static constexpr uint32_t idStride{200};
 
         StepLFONode(int i)
-            : rate(floatMd().asLfoRate().withGroupName(gn(i)).withName("Rate").withID(id(0, i))),
+            : rate(floatMd()
+                       .asLfoRate()
+                       .withGroupName(gn(i))
+                       .withDefault(i == 0 ? 0 : 1)
+                       .withName("Rate")
+                       .withID(id(0, i))),
               smooth(floatMd()
                          .withRange(0, 2)
                          .withDefault(0)

@@ -37,6 +37,9 @@ struct StepEditor : juce::Component
         auto oCol = panel.style()->getColour(bst::Outlined::styleClass, bst::Outlined::outline);
         auto vCol =
             panel.style()->getColour(bst::ValueBearing::styleClass, bst::ValueBearing::value);
+        auto hCol =
+            panel.style()->getColour(bst::ValueBearing::styleClass, bst::ValueBearing::value_hover);
+        hCol = hCol.withAlpha(0.5f);
 
         g.fillAll(gCol);
 
@@ -45,15 +48,15 @@ struct StepEditor : juce::Component
         {
             float val = panel.stepDs[i]->getValue();
 
+            g.setColour(vCol);
+
             if (val < 0)
             {
-                g.setColour(vCol);
                 g.fillRect(i * bw + mg, getHeight() / 2., bw - 2 * mg, -getHeight() / 2 * val);
             }
             else
             {
                 // 1 -> y = 0, 0 -> y = h/2. so h/2 * (1-y)
-                g.setColour(vCol);
                 g.fillRect(i * bw + mg, getHeight() / 2 * (1 - val), bw - 2 * mg,
                            getHeight() / 2 * val);
             }
@@ -63,6 +66,13 @@ struct StepEditor : juce::Component
         for (int i = 1; i < maxSteps; i++)
             g.drawVerticalLine(i * bw, 0, getHeight());
         g.drawHorizontalLine(getHeight() / 2, 0, getWidth());
+
+        auto cs = panel.currentStep;
+        if (cs >= 0 && cs < maxSteps)
+        {
+            g.setColour(hCol);
+            g.drawRect(cs * bw, 0., bw, getHeight() * 1., 1.);
+        }
     }
 
     int lastEditedStep{-1};

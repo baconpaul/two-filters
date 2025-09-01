@@ -30,6 +30,8 @@
 
 #include "sst/clap_juce_shim/clap_juce_shim.h"
 
+#include "sst/basic-blocks/modulators/TransportClapAdapter.h"
+
 #include "ui/plugin-editor.h"
 
 #include <clapwrapper/vst3.h>
@@ -132,6 +134,8 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     clap_process_status processForRouting(const clap_process *process) noexcept
     {
         auto fpuguard = sst::plugininfra::cpufeatures::FPUStateGuard();
+
+        sst::basic_blocks::modulators::fromClapTransport(engine->transport, process->transport);
 
         auto ev = process->in_events;
         auto outq = process->out_events;

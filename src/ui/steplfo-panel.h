@@ -40,6 +40,17 @@ struct StepLFOPanel : sst::jucegui::components::NamedPanel
 
     void onIdle();
 
+    void setCurrentStep(int cs)
+    {
+        if (cs != currentStep)
+        {
+            currentStep = cs;
+            repaint();
+        }
+    }
+
+    int currentStep{-1};
+
     std::unique_ptr<StepEditor> stepEditor;
     std::array<std::unique_ptr<PatchContinuous>, maxSteps> stepDs;
     int instance;

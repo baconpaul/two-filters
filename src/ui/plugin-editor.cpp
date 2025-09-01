@@ -196,6 +196,11 @@ void PluginEditor::idle()
             patchCopy.filterNodes[fid].config.mt = (sfpp::FilterSubModel)aum->uintValues[4];
             filterPanel[fid]->onModelChanged();
         }
+        else if (aum->action == Engine::AudioToUIMsg::UPDATE_LFOSTEP)
+        {
+            stepLFOPanel[0]->setCurrentStep(aum->value);
+            stepLFOPanel[1]->setCurrentStep(aum->value2);
+        }
         else
         {
             SQLOG("Ignored patch message " << aum->action);

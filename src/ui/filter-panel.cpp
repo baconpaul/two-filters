@@ -105,6 +105,7 @@ struct FilterCurve : juce::Component
         auto ty = [=](float y) { return yoff - y * ysc; };
 
         namespace bst = sst::jucegui::components::base_styles;
+        g.fillAll(panel.style()->getColour(bst::ValueGutter::styleClass, bst::ValueGutter::gutter));
         auto olc = panel.style()->getColour(bst::Outlined::styleClass, bst::Outlined::outline);
         g.setColour(olc);
         g.setFont(juce::FontOptions(10));
