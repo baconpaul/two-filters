@@ -197,6 +197,8 @@ void PluginEditor::idle()
             patchCopy.filterNodes[fid].config.dt = (sfpp::DriveMode)aum->uintValues[3];
             patchCopy.filterNodes[fid].config.mt = (sfpp::FilterSubModel)aum->uintValues[4];
             filterPanel[fid]->onModelChanged();
+            for (auto &s : stepLFOPanel)
+                s->onModelChanged();
         }
         else if (aum->action == Engine::AudioToUIMsg::UPDATE_LFOSTEP)
         {
@@ -736,6 +738,8 @@ void PluginEditor::setPatchNameDisplay()
 void PluginEditor::postPatchChange(const std::string &s)
 {
     for (auto &f : filterPanel)
+        f->onModelChanged();
+    for (auto &f : stepLFOPanel)
         f->onModelChanged();
 
     presetDataBinding->setStateForDisplayName(s);

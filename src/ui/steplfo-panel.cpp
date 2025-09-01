@@ -161,6 +161,48 @@ StepLFOPanel::StepLFOPanel(PluginEditor &editor, int instance)
     createComponent(editor, *this, sn.stepCount, stepCount, stepCountD);
     addAndMakeVisible(*stepCount);
     stepCountD->onGuiSetValue = [this]() { stepEditor->repaint(); };
+
+    int idx{0};
+    createComponent(editor, *this, sn.toCO[0], routeK[idx], routeD[idx]);
+    routeD[idx]->labelOverride = "Cutoff";
+    idx++;
+    createComponent(editor, *this, sn.toRes[0], routeK[idx], routeD[idx]);
+    routeD[idx]->labelOverride = "Res";
+    idx++;
+    createComponent(editor, *this, sn.toMorph[0], routeK[idx], routeD[idx]);
+    routeD[idx]->labelOverride = "Morph";
+    idx++;
+
+    createComponent(editor, *this, sn.toCO[1], routeK[idx], routeD[idx]);
+    routeD[idx]->labelOverride = "Cutoff";
+    idx++;
+    createComponent(editor, *this, sn.toRes[1], routeK[idx], routeD[idx]);
+    routeD[idx]->labelOverride = "Res";
+    idx++;
+    createComponent(editor, *this, sn.toMorph[1], routeK[idx], routeD[idx]);
+    routeD[idx]->labelOverride = "Morph";
+    idx++;
+    createComponent(editor, *this, sn.toFB, routeK[idx], routeD[idx]);
+    routeD[idx]->labelOverride = "F/Back";
+    idx++;
+    createComponent(editor, *this, sn.toMix, routeK[idx], routeD[idx]);
+    routeD[idx]->labelOverride = "Mix";
+    idx++;
+
+    for (int i = 0; i < numRoutes; i++)
+    {
+        addAndMakeVisible(*routeK[i]);
+    }
+
+    toF1 = std::make_unique<sst::jucegui::components::RuledLabel>();
+    toF1->setText("To Filter 1");
+    addAndMakeVisible(*toF1);
+    toF2 = std::make_unique<sst::jucegui::components::RuledLabel>();
+    toF2->setText("To Filter 2");
+    addAndMakeVisible(*toF2);
+    toRt = std::make_unique<sst::jucegui::components::RuledLabel>();
+    toRt->setText("To Main");
+    addAndMakeVisible(*toRt);
 }
 StepLFOPanel::~StepLFOPanel() = default;
 void StepLFOPanel::resized()
@@ -172,6 +214,31 @@ void StepLFOPanel::resized()
     rA = rA.withTrimmedTop(22);
 
     stepEditor->setBounds(q);
+
+    auto bA = getContentArea().withTrimmedTop(getContentArea().getHeight() - bPad);
+    auto kw = bA.getWidth() / numRoutes;
+
+    auto lA = bA.withHeight(25).reduced(0, 2);
+    toF1->setBounds(lA.withWidth(3 * kw).reduced(4, 0));
+    toF2->setBounds(lA.withWidth(3 * kw).translated(3 * kw, 0).reduced(4, 0));
+    toRt->setBounds(lA.withWidth(2 * kw).translated(6 * kw, 0).reduced(4, 0));
+
+    auto kA = bA.withWidth(kw).withTrimmedTop(25).withTrimmedBottom(2);
+    for (int i = 0; i < numRoutes; i++)
+    {
+        routeK[i]->setBounds(kA.reduced(6, 0));
+        kA = kA.translated(kw, 0);
+    }
+}
+
+void StepLFOPanel::onModelChanged()
+{
+    for (int i = 0; i < numFilters; ++i)
+    {
+        auto &fn = editor.patchCopy.filterNodes[i];
+        auto xtra = sst::filtersplusplus::Filter::coefficientsExtraCount(fn.model, fn.config);
+        routeK[i * 3 + 2]->setEnabled(xtra > 0);
+    }
 }
 
 } // namespace baconpaul::twofilters::ui

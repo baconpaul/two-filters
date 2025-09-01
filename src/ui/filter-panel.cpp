@@ -14,6 +14,9 @@
  */
 
 #include "filter-panel.h"
+
+#include "steplfo-panel.h"
+
 #include <map>
 
 #include "sst/filters/FilterPlotter.h"
@@ -289,6 +292,8 @@ void FilterPanel::showModelMenu()
                           editor.patchCopy.filterNodes[instance].config = configs.front();
                       editor.pushFilterSetup(instance);
                       onModelChanged();
+                      for (auto &s : editor.stepLFOPanel)
+                          s->onModelChanged();
                   });
     }
 
@@ -333,6 +338,8 @@ void FilterPanel::showConfigMenu()
                       editor.patchCopy.filterNodes[instance].config = c;
                       editor.pushFilterSetup(instance);
                       onModelChanged();
+                      for (auto &s : editor.stepLFOPanel)
+                          s->onModelChanged();
                   });
     }
 
