@@ -39,6 +39,9 @@ struct StepEditor : juce::Component
             panel.style()->getColour(bst::ValueBearing::styleClass, bst::ValueBearing::value);
         auto hCol =
             panel.style()->getColour(bst::ValueBearing::styleClass, bst::ValueBearing::value_hover);
+        auto lCol =
+            panel.style()->getColour(bst::BaseLabel::styleClass, bst::BaseLabel::labelcolor);
+        auto lFt = panel.style()->getFont(bst::BaseLabel::styleClass, bst::BaseLabel::labelfont);
         hCol = hCol.withAlpha(0.5f);
 
         g.fillAll(gCol);
@@ -67,6 +70,23 @@ struct StepEditor : juce::Component
             g.drawVerticalLine(i * bw, 0, getHeight());
         g.drawHorizontalLine(getHeight() / 2, 0, getWidth());
 
+        if (paintStep >= 0)
+        {
+            float val = panel.stepDs[paintStep]->getValue();
+            g.setFont(lFt.withHeight(8));
+            g.setColour(lCol);
+            auto vf = fmt::format("{:.2f}", val);
+            if (val > 0)
+            {
+                g.drawText(vf, paintStep * bw, getHeight() / 2 + 2, bw, 14,
+                           juce::Justification::centredTop, false);
+            }
+            else
+            {
+                g.drawText(vf, paintStep * bw, getHeight() / 2 - 16, bw, 14,
+                           juce::Justification::centredBottom, false);
+            }
+        }
         auto cs = panel.currentStep;
         if (cs >= 0 && cs < maxSteps)
         {
@@ -76,6 +96,7 @@ struct StepEditor : juce::Component
     }
 
     int lastEditedStep{-1};
+    int paintStep{-1};
     void adjustValue(const juce::Point<float> &e, bool endAlways)
     {
         auto x = std::clamp(e.x, 0.f, 1.f * getWidth());
@@ -97,11 +118,12 @@ struct StepEditor : juce::Component
         }
 
         panel.stepDs[step]->setValueFromGUI(val);
-
+        paintStep = step;
         if (endAlways)
         {
             panel.editor.mainToAudio.push(
                 {Engine::MainToAudioMsg::Action::END_EDIT, panel.stepDs[step]->pid});
+            paintStep = -1;
         }
         repaint();
     }
