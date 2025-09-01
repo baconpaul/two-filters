@@ -213,12 +213,12 @@ struct Patch : pats::PatchBase<Patch, Param>
                       .withDefault(1)
                       .withID(2)),
               inputGain(floatMd()
-                            .asCubicDecibelUpTo(18)
+                            .asCubicDecibelAttenuationWithUpperDBBound(18)
                             .withGroupName("Routing")
                             .withName("Pre Gain")
                             .withID(5)),
               outputGain(floatMd()
-                             .asCubicDecibelUpTo(18)
+                             .asCubicDecibelAttenuationWithUpperDBBound(18)
                              .withGroupName("Routing")
                              .withName("Post Gain")
                              .withID(6))
