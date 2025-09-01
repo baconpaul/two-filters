@@ -49,11 +49,11 @@ jobs:
           os: ${{ runner.os }}
 
       # onc signing is set up
-      #- uses: apple-actions/import-codesign-certs@v3
-      #  if: runner.os == 'macOS' && github.event_name != 'pull_request'
-      #  with:
-      #    p12-file-base64: ${{ secrets.MAC_CERTS_P12 }}
-      #    p12-password: ${{ secrets.CERT_PWD }}
+      - uses: apple-actions/import-codesign-certs@v3
+        if: runner.os == 'macOS' && github.event_name != 'pull_request'
+        with:
+          p12-file-base64: ${{ secrets.MAC_CERTS_P12 }}
+          p12-password: ${{ secrets.CERT_PWD }}
 
       - name: Build release version
         if: github.event_name != 'pull_request'
