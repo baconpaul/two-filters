@@ -32,9 +32,9 @@ struct RoutingPanel : sst::jucegui::components::NamedPanel
     PluginEditor &editor;
 
     std::unique_ptr<PatchDiscrete> routingModeD, fbPowerD;
-    std::unique_ptr<PatchContinuous> feedbackD, mixD;
+    std::unique_ptr<PatchContinuous> feedbackD, mixD, igD, ogD;
 
-    std::unique_ptr<sst::jucegui::components::Knob> feedbackK, mixK;
+    std::unique_ptr<sst::jucegui::components::Knob> feedbackK, mixK, igK, ogK;
     std::unique_ptr<sst::jucegui::components::MultiSwitch> routingModeS;
     std::unique_ptr<sst::jucegui::components::ToggleButton> fbPowerT;
 

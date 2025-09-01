@@ -32,7 +32,7 @@ static constexpr size_t numFilters{2};
 static constexpr size_t numStepLFOs{2};
 static constexpr size_t maxSteps{16};
 
-constexpr uint32_t edWidth{920}, edHeight{630};
+constexpr uint32_t edWidth{940}, edHeight{630};
 
 extern int debugLevel;
 

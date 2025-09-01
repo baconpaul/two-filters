@@ -19,7 +19,7 @@ namespace baconpaul::twofilters::ui
 {
 
 RoutingPanel::RoutingPanel(PluginEditor &editor)
-    : sst::jucegui::components::NamedPanel("Routing"), editor(editor)
+    : sst::jucegui::components::NamedPanel("Main"), editor(editor)
 {
     auto rn = editor.patchCopy.routingNode;
     createComponent(editor, *this, rn.routingMode, routingModeS, routingModeD);
@@ -27,6 +27,14 @@ RoutingPanel::RoutingPanel(PluginEditor &editor)
 
     createComponent(editor, *this, rn.feedback, feedbackK, feedbackD);
     addAndMakeVisible(*feedbackK);
+
+    createComponent(editor, *this, rn.inputGain, igK, igD);
+    addAndMakeVisible(*igK);
+    igK->setEnabled(false);
+
+    createComponent(editor, *this, rn.outputGain, ogK, ogD);
+    addAndMakeVisible(*ogK);
+    ogK->setEnabled(false);
 
     createComponent(editor, *this, rn.mix, mixK, mixD);
     addAndMakeVisible(*mixK);
@@ -46,9 +54,11 @@ void RoutingPanel::resized()
 
     routingModeS->setBounds(ca.withHeight(100));
     ca = ca.withTrimmedTop(110);
-    auto kr = ca.withHeight(75).reduced(25, 0);
+    auto kr = ca.withHeight(75).reduced(15, 0);
     feedbackK->setBounds(kr);
     mixK->setBounds(kr.translated(0, 80));
+    igK->setBounds(kr.translated(0, 2 * 80));
+    ogK->setBounds(kr.translated(0, 3 * 80));
     auto tr = kr.withWidth(15).withHeight(15).translated(-10, -4);
     fbPowerT->setBounds(tr);
 }

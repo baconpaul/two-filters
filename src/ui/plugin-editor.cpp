@@ -303,12 +303,15 @@ void PluginEditor::resized()
 
     vuMeter->setBounds(but);
 
-    auto ta = panelArea.withHeight(300).withWidth(panelArea.getWidth() / 2);
-    auto fa = ta.withTrimmedRight(60);
+    static constexpr int routingWidth{100};
+    auto ra = panelArea.withWidth(routingWidth);
+    routingPanel->setBounds(ra.reduced(panelMargin));
+
+    panelArea = panelArea.withTrimmedLeft(routingWidth).withTrimmedRight(3);
+    auto fa = panelArea.withHeight(300).withWidth(panelArea.getWidth() / 2);
     filterPanel[0]->setBounds(fa.reduced(panelMargin));
     filterPanel[1]->setBounds(fa.translated(fa.getWidth(), 0).reduced(panelMargin));
-    auto ra = fa.translated(fa.getWidth() * 2, 0).withWidth(120);
-    routingPanel->setBounds(ra.reduced(panelMargin));
+
     auto ma = panelArea.withTrimmedTop(300);
 
     auto sp = ma.withWidth(ma.getWidth() / 2);

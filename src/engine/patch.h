@@ -202,17 +202,26 @@ struct Patch : pats::PatchBase<Patch, Param>
                               .withName("Mode")
                               .withID(3)
                               .withUnorderedMapFormatting({{0, "Serial"},
-                                                           {1, "Serial (Post 1)"},
-                                                           {2, "Parallel (FB Both)"},
-                                                           {3, "Parallel (FB 1)"},
-                                                           {4, "Parallel (FB Each)"}})),
+                                                           {1, "Serial (F1)"},
+                                                           {2, "Par"},
+                                                           {3, "Par / FB 1"},
+                                                           {4, "Par / FB Each"}})),
               mix(floatMd()
                       .asPercent()
                       .withGroupName("Routing")
                       .withName("Mix")
                       .withDefault(1)
-                      .withID(2))
-
+                      .withID(2)),
+              inputGain(floatMd()
+                            .asCubicDecibelUpTo(12)
+                            .withGroupName("Routing")
+                            .withName("Pre Gain")
+                            .withID(5)),
+              outputGain(floatMd()
+                             .asCubicDecibelUpTo(12)
+                             .withGroupName("Routing")
+                             .withName("Post Gain")
+                             .withID(6))
         {
         }
 
@@ -221,10 +230,12 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param feedback, feedbackPower;
         Param mix;
         Param routingMode;
+        Param inputGain, outputGain;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&feedback, &feedbackPower, &routingMode, &mix};
+            std::vector<Param *> res{&feedback, &feedbackPower, &routingMode,
+                                     &mix,      &inputGain,     &outputGain};
             return res;
         }
     } routingNode;
