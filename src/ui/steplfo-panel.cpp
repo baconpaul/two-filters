@@ -253,6 +253,7 @@ void StepLFOPanel::onModelChanged()
         auto &fn = editor.patchCopy.filterNodes[i];
         auto xtra = sst::filtersplusplus::Filter::coefficientsExtraCount(fn.model, fn.config);
         routeK[i * 3 + 2]->setEnabled(xtra > 0);
+        routeK[i * 3 + 2]->repaint();
     }
 }
 
