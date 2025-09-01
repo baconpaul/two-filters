@@ -25,7 +25,7 @@
 namespace baconpaul::twofilters::ui
 {
 
-struct StepSlider;
+struct StepEditor;
 
 struct StepLFOPanel : sst::jucegui::components::NamedPanel
 {
@@ -40,7 +40,7 @@ struct StepLFOPanel : sst::jucegui::components::NamedPanel
 
     void onIdle();
 
-    std::array<std::unique_ptr<StepSlider>, maxSteps> steps;
+    std::unique_ptr<StepEditor> stepEditor;
     std::array<std::unique_ptr<PatchContinuous>, maxSteps> stepDs;
     int instance;
 };

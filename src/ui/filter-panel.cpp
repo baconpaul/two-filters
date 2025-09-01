@@ -17,6 +17,7 @@
 #include <map>
 
 #include "sst/filters/FilterPlotter.h"
+#include "sst/jucegui/components/BaseStyles.h"
 
 namespace baconpaul::twofilters::ui
 {
@@ -103,7 +104,9 @@ struct FilterCurve : juce::Component
         auto tx = [=](float x) { return (xoff + x) * xsc; };
         auto ty = [=](float y) { return yoff - y * ysc; };
 
-        g.setColour(juce::Colour(100, 100, 100));
+        namespace bst = sst::jucegui::components::base_styles;
+        auto olc = panel.style()->getColour(bst::Outlined::styleClass, bst::Outlined::outline);
+        g.setColour(olc);
         g.setFont(juce::FontOptions(10));
         for (int i = 1; i < 5; ++i)
         {
@@ -138,7 +141,10 @@ struct FilterCurve : juce::Component
         }
         auto fillpath = p;
 
-        auto c = juce::Colour(0xFF, 0x90, 0x00);
+        auto vlc =
+            panel.style()->getColour(bst::ValueBearing::styleClass, bst::ValueBearing::value);
+
+        auto c = vlc;
         auto gr =
             juce::ColourGradient::vertical(c.withAlpha(0.6f), ty(6), c.withAlpha(0.1f), ty(-48));
 
@@ -148,7 +154,10 @@ struct FilterCurve : juce::Component
         g.setGradientFill(gr);
         g.fillPath(fillpath);
 
-        g.setColour(juce::Colours::white);
+        auto bolc =
+            panel.style()->getColour(bst::BaseLabel::styleClass, bst::BaseLabel::labelcolor);
+
+        g.setColour(bolc);
         g.strokePath(p, juce::PathStrokeType(1.5));
     }
     void resized() override {}
