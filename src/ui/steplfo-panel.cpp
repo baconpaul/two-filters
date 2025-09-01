@@ -73,8 +73,8 @@ struct StepEditor : juce::Component
             }
         }
         g.setColour(oCol);
-        g.drawRect(0, 0, (int)(sn.stepCount * bw), getHeight(), 1);
-        for (int i = 1; i < (int)sn.stepCount; i++)
+        g.drawRect(0, 0, getWidth(), getHeight(), 1);
+        for (int i = 1; i <= (int)sn.stepCount; i++)
             g.drawVerticalLine(i * bw, 0, getHeight());
         g.drawHorizontalLine(getHeight() / 2, 0, getWidth());
 

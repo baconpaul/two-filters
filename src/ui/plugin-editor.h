@@ -70,7 +70,10 @@ struct PluginEditor : jcmp::WindowPanel
     void idle();
     std::unique_ptr<juce::Timer> idleTimer;
 
+#if INCLUDE_DEBUG_PANEL
     std::unique_ptr<DebugPanel> debugPanel;
+#endif
+
     std::array<std::unique_ptr<FilterPanel>, numFilters> filterPanel;
     std::array<std::unique_ptr<StepLFOPanel>, numStepLFOs> stepLFOPanel;
     std::unique_ptr<RoutingPanel> routingPanel;

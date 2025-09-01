@@ -62,9 +62,11 @@ PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQu
             ->getFont(jcmp::MenuButton::Styles::styleClass, jcmp::MenuButton::Styles::labelfont)
             .withHeight(18));
 
+#if INCLUDE_DEBUG_PANEL
     debugPanel = std::make_unique<DebugPanel>(*this);
     debugPanel->hasHamburger = false;
     addAndMakeVisible(*debugPanel);
+#endif
 
     for (int i = 0; i < numFilters; ++i)
     {
@@ -294,12 +296,14 @@ void PluginEditor::resized()
     routingPanel->setBounds(ra.reduced(panelMargin));
     auto ma = panelArea.withTrimmedTop(300);
 
-    auto sp = ma.withHeight(250).withWidth(ma.getWidth() / 2);
+    auto sp = ma.withWidth(ma.getWidth() / 2);
     stepLFOPanel[0]->setBounds(sp.reduced(panelMargin));
     sp = sp.translated(sp.getWidth(), 0);
     stepLFOPanel[1]->setBounds(sp.reduced(panelMargin));
 
+#if INCLUDE_DEBUG_PANEL
     debugPanel->setBounds(ma.reduced(panelMargin).withTrimmedTop(250));
+#endif
 }
 
 void PluginEditor::showTooltipOn(juce::Component *c)
