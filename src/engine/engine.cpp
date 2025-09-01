@@ -31,14 +31,7 @@ namespace sdsp = sst::basic_blocks::dsp;
 Engine::Engine() : lfos{tuningProvider, tuningProvider}
 {
     tuningProvider.init();
-    for (int i = 0; i < maxSteps; ++i)
-    {
-        lfoStorage[0].data[i] = 0;
-        lfoStorage[1].data[i] = 0;
-    }
-
-    lfoStorage[0].rateIsForSingleStep = true;
-    lfoStorage[1].rateIsForSingleStep = true;
+    updateLfoStorage();
 }
 
 Engine::~Engine() {}
@@ -58,32 +51,47 @@ void Engine::setSampleRate(double sr)
 
     audioToUi.push({AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
 
-    for (int i = 0; i < numFilters; ++i)
-    {
-        lfos[i].assign(&lfoStorage[i], patch.stepLfoNodes[i].rate, &transport, rng, true);
-        lfos[i].setSampleRate(sampleRate, sampleRateInv);
-        lfos[i].retrigger();
-    }
-    audioToUi.push({AudioToUIMsg::UPDATE_LFOSTEP, 0, (float)lfos[0].getCurrentStep(),
-                    (float)lfos[1].getCurrentStep()});
-
+    reassignLfos();
+    sendUpdateLfo();
     for (int i = 0; i < numFilters; ++i)
     {
         setupFilter(i);
     }
 }
 
+void Engine::updateLfoStorage()
+{
+    for (int i = 0; i < numStepLFOs; ++i)
+    {
+        for (int j = 0; j < maxSteps; ++j)
+        {
+            lfoStorage[i].data[j] = patch.stepLfoNodes[i].steps[j];
+        }
+
+        lfoStorage[i].repeat = (int)std::round(patch.stepLfoNodes[i].stepCount);
+        lfoStorage[i].smooth = patch.stepLfoNodes[i].smooth;
+        lfoStorage[i].rateIsForSingleStep = true;
+    }
+}
+void Engine::reassignLfos()
+{
+    updateLfoStorage();
+    for (int i = 0; i < numFilters; ++i)
+    {
+        lfos[i].assign(&lfoStorage[i], patch.stepLfoNodes[i].rate, &transport, rng, true);
+        lfos[i].setSampleRate(sampleRate, sampleRateInv);
+        lfos[i].retrigger();
+    }
+
+    sendUpdateLfo();
+}
+
 void Engine::processControl(const clap_output_events_t *outq)
 {
-    for (int i = 0; i < maxSteps; ++i)
-    {
-        lfoStorage[0].data[i] = patch.stepLfoNodes[0].steps[i];
-        lfoStorage[1].data[i] = patch.stepLfoNodes[1].steps[i];
-    }
+    updateLfoStorage();
 
     for (int i = 0; i < numStepLFOs; ++i)
     {
-        lfoStorage[i].repeat = (int)std::round(patch.stepLfoNodes[i].stepCount);
         lfos[i].process(patch.stepLfoNodes[i].rate, 0, true, false, blockSize);
     }
 
@@ -133,10 +141,9 @@ void Engine::processControl(const clap_output_events_t *outq)
         if (lastVuUpdate >= updateVuEvery)
         {
             AudioToUIMsg msg{AudioToUIMsg::UPDATE_VU, 0, vuPeak.vu_peak[0], vuPeak.vu_peak[1]};
-            AudioToUIMsg lmsg{AudioToUIMsg::UPDATE_LFOSTEP, 0, (float)lfos[0].getCurrentStep(),
-                              (float)lfos[1].getCurrentStep()};
             audioToUi.push(msg);
-            audioToUi.push(lmsg);
+
+            sendUpdateLfo();
 
             lastVuUpdate = 0;
         }
@@ -385,8 +392,14 @@ void Engine::restartLfos()
 {
     lfos[0].retrigger();
     lfos[1].retrigger();
-    audioToUi.push({AudioToUIMsg::UPDATE_LFOSTEP, 0, (float)lfos[0].getCurrentStep(),
-                    (float)lfos[1].getCurrentStep()});
+    sendUpdateLfo();
 }
 
+void Engine::sendUpdateLfo()
+{
+    audioToUi.push({AudioToUIMsg::UPDATE_LFOSTEP, 0, (float)lfos[0].getCurrentStep(),
+                    (float)lfos[1].getCurrentStep()});
+    audioToUi.push({AudioToUIMsg::UPDATE_LFOSTEP, 1, (float)lfos[0].phase, (float)lfos[1].phase});
+    audioToUi.push({AudioToUIMsg::UPDATE_LFOSTEP, 2, (float)lfos[0].output, (float)lfos[1].output});
+}
 } // namespace baconpaul::twofilters

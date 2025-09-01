@@ -36,6 +36,8 @@ struct PatchContinuous : jdat::Continuous
     Param *p{nullptr};
     std::function<void()> onGuiSetValue{nullptr};
 
+    bool tempoSynced{false};
+
     PatchContinuous(PluginEditor &e, uint32_t id) : editor(e), pid(id)
     {
         if (e.patchCopy.paramMap.find(id) == e.patchCopy.paramMap.end())
@@ -61,7 +63,7 @@ struct PatchContinuous : jdat::Continuous
     float getValue() const override { return p->value; }
     std::string getValueAsStringFor(float f) const override
     {
-        if (tsPowerPartner && tsPowerPartner->getValue())
+        if (tempoSynced)
         {
             auto r = p->meta.valueToString(
                 f, sst::basic_blocks::params::ParamMetaData::FeatureState().withTemposync(true));
@@ -77,7 +79,7 @@ struct PatchContinuous : jdat::Continuous
     }
     void setValueAsString(const std::string &s) override
     {
-        if (tsPowerPartner && tsPowerPartner->getValue())
+        if (tempoSynced)
         {
             auto f = p->meta.valueFromTemposyncNotation(s);
             if (f.has_value())
@@ -108,7 +110,14 @@ struct PatchContinuous : jdat::Continuous
             if (onPullFromDef)
                 onPullFromDef();
         }
-        p->value = f;
+        if (tempoSynced)
+        {
+            p->value = p->meta.snapToTemposync(f);
+        }
+        else
+        {
+            p->value = f;
+        }
         editor.mainToAudio.push({Engine::MainToAudioMsg::Action::SET_PARAM, pid, f});
         editor.requestParamsFlush();
         editor.updateTooltip(this);
@@ -121,9 +130,6 @@ struct PatchContinuous : jdat::Continuous
     bool isBipolar() const override { return p->meta.isBipolar(); }
     float getMin() const override { return p->meta.minVal; }
     float getMax() const override { return p->meta.maxVal; }
-
-    jdat::Discrete *tsPowerPartner{nullptr};
-    void setTemposyncPowerPartner(jdat::Discrete *d) { tsPowerPartner = d; }
 
     std::function<void()> onPullFromMin{nullptr}, onPullFromDef{nullptr};
 

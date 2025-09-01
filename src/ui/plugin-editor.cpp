@@ -202,8 +202,21 @@ void PluginEditor::idle()
         }
         else if (aum->action == Engine::AudioToUIMsg::UPDATE_LFOSTEP)
         {
-            stepLFOPanel[0]->setCurrentStep(aum->value);
-            stepLFOPanel[1]->setCurrentStep(aum->value2);
+            if (aum->paramId == 0)
+            {
+                stepLFOPanel[0]->setCurrentStep(aum->value);
+                stepLFOPanel[1]->setCurrentStep(aum->value2);
+            }
+            if (aum->paramId == 1)
+            {
+                stepLFOPanel[0]->setCurrentPhase(aum->value);
+                stepLFOPanel[1]->setCurrentPhase(aum->value2);
+            }
+            if (aum->paramId == 2)
+            {
+                stepLFOPanel[0]->setCurrentLevel(aum->value);
+                stepLFOPanel[1]->setCurrentLevel(aum->value2);
+            }
         }
         else
         {

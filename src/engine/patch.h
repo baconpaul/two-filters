@@ -299,7 +299,8 @@ struct Patch : pats::PatchBase<Patch, Param>
                        .withName("Rate")
                        .withID(id(0, i))),
               smooth(floatMd()
-                         .withRange(0, 2)
+                         .withRange(-2, 2)
+                         .withLinearScaleFormatting("")
                          .withDefault(0)
                          .withGroupName(gn(i))
                          .withName("Smooth")

@@ -1,17 +1,10 @@
 # Two Filters
 
-Work in progress
+Two Filers, Two Step Sequencers, and some fixed mod paths.
 
-It currently has two filters
+Really, its a test bed for our new Filter API. But you may find it fun.
 
-Soon it will have a bit of modulation and then it will be done
-
-## BP Todo
-
-- get those on screen with fixed mod matrix to cutoffs, resonances, morphs, mix and feedback
-  - Rate 
-  - Smooth
-  
+![Two Filters Screenshot](doc/TF.png)
 
 Later if it is popular:
 - show the modulated response in the ui also

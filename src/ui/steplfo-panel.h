@@ -51,7 +51,20 @@ struct StepLFOPanel : sst::jucegui::components::NamedPanel
         }
     }
 
+    void setCurrentPhase(float ph)
+    {
+        currentPhase = ph;
+        repaint();
+    }
+
+    void setCurrentLevel(float ph)
+    {
+        currentLevel = ph;
+        repaint();
+    }
+
     int currentStep{-1};
+    float currentPhase{0}, currentLevel{0};
 
     std::unique_ptr<StepEditor> stepEditor;
     std::array<std::unique_ptr<PatchContinuous>, maxSteps> stepDs;
@@ -62,6 +75,9 @@ struct StepLFOPanel : sst::jucegui::components::NamedPanel
     std::array<std::unique_ptr<PatchContinuous>, numRoutes> routeD;
     std::array<std::unique_ptr<sst::jucegui::components::Knob>, numRoutes> routeK;
     std::unique_ptr<sst::jucegui::components::RuledLabel> toF1, toF2, toRt;
+
+    std::unique_ptr<sst::jucegui::components::Knob> rate, smooth;
+    std::unique_ptr<PatchContinuous> rateD, smoothD;
 
     void onModelChanged();
     int instance;

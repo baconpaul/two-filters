@@ -67,6 +67,9 @@ struct Engine
     std::array<stepLfo_t::Storage, numStepLFOs> lfoStorage;
     sst::basic_blocks::tables::EqualTuningProvider tuningProvider;
     sst::basic_blocks::modulators::Transport transport;
+    void sendUpdateLfo();
+    void reassignLfos();
+    void updateLfoStorage();
 
     void restartLfos();
 
@@ -325,6 +328,8 @@ struct Engine
         {
             p->lag.snapTo(p->value);
         }
+
+        reassignLfos();
     }
 
     void setupFilter(int instance);

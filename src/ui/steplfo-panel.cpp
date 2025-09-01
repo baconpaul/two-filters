@@ -101,6 +101,11 @@ struct StepEditor : juce::Component
             g.setColour(hCol);
             g.drawRect(cs * bw, 0., bw, getHeight() * 1., 1.);
         }
+
+        auto xC = (cs + panel.currentPhase) * bw;
+        auto yC = (1 - panel.currentLevel) * getHeight() / 2;
+        g.setColour(lCol);
+        g.fillEllipse(xC - 2, yC - 2, 5., 5.);
     }
 
     int lastEditedStep{-1};
@@ -203,15 +208,25 @@ StepLFOPanel::StepLFOPanel(PluginEditor &editor, int instance)
     toRt = std::make_unique<sst::jucegui::components::RuledLabel>();
     toRt->setText("To Main");
     addAndMakeVisible(*toRt);
+
+    createComponent(editor, *this, sn.rate, rate, rateD);
+    rateD->tempoSynced = true;
+    addAndMakeVisible(*rate);
+    createComponent(editor, *this, sn.smooth, smooth, smoothD);
+    addAndMakeVisible(*smooth);
 }
 StepLFOPanel::~StepLFOPanel() = default;
 void StepLFOPanel::resized()
 {
-    auto rPad{90}, bPad{90};
+    auto rPad{80}, bPad{90};
     auto q = getContentArea().withTrimmedRight(rPad).withTrimmedBottom(bPad);
     auto rA = getContentArea().withWidth(rPad).translated(q.getWidth(), 0).withTrimmedBottom(bPad);
     stepCount->setBounds(rA.withHeight(20));
-    rA = rA.withTrimmedTop(22);
+    rA = rA.withTrimmedTop(30);
+    auto ka = rA.withHeight(63).reduced((rA.getWidth() - 44) / 2, 0);
+    rate->setBounds(ka);
+    ka = ka.translated(0, 65);
+    smooth->setBounds(ka);
 
     stepEditor->setBounds(q);
 
