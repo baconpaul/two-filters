@@ -42,26 +42,9 @@ struct StepLFOPanel : sst::jucegui::components::NamedPanel
 
     void onIdle();
 
-    void setCurrentStep(int cs)
-    {
-        if (cs != currentStep)
-        {
-            currentStep = cs;
-            repaint();
-        }
-    }
-
-    void setCurrentPhase(float ph)
-    {
-        currentPhase = ph;
-        repaint();
-    }
-
-    void setCurrentLevel(float ph)
-    {
-        currentLevel = ph;
-        repaint();
-    }
+    void setCurrentStep(int cs);
+    void setCurrentPhase(float ph);
+    void setCurrentLevel(float ph);
 
     int currentStep{-1};
     float currentPhase{0}, currentLevel{0};

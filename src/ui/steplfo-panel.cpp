@@ -256,4 +256,25 @@ void StepLFOPanel::onModelChanged()
     }
 }
 
+void StepLFOPanel::setCurrentStep(int cs)
+{
+    if (cs != currentStep)
+    {
+        currentStep = cs;
+        stepEditor->repaint();
+    }
+}
+
+void StepLFOPanel::setCurrentPhase(float ph)
+{
+    currentPhase = ph;
+    stepEditor->repaint();
+}
+
+void StepLFOPanel::setCurrentLevel(float ph)
+{
+    currentLevel = ph;
+    stepEditor->repaint();
+}
+
 } // namespace baconpaul::twofilters::ui

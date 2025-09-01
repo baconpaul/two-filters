@@ -79,23 +79,71 @@ struct FilterCurve : juce::Component
                 }
                 // TODO - really we should snap these values on audio thread in lock
                 auto &fn = panel.editor.patchCopy.filterNodes[panel.instance];
-                auto crv =
-                    plotter.plotFilterMagnitudeResponse(fn.model, fn.config, lco, lre, lmo, 0, 0);
-                auto tcX = crv.first;
-                for (auto &x : tcX)
-                    x = (x > 0 ? log10(x) : 0);
-
+                if (fn.model == sst::filtersplusplus::FilterModel::None)
                 {
-                    std::unique_lock<std::mutex> l(dataM);
-                    cX = tcX;
-                    cY = crv.second;
-                    repaintReq++;
+                    {
+                        std::unique_lock<std::mutex> l(dataM);
+                        cX.clear();
+                        cY.clear();
+                        cX.push_back(0.5);
+                        cX.push_back(5.0);
+                        cY.push_back(0.0);
+                        cY.push_back(0.0);
+
+                        repaintReq++;
+                    }
+                }
+                else
+                {
+                    auto crv = plotter.plotFilterMagnitudeResponse(fn.model, fn.config, lco, lre,
+                                                                   lmo, 0, 0);
+                    auto tcX = crv.first;
+                    for (auto &x : tcX)
+                        x = (x > 0 ? log10(x) : 0);
+
+                    {
+                        std::unique_lock<std::mutex> l(dataM);
+                        cX = tcX;
+                        cY = crv.second;
+                        repaintReq++;
+                    }
                 }
             }
         }
     }
-    void paint(juce::Graphics &g) override
+
+    juce::Image renderCache;
+    void paint(juce::Graphics &gReal) override
     {
+        /*
+         * The updated setp sequence causes a repaint here which on some windows boxes is
+         * painful so just cache the image
+         */
+        float sc =
+            juce::Desktop::getInstance().getDisplays().getDisplayForRect(getLocalBounds())->scale *
+            panel.editor.zoomFactor;
+        int tW = std::round(sc * getWidth());
+        int tH = std::round(sc * getHeight());
+        if (renderCache.getWidth() != tW || renderCache.getHeight() != tH)
+        {
+            invalidateImage = true;
+        }
+
+        if (!invalidateImage && renderCache.getWidth() > 0)
+        {
+            gReal.drawImage(renderCache, getLocalBounds().toFloat());
+            return;
+        }
+
+        invalidateImage = false;
+        if (renderCache.getWidth() != tW || renderCache.getHeight() != tH)
+        {
+            renderCache = juce::Image(juce::Image::ARGB, tW, tH, true);
+        }
+
+        juce::Graphics g(renderCache);
+        g.fillAll(juce::Colours::black);
+        g.addTransform(juce::AffineTransform::scale(sc, sc));
         std::unique_lock<std::mutex> l(dataM);
         auto xsc = 1.0 / (log10(20000) - log10(6)) * getWidth();
         auto xoff = -log10(6);
@@ -132,7 +180,10 @@ struct FilterCurve : juce::Component
         g.drawRect(getLocalBounds(), 1.0f);
 
         if (cX.empty() || cY.empty())
+        {
+            gReal.drawImage(renderCache, getLocalBounds().toFloat());
             return;
+        }
 
         auto p = juce::Path();
         p.startNewSubPath(tx(cX[0]), ty(cY[0]));
@@ -155,14 +206,20 @@ struct FilterCurve : juce::Component
         fillpath.lineTo(tx(cX.back()), ty(my));
         fillpath.lineTo(tx(cX[0]), ty(my));
         fillpath.closeSubPath();
-        g.setGradientFill(gr);
-        g.fillPath(fillpath);
+
+        if (cX.size() > 10)
+        {
+            g.setGradientFill(gr);
+            g.fillPath(fillpath);
+        }
 
         auto bolc =
             panel.style()->getColour(bst::BaseLabel::styleClass, bst::BaseLabel::labelcolor);
 
         g.setColour(bolc);
         g.strokePath(p, juce::PathStrokeType(1.5));
+
+        gReal.drawImage(renderCache, getLocalBounds().toFloat());
     }
     void resized() override {}
 
@@ -171,12 +228,16 @@ struct FilterCurve : juce::Component
         bool rp{false};
         {
             std::unique_lock<std::mutex> l(dataM);
-            rp = lastRepaintReq == repaintReq;
+            rp = lastRepaintReq != repaintReq;
             lastRepaintReq = repaintReq;
         }
         if (rp)
+        {
+            invalidateImage = true;
             repaint();
+        }
     }
+    bool invalidateImage{true};
 
     void rebuild()
     {
