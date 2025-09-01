@@ -108,6 +108,9 @@ struct Engine
             if constexpr (fb)
             {
                 float fblev = patch.routingNode.feedback;
+                fblev += lfos[0].output * patch.stepLfoNodes[0].toFB +
+                         lfos[1].output * patch.stepLfoNodes[1].toFB;
+                fblev = std::clamp(fblev, 0.f, 1.f);
                 fblev = fblev * fblev * fblev;
 
                 // y = x * ( 27 + x * x ) / ( 27 + 9 * x * x );
@@ -137,6 +140,10 @@ struct Engine
                 filters[1].processStereoSample(outL, outR, tmpL, tmpR);
 
                 float fblev = patch.routingNode.feedback;
+                fblev += lfos[0].output * patch.stepLfoNodes[0].toFB +
+                         lfos[1].output * patch.stepLfoNodes[1].toFB;
+                fblev = std::clamp(fblev, 0.f, 1.f);
+
                 fblev = fblev * fblev * fblev;
 
                 // y = x * ( 27 + x * x ) / ( 27 + 9 * x * x );
@@ -163,6 +170,10 @@ struct Engine
             {
                 // Only need to run 1 if we have feedback
                 float fblev = patch.routingNode.feedback;
+                fblev += lfos[0].output * patch.stepLfoNodes[0].toFB +
+                         lfos[1].output * patch.stepLfoNodes[1].toFB;
+                fblev = std::clamp(fblev, 0.f, 1.f);
+
                 fblev = fblev * fblev * fblev;
 
                 // y = x * ( 27 + x * x ) / ( 27 + 9 * x * x );
@@ -189,6 +200,10 @@ struct Engine
             {
                 // Only need to run 1 if we have feedback
                 float fblev = patch.routingNode.feedback;
+                fblev += lfos[0].output * patch.stepLfoNodes[0].toFB +
+                         lfos[1].output * patch.stepLfoNodes[1].toFB;
+                fblev = std::clamp(fblev, 0.f, 1.f);
+
                 fblev = fblev * fblev * fblev;
 
                 // y = x * ( 27 + x * x ) / ( 27 + 9 * x * x );
@@ -222,6 +237,10 @@ struct Engine
             {
                 // Only need to run 1 if we have feedback
                 float fblev = patch.routingNode.feedback;
+                fblev += lfos[0].output * patch.stepLfoNodes[0].toFB +
+                         lfos[1].output * patch.stepLfoNodes[1].toFB;
+                fblev = std::clamp(fblev, 0.f, 1.f);
+
                 fblev = fblev * fblev * fblev;
 
                 // y = x * ( 27 + x * x ) / ( 27 + 9 * x * x );
@@ -234,6 +253,10 @@ struct Engine
         }
 
         float mx = patch.routingNode.mix;
+        mx += lfos[0].output * patch.stepLfoNodes[0].toMix +
+              lfos[1].output * patch.stepLfoNodes[1].toMix;
+        mx = std::clamp(mx, 0.f, 1.f);
+
         outL = mx * outL + (1 - mx) * origL;
         outR = mx * outR + (1 - mx) * origR;
 
