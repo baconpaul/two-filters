@@ -94,6 +94,11 @@ struct Engine
         auto origL = inL;
         auto origR = inR;
 
+        auto inG = patch.routingNode.inputGain;
+        inG = inG * inG * inG;
+        inL *= inG;
+        inR *= inG;
+
         if constexpr (mode == RoutingModes::Serial_Post2)
         {
             if constexpr (fb)
@@ -257,11 +262,16 @@ struct Engine
               lfos[1].output * patch.stepLfoNodes[1].toMix;
         mx = std::clamp(mx, 0.f, 1.f);
 
+        auto outG = patch.routingNode.outputGain;
+        outG = outG * outG * outG;
+        outL *= outG;
+        outR *= outG;
+
         outL = mx * outL + (1 - mx) * origL;
         outR = mx * outR + (1 - mx) * origR;
 
-        outL = std::clamp(outL, -1.5f, 1.5f);
-        outR = std::clamp(outR, -1.5f, 1.5f);
+        outL = std::clamp(outL, -2.5f, 2.5f);
+        outR = std::clamp(outR, -2.5f, 2.5f);
 
         if (isEditorAttached)
         {

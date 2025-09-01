@@ -66,7 +66,8 @@ struct PatchContinuous : jdat::Continuous
         if (tempoSynced)
         {
             auto r = p->meta.valueToString(
-                f, sst::basic_blocks::params::ParamMetaData::FeatureState().withTemposync(true));
+                p->meta.snapToTemposync(f),
+                sst::basic_blocks::params::ParamMetaData::FeatureState().withTemposync(true));
             if (r.has_value())
             {
                 return *r;

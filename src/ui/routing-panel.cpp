@@ -30,11 +30,9 @@ RoutingPanel::RoutingPanel(PluginEditor &editor)
 
     createComponent(editor, *this, rn.inputGain, igK, igD);
     addAndMakeVisible(*igK);
-    igK->setEnabled(false);
 
     createComponent(editor, *this, rn.outputGain, ogK, ogD);
     addAndMakeVisible(*ogK);
-    ogK->setEnabled(false);
 
     createComponent(editor, *this, rn.mix, mixK, mixD);
     addAndMakeVisible(*mixK);
