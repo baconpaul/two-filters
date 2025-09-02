@@ -95,6 +95,10 @@ struct FilterCurve : juce::Component
                 }
                 else
                 {
+                    if (sst::filtersplusplus::Filter::coefficientsExtraIsBipolar(fn.model,
+                                                                                 fn.config, 0))
+                        lmo = lmo * 2 - 1;
+
                     auto par = sst::filters::FilterPlotParameters();
                     par.freqSmoothOctaves = 1.0 / 36.0;
                     auto crv = plotter.plotFilterMagnitudeResponse(fn.model, fn.config, lco, lre,

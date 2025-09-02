@@ -138,6 +138,9 @@ void Engine::processControl(const clap_output_events_t *outq)
             re += lfos[j].output * patch.stepLfoNodes[j].toRes[i];
             mo += lfos[j].output * patch.stepLfoNodes[j].toMorph[i];
         }
+        if (sst::filtersplusplus::Filter::coefficientsExtraIsBipolar(fn.model, fn.config, 0))
+            mo = mo * 2 - 1;
+
         filters[i].makeCoefficients(0, co, re, mo);
         filters[i].copyCoefficientsFromVoiceToVoice(0, 1);
         filters[i].prepareBlock();
