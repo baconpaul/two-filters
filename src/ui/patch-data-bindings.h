@@ -119,7 +119,7 @@ struct PatchContinuous : jdat::Continuous
         {
             p->value = f;
         }
-        editor.mainToAudio.push({Engine::MainToAudioMsg::Action::SET_PARAM, pid, f});
+        editor.mainToAudio.push({Engine::MainToAudioMsg::Action::SET_PARAM, pid, p->value});
         editor.requestParamsFlush();
         editor.updateTooltip(this);
 
