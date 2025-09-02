@@ -643,10 +643,14 @@ void PluginEditor::showPresetPopup()
     p.addSubMenu("User Interface", uim);
 
     p.addSeparator();
-    p.addItem("Read the Manual", false, false, []() {});
+    p.addItem("Read the Manual",
+              []()
+              {
+                  juce::URL("https://github.com/baconpaul/two-filters/blob/main/doc/manual.md")
+                      .launchInDefaultBrowser();
+              });
     p.addItem("Get the Source", []()
               { juce::URL("https://github.com/baconpaul/two-filters/").launchInDefaultBrowser(); });
-    p.addItem("Acknowledgements", false, false, []() {});
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
 }
 
