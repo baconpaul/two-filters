@@ -221,7 +221,18 @@ struct Patch : pats::PatchBase<Patch, Param>
                              .asCubicDecibelAttenuationWithUpperDBBound(18)
                              .withGroupName("Routing")
                              .withName("Post Gain")
-                             .withID(6))
+                             .withID(6)),
+              noiseLevel(floatMd()
+                             .asCubicDecibelAttenuation()
+                             .withDefault(0)
+                             .withGroupName("Routing")
+                             .withName("Noise Level")
+                             .withID(7)),
+              noisePower(intMd()
+                             .asOnOffBool()
+                             .withGroupName("Routing")
+                             .withName("Noise Power")
+                             .withID(id(8)))
         {
         }
 
@@ -231,11 +242,12 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param mix;
         Param routingMode;
         Param inputGain, outputGain;
+        Param noiseLevel, noisePower;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&feedback, &feedbackPower, &routingMode,
-                                     &mix,      &inputGain,     &outputGain};
+            std::vector<Param *> res{&feedback,  &feedbackPower, &routingMode, &mix,
+                                     &inputGain, &outputGain,    &noiseLevel,  &noisePower};
             return res;
         }
     } routingNode;

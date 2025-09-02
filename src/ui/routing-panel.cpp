@@ -37,11 +37,21 @@ RoutingPanel::RoutingPanel(PluginEditor &editor)
     createComponent(editor, *this, rn.mix, mixK, mixD);
     addAndMakeVisible(*mixK);
 
+    createComponent(editor, *this, rn.noiseLevel, noiseLevelK, noiseLevelD);
+    addAndMakeVisible(*noiseLevelK);
+
     createComponent(editor, *this, rn.feedbackPower, fbPowerT, fbPowerD);
     fbPowerT->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
     fbPowerT->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
     addAndMakeVisible(*fbPowerT);
     fbPowerD->onGuiSetValue = [this]() { enableFB(); };
+    editor.componentRefreshByID[rn.feedback.meta.id] = [this]() { enableFB(); };
+
+    createComponent(editor, *this, rn.noisePower, noisePowerT, noisePowerD);
+    noisePowerT->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
+    noisePowerT->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
+    addAndMakeVisible(*noisePowerT);
+    noisePowerD->onGuiSetValue = [this]() { enableFB(); };
     editor.componentRefreshByID[rn.feedback.meta.id] = [this]() { enableFB(); };
 
     enableFB();
@@ -57,14 +67,20 @@ void RoutingPanel::resized()
     mixK->setBounds(kr.translated(0, 80));
     igK->setBounds(kr.translated(0, 2 * 80));
     ogK->setBounds(kr.translated(0, 3 * 80));
+    noiseLevelK->setBounds(kr.translated(0, 4 * 80));
     auto tr = kr.withWidth(15).withHeight(15).translated(-10, -4);
     fbPowerT->setBounds(tr);
+    auto nr = noiseLevelK->getBounds().withWidth(15).withHeight(15).translated(-10, -4);
+    noisePowerT->setBounds(nr);
 }
 
 void RoutingPanel::enableFB()
 {
     feedbackK->setEnabled(editor.patchCopy.routingNode.feedbackPower.value > 0.5f);
     feedbackK->repaint();
+
+    noiseLevelK->setEnabled(editor.patchCopy.routingNode.noisePower.value > 0.5f);
+    noiseLevelK->repaint();
 }
 
 } // namespace baconpaul::twofilters::ui

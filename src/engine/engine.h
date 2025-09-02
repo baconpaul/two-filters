@@ -36,6 +36,7 @@
 #include "engine/patch.h"
 
 #include "sst/basic-blocks/dsp/LagCollection.h"
+#include "sst/basic-blocks/dsp/CorrelatedNoise.h"
 #include "sst/filters++.h"
 
 namespace baconpaul::twofilters
@@ -84,7 +85,9 @@ struct Engine
     void beginLargerBlock() { didResetInLargerBlock = false; }
     void processControl(const clap_output_events_t *);
 
-    template <RoutingModes mode, bool fb>
+    float noiseState[2][2]{0, 0};
+
+    template <RoutingModes mode, bool fb, bool withNoise>
     void processAudio(float inL, float inR, float &outL, float &outR)
     {
         if (!audioRunning)
@@ -101,6 +104,18 @@ struct Engine
         inG = inG * inG * inG;
         inL *= inG;
         inR *= inG;
+
+        if constexpr (withNoise)
+        {
+            float nsG = patch.routingNode.noiseLevel;
+            nsG = nsG * nsG * nsG;
+            auto n1 = sst::basic_blocks::dsp::correlated_noise_o2mk2_supplied_value(
+                noiseState[0][0], noiseState[0][1], 0, rng.unifPM1());
+            auto n2 = sst::basic_blocks::dsp::correlated_noise_o2mk2_supplied_value(
+                noiseState[1][0], noiseState[1][1], 0, rng.unifPM1());
+            inL += nsG * n1;
+            inR += nsG * n2;
+        }
 
         if constexpr (mode == RoutingModes::Serial_Post2)
         {

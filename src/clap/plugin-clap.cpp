@@ -111,6 +111,7 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     clap_process_status process(const clap_process *process) noexcept override
     {
         auto useFeedback = engine->patch.routingNode.feedbackPower > 0.5;
+        auto useNoise = engine->patch.routingNode.noisePower > 0.5;
         auto mode = (Engine::RoutingModes)std::round(engine->patch.routingNode.routingMode);
 
         switch (mode)
@@ -118,9 +119,28 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 #define CSRM(x)                                                                                    \
     case x:                                                                                        \
         if (useFeedback)                                                                           \
-            return processForRouting<x, true>(process);                                            \
+        {                                                                                          \
+            if (useNoise)                                                                          \
+            {                                                                                      \
+                return processForRouting<x, true, true>(process);                                  \
+            }                                                                                      \
+            else                                                                                   \
+            {                                                                                      \
+                return processForRouting<x, true, false>(process);                                 \
+            }                                                                                      \
+        }                                                                                          \
         else                                                                                       \
-            return processForRouting<x, false>(process);
+        {                                                                                          \
+            if (useNoise)                                                                          \
+            {                                                                                      \
+                return processForRouting<x, false, true>(process);                                 \
+            }                                                                                      \
+            else                                                                                   \
+            {                                                                                      \
+                return processForRouting<x, false, false>(process);                                \
+            }                                                                                      \
+        }
+
             CSRM(Engine::RoutingModes::Serial_Post1)
             CSRM(Engine::RoutingModes::Serial_Post2)
             CSRM(Engine::RoutingModes::Parallel_FBOne)
@@ -131,7 +151,7 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     }
 
     int priorBarNumber{-1};
-    template <Engine::RoutingModes routingMode, bool withFeedback>
+    template <Engine::RoutingModes routingMode, bool withFeedback, bool withNoise>
     clap_process_status processForRouting(const clap_process *process) noexcept
     {
         auto fpuguard = sst::plugininfra::cpufeatures::FPUStateGuard();
@@ -171,8 +191,8 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 engine->processControl(outq);
             }
 
-            engine->processAudio<routingMode, withFeedback>(inD[0][s], inD[1][s], outD[0][s],
-                                                            outD[1][s]);
+            engine->processAudio<routingMode, withFeedback, withNoise>(inD[0][s], inD[1][s],
+                                                                       outD[0][s], outD[1][s]);
 
             blockPos = (blockPos + 1) & (blockSize - 1);
         }
