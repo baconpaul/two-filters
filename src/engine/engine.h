@@ -67,6 +67,7 @@ struct Engine
     std::array<stepLfo_t::Storage, numStepLFOs> lfoStorage;
     sst::basic_blocks::tables::EqualTuningProvider tuningProvider;
     sst::basic_blocks::modulators::Transport transport;
+    uint32_t lastStatus{sst::basic_blocks::modulators::Transport::STOPPED};
     void sendUpdateLfo();
     void reassignLfos();
     void updateLfoStorage();
@@ -79,6 +80,8 @@ struct Engine
     double sampleRate{1}, sampleRateInv{1};
     void setSampleRate(double sampleRate);
 
+    bool didResetInLargerBlock{false};
+    void beginLargerBlock() { didResetInLargerBlock = false; }
     void processControl(const clap_output_events_t *);
 
     template <RoutingModes mode, bool fb>

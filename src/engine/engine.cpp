@@ -88,6 +88,33 @@ void Engine::reassignLfos()
 
 void Engine::processControl(const clap_output_events_t *outq)
 {
+    auto beatsPerMeasure = 4.0 * transport.signature.numerator / transport.signature.denominator;
+
+    auto isPlaying = [](auto v)
+    {
+        auto b = (v & sst::basic_blocks::modulators::Transport::PLAYING) ||
+                 (v & sst::basic_blocks::modulators::Transport::RECORDING);
+        return b;
+    };
+
+    if (!isPlaying(lastStatus) && isPlaying(transport.status))
+    {
+        restartLfos();
+    }
+    lastStatus = transport.status;
+
+    auto btIncr = blockSize * transport.tempo / (60 * sampleRate);
+    transport.hostTimeInBeats += btIncr;
+    transport.timeInBeats += btIncr;
+    if (transport.timeInBeats >= transport.lastBarStartInBeats + beatsPerMeasure &&
+        !didResetInLargerBlock)
+    {
+        restartLfos();
+        if (!isPlaying(transport.status))
+            transport.lastBarStartInBeats += beatsPerMeasure;
+        didResetInLargerBlock = true;
+    }
+
     updateLfoStorage();
 
     for (int i = 0; i < numStepLFOs; ++i)
