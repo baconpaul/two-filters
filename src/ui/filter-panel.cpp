@@ -95,8 +95,10 @@ struct FilterCurve : juce::Component
                 }
                 else
                 {
+                    auto par = sst::filters::FilterPlotParameters();
+                    par.freqSmoothOctaves = 1.0 / 36.0;
                     auto crv = plotter.plotFilterMagnitudeResponse(fn.model, fn.config, lco, lre,
-                                                                   lmo, 0, 0);
+                                                                   lmo, 0, 0, par);
                     auto tcX = crv.first;
                     for (auto &x : tcX)
                         x = (x > 0 ? log10(x) : 0);
@@ -256,7 +258,7 @@ struct FilterCurve : juce::Component
 
     std::vector<float> cX, cY;
 
-    sst::filters::FilterPlotter plotter;
+    sst::filters::FilterPlotter plotter{14};
 };
 
 FilterPanel::FilterPanel(PluginEditor &editor, int ins)
