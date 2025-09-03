@@ -193,12 +193,18 @@ struct FilterCurve : juce::Component
 
         auto p = juce::Path();
         p.startNewSubPath(tx(cX[0]), ty(cY[0]));
+        auto lX = tx(cX[0]);
         auto my = std::min(cY[0], dbMin);
         for (int i = 1; i < cX.size(); i++)
         {
-            p.lineTo(tx(cX[i]), ty(cY[i]));
-            if (cY[i] < my)
-                my = cY[i];
+            if (tx(cX[i]) - tx(lX) > 0.5)
+            {
+                lX = cX[i];
+
+                p.lineTo(tx(cX[i]), ty(cY[i]));
+                if (cY[i] < my)
+                    my = cY[i];
+            }
         }
         auto fillpath = p;
 
@@ -206,16 +212,23 @@ struct FilterCurve : juce::Component
             panel.style()->getColour(bst::ValueBearing::styleClass, bst::ValueBearing::value);
 
         auto c = vlc;
-        auto gr =
-            juce::ColourGradient::vertical(c.withAlpha(0.6f), ty(6), c.withAlpha(0.1f), ty(-48));
 
         fillpath.lineTo(tx(cX.back()), ty(my));
         fillpath.lineTo(tx(cX[0]), ty(my));
         fillpath.closeSubPath();
 
-        if (cX.size() > 10)
+        if (cX.size() > 10 && panel.editor.cpuGraphicsMode != PluginEditor::MINIMAL)
         {
-            g.setGradientFill(gr);
+            if (panel.editor.cpuGraphicsMode != PluginEditor::FULL)
+            {
+                g.setColour(c.withAlpha(0.2f));
+            }
+            else
+            {
+                auto gr = juce::ColourGradient::vertical(c.withAlpha(0.6f), ty(6),
+                                                         c.withAlpha(0.1f), ty(-48));
+                g.setGradientFill(gr);
+            }
             g.fillPath(fillpath);
         }
 
@@ -229,19 +242,26 @@ struct FilterCurve : juce::Component
     }
     void resized() override {}
 
+    int idleCount{0};
     void onIdle()
     {
-        bool rp{false};
+        if (idleCount == 0)
         {
-            std::unique_lock<std::mutex> l(dataM);
-            rp = lastRepaintReq != repaintReq;
-            lastRepaintReq = repaintReq;
+            bool rp{false};
+            {
+                std::unique_lock<std::mutex> l(dataM);
+                rp = lastRepaintReq != repaintReq;
+                lastRepaintReq = repaintReq;
+            }
+            if (rp)
+            {
+                invalidateImage = true;
+                repaint();
+            }
         }
-        if (rp)
-        {
-            invalidateImage = true;
-            repaint();
-        }
+        idleCount++;
+        if (idleCount > ((panel.editor.cpuGraphicsMode != PluginEditor::FULL) ? 3 : 0))
+            idleCount = 0;
     }
     bool invalidateImage{true};
 

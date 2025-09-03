@@ -127,6 +127,9 @@ PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQu
     mainToAudio.push({Engine::MainToAudioMsg::REQUEST_REFRESH, true});
     requestParamsFlush();
 
+    cpuGraphicsMode = (PluginEditor::GraphicsMode)defaultsProvider->getUserDefaultValue(
+        Defaults::useLowCpuGraphics, PluginEditor::FULL);
+
     auto pzf = defaultsProvider->getUserDefaultValue(Defaults::zoomLevel, 100);
     zoomFactor = pzf * 0.01;
     setTransform(juce::AffineTransform().scaled(zoomFactor));
@@ -597,6 +600,29 @@ void PluginEditor::showPresetPopup()
                     });
     }
 
+    uim.addSeparator();
+    auto lcg = (PluginEditor::GraphicsMode)defaultsProvider->getUserDefaultValue(
+        Defaults::useLowCpuGraphics, PluginEditor::GraphicsMode::FULL);
+
+    for (auto [mode, nm] : {std::make_pair(PluginEditor::GraphicsMode::FULL, std::string("Full")),
+                            {PluginEditor::GraphicsMode::REDUCES, "Reduced"},
+                            {PluginEditor::GraphicsMode::MINIMAL, "Minimal"}})
+    {
+        uim.addItem("Use " + nm + " Graphics", true, lcg == mode,
+                    [w = juce::Component::SafePointer(this), um = mode]()
+                    {
+                        if (!w)
+                            return;
+                        w->defaultsProvider->updateUserDefaultValue(Defaults::useLowCpuGraphics,
+                                                                    um);
+                        w->cpuGraphicsMode = um;
+                        for (auto &f : w->filterPanel)
+                            f->onModelChanged();
+                        for (auto &s : w->stepLFOPanel)
+                            s->onModelChanged();
+                        w->repaint();
+                    });
+    }
     uim.addSeparator();
     uim.addItem("Dark Mode", true, !isLight,
                 [w = juce::Component::SafePointer(this)]()

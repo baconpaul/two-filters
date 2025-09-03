@@ -26,6 +26,7 @@ enum Defaults
     useLightSkin,
     zoomLevel,
     useSoftwareRenderer, // only used on windows
+    useLowCpuGraphics,
     numDefaults
 };
 
@@ -39,6 +40,8 @@ inline std::string defaultName(Defaults d)
         return "zoomLevel";
     case useSoftwareRenderer:
         return "useSoftwareRenderer";
+    case useLowCpuGraphics:
+        return "useLowCpuGraphics";
     case numDefaults:
     {
         SQLOG("Software Error - defaults found");

@@ -95,6 +95,13 @@ struct PluginEditor : jcmp::WindowPanel
 
     void setSkinFromDefaults();
 
+    enum GraphicsMode
+    {
+        FULL = 0,
+        REDUCES = 1,
+        MINIMAL = 2
+    } cpuGraphicsMode{FULL};
+
     std::unique_ptr<jcmp::ToolTip> toolTip;
     void showTooltipOn(juce::Component *c);
     void updateTooltip(jdat::Continuous *c);

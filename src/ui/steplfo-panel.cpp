@@ -95,17 +95,24 @@ struct StepEditor : juce::Component
                            juce::Justification::centredBottom, false);
             }
         }
-        auto cs = panel.currentStep;
-        if (cs >= 0 && cs < maxSteps)
+        if (panel.editor.cpuGraphicsMode != PluginEditor::MINIMAL)
         {
-            g.setColour(hCol);
-            g.drawRect(cs * bw, 0., bw, getHeight() * 1., 1.);
+            auto cs = panel.currentStep;
+            if (cs >= 0 && cs < maxSteps)
+            {
+                g.setColour(hCol);
+                g.drawRect(cs * bw, 0., bw, getHeight() * 1., 1.);
+            }
         }
 
-        auto xC = (cs + panel.currentPhase) * bw;
-        auto yC = (1 - panel.currentLevel) * getHeight() / 2;
-        g.setColour(lCol);
-        g.fillEllipse(xC - 2, yC - 2, 5., 5.);
+        if (panel.editor.cpuGraphicsMode == PluginEditor::FULL)
+        {
+            auto cs = panel.currentStep;
+            auto xC = (cs + panel.currentPhase) * bw;
+            auto yC = (1 - panel.currentLevel) * getHeight() / 2;
+            g.setColour(lCol);
+            g.fillEllipse(xC - 2, yC - 2, 5., 5.);
+        }
     }
 
     int lastEditedStep{-1};
@@ -259,23 +266,32 @@ void StepLFOPanel::onModelChanged()
 
 void StepLFOPanel::setCurrentStep(int cs)
 {
-    if (cs != currentStep)
+    if (editor.cpuGraphicsMode != PluginEditor::MINIMAL)
     {
-        currentStep = cs;
-        stepEditor->repaint();
+        if (cs != currentStep)
+        {
+            currentStep = cs;
+            stepEditor->repaint();
+        }
     }
 }
 
 void StepLFOPanel::setCurrentPhase(float ph)
 {
-    currentPhase = ph;
-    stepEditor->repaint();
+    if (editor.cpuGraphicsMode == PluginEditor::FULL)
+    {
+        currentPhase = ph;
+        stepEditor->repaint();
+    }
 }
 
 void StepLFOPanel::setCurrentLevel(float ph)
 {
-    currentLevel = ph;
-    stepEditor->repaint();
+    if (editor.cpuGraphicsMode == PluginEditor::FULL)
+    {
+        currentLevel = ph;
+        stepEditor->repaint();
+    }
 }
 
 } // namespace baconpaul::twofilters::ui
