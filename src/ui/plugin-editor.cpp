@@ -274,7 +274,11 @@ void PluginEditor::paint(juce::Graphics &g)
     g.drawText(sst::plugininfra::VersionInformation::git_implied_display_version,
                getLocalBounds().reduced(3, 3), juce::Justification::centredBottom);
 
-    g.setColour(juce::Colours::white);
+    if (isLight)
+        g.setColour(juce::Colours::navy);
+    else
+        g.setColour(juce::Colours::white);
+    q = ft.withHeight(12);
     g.setFont(juce::FontOptions(25));
     auto dr = juce::Rectangle<int>(0, 0, np, ht);
     g.drawText(PRODUCT_NAME, dr.reduced(2), juce::Justification::centredLeft);
@@ -660,6 +664,7 @@ void PluginEditor::showPresetPopup()
             if (!w)
                 return;
             w->defaultsProvider->updateUserDefaultValue(Defaults::useSoftwareRenderer, !swr);
+            w->setSkinFromDefaults();
             juce::AlertWindow::showMessageBoxAsync(
                 juce::AlertWindow::WarningIcon, "Software Renderer Change",
                 "A software renderer change is only active once you restart/reload the plugin.");
@@ -852,6 +857,11 @@ void PluginEditor::setSkinFromDefaults()
         style()
             ->getFont(jcmp::MenuButton::Styles::styleClass, jcmp::MenuButton::Styles::labelfont)
             .withHeight(18));
+
+    for (auto &f : filterPanel)
+        f->onModelChanged();
+    for (auto &s : stepLFOPanel)
+        s->onModelChanged();
 }
 
 void PluginEditor::setZoomFactor(float zf)
