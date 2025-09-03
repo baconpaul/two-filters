@@ -51,6 +51,8 @@ struct FilterCurve : juce::Component
     void run()
     {
         int lur{0};
+        auto lastWait = std::chrono::high_resolution_clock::now();
+
         while (running)
         {
             int nur{lur};
@@ -65,14 +67,30 @@ struct FilterCurve : juce::Component
                     sendCV.wait(l);
                 }
             }
+            auto postLastWait = std::chrono::high_resolution_clock::now();
+            auto dur =
+                std::chrono::duration_cast<std::chrono::microseconds>(postLastWait - lastWait);
+#if JUCE_WINDOWS
+            auto atLeast = 1000000 / 30.0;
+#else
+            auto atLeast = 1000000 / 60.0;
+#endif
+
+            if (dur.count() < atLeast)
+            {
+                std::this_thread::sleep_for(
+                    std::chrono::microseconds((int)(atLeast - dur.count())));
+            }
             if (running && nur != lur)
             {
                 float lco, lre, lmo;
 
-                lur = nur;
-
                 {
                     std::unique_lock<std::mutex> l(dataM);
+
+                    nur = updateRequest;
+                    lur = nur;
+
                     lco = co;
                     lre = res;
                     lmo = morph;
@@ -115,6 +133,7 @@ struct FilterCurve : juce::Component
                     }
                 }
             }
+            lastWait = std::chrono::high_resolution_clock::now();
         }
     }
 
@@ -434,5 +453,7 @@ void FilterPanel::showConfigMenu()
 }
 
 void FilterPanel::onIdle() { curve->onIdle(); }
+
+void FilterPanel::endEdit(int id) { curve->rebuild(); }
 
 } // namespace baconpaul::twofilters::ui

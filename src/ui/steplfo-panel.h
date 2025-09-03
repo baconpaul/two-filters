@@ -38,7 +38,7 @@ struct StepLFOPanel : sst::jucegui::components::NamedPanel
     PluginEditor &editor;
 
     void beginEdit() {}
-    void endEdit() {}
+    void endEdit(int id) {}
 
     void onIdle();
 

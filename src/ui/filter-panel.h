@@ -37,10 +37,10 @@ struct FilterPanel : sst::jucegui::components::NamedPanel
 
     PluginEditor &editor;
 
-    void beginEdit() {}
-    void endEdit() {}
-
     void onModelChanged();
+
+    void beginEdit() {}
+    void endEdit(int id);
 
     void onIdle();
 

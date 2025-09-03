@@ -41,7 +41,7 @@ struct RoutingPanel : sst::jucegui::components::NamedPanel
     void enableFB();
 
     void beginEdit() {}
-    void endEdit() {}
+    void endEdit(int id) {}
 };
 } // namespace baconpaul::twofilters::ui
 #endif // ROUTING_PANEL_H

@@ -33,7 +33,7 @@ struct DebugPanel : sst::jucegui::components::NamedPanel
     PluginEditor &editor;
 
     void beginEdit() {}
-    void endEdit() {}
+    void endEdit(int id) {}
 };
 } // namespace baconpaul::twofilters::ui
 #endif // MAIN_PANEL_H

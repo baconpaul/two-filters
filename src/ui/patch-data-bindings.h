@@ -224,6 +224,7 @@ void createComponent(PluginEditor &e, P &panel, const Param &parm, std::unique_p
         {
             e.hideTooltip();
         }
+        panel.endEdit(id);
     };
     cm->onWheelEditOccurred = [&cm]()
     {
