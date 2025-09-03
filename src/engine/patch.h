@@ -316,7 +316,7 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         StepLFONode(int i)
             : rate(floatMd()
-                       .asLfoRate()
+                       .asLfoRate(-1, 5) // whole to 64th
                        .withGroupName(gn(i))
                        .withDefault(i == 0 ? 2 : 3)
                        .withName("Rate")
