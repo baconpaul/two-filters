@@ -170,7 +170,7 @@ jobs:
         uses: surge-synthesizer/sst-githubactions/discord-release-notify@main
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          tag: ${{ github.ref_name }}
+          tag: Nightly
           title: "A New Two Filters Nightly is Available"
           subtitle: "But its only two filters. Don't get too excited."
 
