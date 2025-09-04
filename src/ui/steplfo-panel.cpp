@@ -53,7 +53,7 @@ struct StepEditor : juce::Component
         g.setColour(gCol.withAlpha(0.3f));
         g.fillRect(restArea);
 
-        int mg{2};
+        int mg{1};
         for (int i = 0; i < maxSteps; i++)
         {
             float val = panel.stepDs[i]->getValue();
@@ -154,23 +154,22 @@ struct StepEditor : juce::Component
         auto stepBlocks = stepSamples / blockSize;
 
         lfoPath.clear();
-        if (panel.instance == 0)
+
+        auto tx = [=](auto x) { return x / (stepBlocks * 16) * getWidth(); };
+        auto ty = [=](auto y) { return (1 - (y + 1) / 2.) * getHeight(); };
+        for (int i = 0; i < steps * stepBlocks; ++i)
         {
-            auto tx = [=](auto x) { return x / (stepBlocks * 16) * getWidth(); };
-            auto ty = [=](auto y) { return (1 - (y + 1) / 2.) * getHeight(); };
-            for (int i = 0; i < steps * stepBlocks; ++i)
+            lfo.process(rate, 0, true, false, blockSize);
+            if (i == 0)
             {
-                lfo.process(rate, 0, true, false, blockSize);
-                if (i == 0)
-                {
-                    lfoPath.startNewSubPath(tx(i), ty(lfo.output));
-                }
-                else
-                {
-                    lfoPath.lineTo(tx(i), ty(lfo.output));
-                }
+                lfoPath.startNewSubPath(tx(i), ty(lfo.output));
+            }
+            else
+            {
+                lfoPath.lineTo(tx(i), ty(lfo.output));
             }
         }
+
         pathValid = true;
     }
 
