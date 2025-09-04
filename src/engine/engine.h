@@ -72,6 +72,7 @@ struct Engine
     void sendUpdateLfo();
     void reassignLfos();
     void updateLfoStorage();
+    static void updateLfoStorageFromTo(const Patch &p, int node, stepLfo_t::Storage &to);
 
     void restartLfos();
 

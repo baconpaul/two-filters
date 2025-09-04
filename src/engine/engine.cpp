@@ -61,17 +61,19 @@ void Engine::setSampleRate(double sr)
 
 void Engine::updateLfoStorage()
 {
-    for (int i = 0; i < numStepLFOs; ++i)
+    updateLfoStorageFromTo(patch, 0, lfoStorage[0]);
+    updateLfoStorageFromTo(patch, 1, lfoStorage[1]);
+}
+void Engine::updateLfoStorageFromTo(const Patch &p, int node, stepLfo_t::Storage &s)
+{
+    for (int j = 0; j < maxSteps; ++j)
     {
-        for (int j = 0; j < maxSteps; ++j)
-        {
-            lfoStorage[i].data[j] = patch.stepLfoNodes[i].steps[j];
-        }
-
-        lfoStorage[i].repeat = (int)std::round(patch.stepLfoNodes[i].stepCount);
-        lfoStorage[i].smooth = patch.stepLfoNodes[i].smooth;
-        lfoStorage[i].rateIsForSingleStep = true;
+        s.data[j] = p.stepLfoNodes[node].steps[j];
     }
+
+    s.repeat = (int)std::round(p.stepLfoNodes[node].stepCount);
+    s.smooth = p.stepLfoNodes[node].smooth;
+    s.rateIsForSingleStep = true;
 }
 void Engine::reassignLfos()
 {

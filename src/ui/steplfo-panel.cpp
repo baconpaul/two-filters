@@ -22,8 +22,9 @@ namespace baconpaul::twofilters::ui
 
 struct StepEditor : juce::Component
 {
-    StepEditor(StepLFOPanel &p) : panel(p)
+    StepEditor(StepLFOPanel &p) : panel(p), lfo(tp)
     {
+        tp.init();
         for (int i = 0; i < maxSteps; i++)
             panel.editor.componentRefreshByID[panel.stepDs[i]->pid] = [this]() { repaint(); };
     }
@@ -113,6 +114,64 @@ struct StepEditor : juce::Component
             g.setColour(lCol);
             g.fillEllipse(xC - 2, yC - 2, 5., 5.);
         }
+        rebuildLfoPath();
+        if (!lfoPath.isEmpty())
+        {
+            auto bolc =
+                panel.style()->getColour(bst::BaseLabel::styleClass, bst::BaseLabel::labelcolor);
+
+            g.setColour(bolc);
+            if (!lfoPath.isEmpty())
+                g.strokePath(lfoPath, juce::PathStrokeType(1));
+        }
+    }
+
+    juce::Path lfoPath;
+    Engine::stepLfo_t lfo;
+    Engine::stepLfo_t::Storage lfoStorage;
+    sst::basic_blocks::dsp::RNG rng;
+    sst::basic_blocks::tables::EqualTuningProvider tp;
+    sst::basic_blocks::modulators::Transport transport;
+    bool pathValid{false};
+    void invalidatePath() { pathValid = false; }
+    void rebuildLfoPath()
+    {
+        if (pathValid)
+            return;
+
+        transport.tempo = 120;
+        auto rate = 7;
+        auto sr = 48000;
+        auto steps = panel.editor.patchCopy.stepLfoNodes[panel.instance].stepCount;
+
+        rng.reseed(8675309);
+        lfo.setSampleRate(sr, 1.0 / sr);
+        Engine::updateLfoStorageFromTo(panel.editor.patchCopy, panel.instance, lfoStorage);
+        lfo.assign(&lfoStorage, rate, &transport, rng, true);
+
+        auto stepTime = 1.0 / (1 << 7);
+        auto stepSamples = sr * stepTime;
+        auto stepBlocks = stepSamples / blockSize;
+
+        lfoPath.clear();
+        if (panel.instance == 0)
+        {
+            auto tx = [=](auto x) { return x / (stepBlocks * 16) * getWidth(); };
+            auto ty = [=](auto y) { return (1 - (y + 1) / 2.) * getHeight(); };
+            for (int i = 0; i < steps * stepBlocks; ++i)
+            {
+                lfo.process(rate, 0, true, false, blockSize);
+                if (i == 0)
+                {
+                    lfoPath.startNewSubPath(tx(i), ty(lfo.output));
+                }
+                else
+                {
+                    lfoPath.lineTo(tx(i), ty(lfo.output));
+                }
+            }
+        }
+        pathValid = true;
     }
 
     int lastEditedStep{-1};
@@ -166,13 +225,22 @@ StepLFOPanel::StepLFOPanel(PluginEditor &editor, int instance)
     for (int i = 0; i < maxSteps; i++)
     {
         stepDs[i] = std::make_unique<PatchContinuous>(editor, sn.steps[i].meta.id);
+        stepDs[i]->onGuiSetValue = [this]()
+        {
+            stepEditor->invalidatePath();
+            stepEditor->repaint();
+        };
     }
     stepEditor = std::make_unique<StepEditor>(*this);
     addAndMakeVisible(*stepEditor);
 
     createComponent(editor, *this, sn.stepCount, stepCount, stepCountD);
     addAndMakeVisible(*stepCount);
-    stepCountD->onGuiSetValue = [this]() { stepEditor->repaint(); };
+    stepCountD->onGuiSetValue = [this]()
+    {
+        stepEditor->invalidatePath();
+        stepEditor->repaint();
+    };
 
     int idx{0};
     createComponent(editor, *this, sn.toCO[0], routeK[idx], routeD[idx]);
@@ -220,6 +288,7 @@ StepLFOPanel::StepLFOPanel(PluginEditor &editor, int instance)
     rateD->tempoSynced = true;
     addAndMakeVisible(*rate);
     createComponent(editor, *this, sn.smooth, smooth, smoothD);
+    smoothD->onGuiSetValue = [this]() { stepEditor->invalidatePath(); };
     addAndMakeVisible(*smooth);
 }
 StepLFOPanel::~StepLFOPanel() = default;
@@ -262,6 +331,8 @@ void StepLFOPanel::onModelChanged()
         routeK[i * 3 + 2]->setEnabled(xtra > 0);
         routeK[i * 3 + 2]->repaint();
     }
+    stepEditor->invalidatePath();
+    repaint();
 }
 
 void StepLFOPanel::setCurrentStep(int cs)
