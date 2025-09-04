@@ -54,6 +54,14 @@ struct Engine
         Parallel_FBEach = 4
     };
 
+    enum struct RetrigModes
+    {
+        EveryBar = 0,
+        Every2Bars = 1,
+        Every4Bars = 2,
+        OnTransport = 3
+    };
+
     Engine();
     ~Engine();
 

@@ -199,6 +199,7 @@ struct Patch : pats::PatchBase<Patch, Param>
               routingMode(intMd()
                               .withRange(0, 4)
                               .withGroupName("Routing")
+                              .withDefault(0)
                               .withName("Mode")
                               .withID(3)
                               .withUnorderedMapFormatting({{0, "Serial"},
@@ -206,6 +207,15 @@ struct Patch : pats::PatchBase<Patch, Param>
                                                            {2, "Par"},
                                                            {3, "Par / FB 1"},
                                                            {4, "Par / FB Each"}})),
+              retriggerMode(
+                  intMd()
+                      .withRange(0, 3)
+                      .withDefault(0)
+                      .withGroupName("Routing")
+                      .withName("Retrigger")
+                      .withID(9)
+                      .withUnorderedMapFormatting(
+                          {{0, "Each Bar"}, {1, "2 Bars"}, {2, "4 Bars"}, {3, "On Start"}})),
               mix(floatMd()
                       .asPercent()
                       .withGroupName("Routing")
@@ -240,13 +250,13 @@ struct Patch : pats::PatchBase<Patch, Param>
 
         Param feedback, feedbackPower;
         Param mix;
-        Param routingMode;
+        Param routingMode, retriggerMode;
         Param inputGain, outputGain;
         Param noiseLevel, noisePower;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&feedback,  &feedbackPower, &routingMode, &mix,
+            std::vector<Param *> res{&feedback,  &feedbackPower, &routingMode, &retriggerMode, &mix,
                                      &inputGain, &outputGain,    &noiseLevel,  &noisePower};
             return res;
         }

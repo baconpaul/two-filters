@@ -21,6 +21,8 @@
 #include "plugin-editor.h"
 #include "sst/jucegui/components/MultiSwitch.h"
 #include "sst/jucegui/components/ToggleButton.h"
+#include "sst/jucegui/components/JogUpDownButton.h"
+#include "sst/jucegui/components/Label.h"
 
 namespace baconpaul::twofilters::ui
 {
@@ -31,11 +33,13 @@ struct RoutingPanel : sst::jucegui::components::NamedPanel
 
     PluginEditor &editor;
 
-    std::unique_ptr<PatchDiscrete> routingModeD, fbPowerD, noisePowerD;
+    std::unique_ptr<PatchDiscrete> routingModeD, fbPowerD, noisePowerD, retriggerModeD;
     std::unique_ptr<PatchContinuous> feedbackD, mixD, igD, ogD, noiseLevelD;
 
     std::unique_ptr<sst::jucegui::components::Knob> feedbackK, mixK, igK, ogK, noiseLevelK;
     std::unique_ptr<sst::jucegui::components::MultiSwitch> routingModeS;
+    std::unique_ptr<sst::jucegui::components::JogUpDownButton> retriggerModeS;
+    std::unique_ptr<sst::jucegui::components::Label> retriggerModeL;
     std::unique_ptr<sst::jucegui::components::ToggleButton> fbPowerT, noisePowerT;
 
     void enableFB();

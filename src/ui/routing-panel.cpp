@@ -24,6 +24,12 @@ RoutingPanel::RoutingPanel(PluginEditor &editor)
     auto rn = editor.patchCopy.routingNode;
     createComponent(editor, *this, rn.routingMode, routingModeS, routingModeD);
     addAndMakeVisible(*routingModeS);
+    retriggerModeL = std::make_unique<sst::jucegui::components::Label>();
+    retriggerModeL->setText("Retrigger");
+    addAndMakeVisible(*retriggerModeL);
+
+    createComponent(editor, *this, rn.retriggerMode, retriggerModeS, retriggerModeD);
+    addAndMakeVisible(*retriggerModeS);
 
     createComponent(editor, *this, rn.feedback, feedbackK, feedbackD);
     addAndMakeVisible(*feedbackK);
@@ -39,6 +45,7 @@ RoutingPanel::RoutingPanel(PluginEditor &editor)
 
     createComponent(editor, *this, rn.noiseLevel, noiseLevelK, noiseLevelD);
     addAndMakeVisible(*noiseLevelK);
+    noiseLevelD->labelOverride = "Noise";
 
     createComponent(editor, *this, rn.feedbackPower, fbPowerT, fbPowerD);
     fbPowerT->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
@@ -60,8 +67,13 @@ void RoutingPanel::resized()
 {
     auto ca = getContentArea().reduced(2, 0);
 
-    routingModeS->setBounds(ca.withHeight(100));
-    ca = ca.withTrimmedTop(110);
+    routingModeS->setBounds(ca.withHeight(90));
+    ca = ca.withTrimmedTop(93);
+
+    retriggerModeL->setBounds(ca.withHeight(18));
+    retriggerModeS->setBounds(ca.withHeight(20).translated(0, 20));
+
+    ca = ca.withTrimmedTop(54);
     auto kr = ca.withHeight(75).reduced(15, 0);
     feedbackK->setBounds(kr);
     mixK->setBounds(kr.translated(0, 80));

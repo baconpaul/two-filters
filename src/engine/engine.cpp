@@ -108,13 +108,23 @@ void Engine::processControl(const clap_output_events_t *outq)
     auto btIncr = blockSize * transport.tempo / (60 * sampleRate);
     transport.hostTimeInBeats += btIncr;
     transport.timeInBeats += btIncr;
-    if (transport.timeInBeats >= transport.lastBarStartInBeats + beatsPerMeasure &&
-        !didResetInLargerBlock)
+
+    auto rtm = (int)std::round(patch.routingNode.retriggerMode);
+    if (rtm != (int)RetrigModes::OnTransport)
     {
-        restartLfos();
-        if (!isPlaying(transport.status))
-            transport.lastBarStartInBeats += beatsPerMeasure;
-        didResetInLargerBlock = true;
+        auto mMul = 1 << rtm;
+        auto isCand = (int)transport.timeInBeats % ((int)(mMul * beatsPerMeasure));
+        if (transport.timeInBeats >= transport.lastBarStartInBeats + beatsPerMeasure &&
+            !didResetInLargerBlock)
+        {
+            if (isCand == 0)
+            {
+                restartLfos();
+            }
+            if (!isPlaying(transport.status))
+                transport.lastBarStartInBeats += beatsPerMeasure;
+            didResetInLargerBlock = true;
+        }
     }
 
     updateLfoStorage();
