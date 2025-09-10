@@ -137,6 +137,66 @@ struct FilterCurve : juce::Component
         }
     }
 
+    bool showDragEdit{false};
+    void mouseEnter(const juce::MouseEvent &event) override
+    {
+        showDragEdit = true;
+        repaint();
+    }
+    void mouseExit(const juce::MouseEvent &event) override
+    {
+        showDragEdit = false;
+        repaint();
+    }
+
+    void positionToCoRes(juce::Point<float> p)
+    {
+        auto res = 1 - p.y / getHeight();
+
+        // x px = (xoff + x) * xsc * getWidth();
+        // x = xpx / getWidth / xsc - xoff
+        auto lfr = p.x / getWidth() / xsc - xoff;
+        auto fr = pow(10.0, lfr);
+        // fr = 440 pow(2, key/12)
+        // key = 12*log2(fr / 440)
+        auto key = 12 * log2(fr / 440.0);
+
+        panel.cutoffD->setValueFromGUI(key);
+        panel.resonanceD->setValueFromGUI(res);
+
+        panel.cutoffK->repaint();
+        panel.resonanceK->repaint();
+    }
+    void mouseDown(const juce::MouseEvent &event) override
+    {
+        panel.cutoffK->onBeginEdit();
+        panel.resonanceK->onBeginEdit();
+        positionToCoRes(event.position.toFloat());
+        repaint();
+    }
+
+    void mouseDrag(const juce::MouseEvent &event) override
+    {
+        positionToCoRes(event.position.toFloat());
+        repaint();
+    }
+
+    void mouseUp(const juce::MouseEvent &event) override
+    {
+        panel.resonanceK->onEndEdit();
+        panel.cutoffK->onEndEdit();
+    }
+
+    float xsc = 1.0 / (log10(20000) - log10(6));
+    float xoff = -log10(6);
+
+    float dbMax{24}, dbMin{-48 - 12};
+    float ysc = 1.0 / (dbMax - dbMin);
+    float yoff = dbMax / (dbMax - dbMin);
+
+    auto tx(float x) { return (xoff + x) * xsc * getWidth(); };
+    auto ty(float y) { return (yoff - y * ysc) * getHeight(); };
+
     juce::Image renderCache;
     void paint(juce::Graphics &gReal) override
     {
@@ -149,6 +209,7 @@ struct FilterCurve : juce::Component
             panel.editor.zoomFactor;
         int tW = std::round(sc * getWidth());
         int tH = std::round(sc * getHeight());
+
         if (renderCache.getWidth() != tW || renderCache.getHeight() != tH)
         {
             invalidateImage = true;
@@ -157,6 +218,11 @@ struct FilterCurve : juce::Component
         if (!invalidateImage && renderCache.getWidth() > 0)
         {
             gReal.drawImage(renderCache, getLocalBounds().toFloat());
+
+            if (showDragEdit)
+            {
+                drawCrosshairs(gReal);
+            }
             return;
         }
 
@@ -170,15 +236,6 @@ struct FilterCurve : juce::Component
         g.fillAll(juce::Colours::black);
         g.addTransform(juce::AffineTransform::scale(sc, sc));
         std::unique_lock<std::mutex> l(dataM);
-        auto xsc = 1.0 / (log10(20000) - log10(6)) * getWidth();
-        auto xoff = -log10(6);
-
-        float dbMax{24}, dbMin{-48 - 12};
-        auto ysc = 1.0 / (dbMax - dbMin) * getHeight();
-        int yoff = dbMax / (dbMax - dbMin) * getHeight();
-
-        auto tx = [=](float x) { return (xoff + x) * xsc; };
-        auto ty = [=](float y) { return yoff - y * ysc; };
 
         namespace bst = sst::jucegui::components::base_styles;
         g.fillAll(panel.style()->getColour(bst::ValueGutter::styleClass, bst::ValueGutter::gutter));
@@ -258,8 +315,34 @@ struct FilterCurve : juce::Component
         g.strokePath(p, juce::PathStrokeType(1.5));
 
         gReal.drawImage(renderCache, getLocalBounds().toFloat());
+        if (showDragEdit)
+        {
+            drawCrosshairs(gReal);
+        }
     }
     void resized() override {}
+
+    void drawCrosshairs(juce::Graphics &gReal)
+    {
+        auto &fn = panel.editor.patchCopy.filterNodes[panel.instance];
+        co = fn.cutoff;
+        res = fn.resonance;
+
+        auto freq = 440 * pow(2, co / 12.0);
+        auto lfre = log10(freq);
+        auto cx = tx(lfre);
+        auto cy = (1.0 - res) * getHeight();
+
+        namespace bst = sst::jucegui::components::base_styles;
+
+        auto vlc = panel.style()->getColour(bst::BaseLabel::styleClass, bst::BaseLabel::labelcolor);
+
+        gReal.setColour(vlc);
+        gReal.drawVerticalLine(cx, 0, getHeight());
+        gReal.drawHorizontalLine(cy, 0, getWidth());
+
+        gReal.fillEllipse(cx - 3, cy - 3, 6, 6);
+    }
 
     int idleCount{0};
     void onIdle()
