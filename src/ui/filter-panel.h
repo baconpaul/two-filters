@@ -47,12 +47,15 @@ struct FilterPanel : sst::jucegui::components::NamedPanel
     std::unique_ptr<FilterCurve> curve;
 
     std::unique_ptr<PatchContinuous> cutoffD, resonanceD, morphD;
+    std::unique_ptr<PatchDiscrete> activeD;
+
     std::unique_ptr<sst::jucegui::components::Knob> cutoffK, resonanceK, morphK;
 
     std::unique_ptr<sst::jucegui::components::MenuButton> modelMenu, configMenu;
 
     void showModelMenu();
     void showConfigMenu();
+
     int instance;
 };
 } // namespace baconpaul::twofilters::ui

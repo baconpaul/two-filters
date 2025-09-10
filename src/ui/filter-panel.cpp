@@ -223,6 +223,15 @@ struct FilterCurve : juce::Component
             {
                 drawCrosshairs(gReal);
             }
+
+            if (!isEnabled())
+            {
+                namespace bst = sst::jucegui::components::base_styles;
+                gReal.fillAll(
+                    panel.style()
+                        ->getColour(bst::ValueGutter::styleClass, bst::ValueGutter::gutter)
+                        .withAlpha(0.5f));
+            }
             return;
         }
 
@@ -319,6 +328,13 @@ struct FilterCurve : juce::Component
         {
             drawCrosshairs(gReal);
         }
+        if (!isEnabled())
+        {
+            namespace bst = sst::jucegui::components::base_styles;
+            gReal.fillAll(panel.style()
+                              ->getColour(bst::ValueGutter::styleClass, bst::ValueGutter::gutter)
+                              .withAlpha(0.5f));
+        }
     }
     void resized() override {}
 
@@ -387,14 +403,30 @@ struct FilterCurve : juce::Component
     sst::filters::FilterPlotter plotter{14};
 };
 
-FilterPanel::FilterPanel(PluginEditor &editor, int ins)
+FilterPanel::FilterPanel(PluginEditor &ed, int ins)
     : instance(ins), sst::jucegui::components::NamedPanel("Filter " + std::to_string(ins + 1)),
-      editor(editor)
+      editor(ed)
 {
+    auto &fn = editor.patchCopy.filterNodes[instance];
+
+    setTogglable(true);
+
+    activeD = std::make_unique<PatchDiscrete>(editor, fn.active.meta.id);
+    setToggleDataSource(activeD.get());
+    toggleButton->onBeginEdit = [this, &fn]() {
+        editor.mainToAudio.push({Engine::MainToAudioMsg::Action::BEGIN_EDIT, fn.active.meta.id});
+    };
+
+    toggleButton->onEndEdit = [this, &fn]() {
+        editor.mainToAudio.push({Engine::MainToAudioMsg::Action::END_EDIT, fn.active.meta.id});
+    };
+    editor.componentRefreshByID[fn.active.meta.id] = [this]() { onModelChanged(); };
+
+    activeD->onGuiSetValue = [this]() { onModelChanged(); };
+
     curve = std::make_unique<FilterCurve>(*this);
     addAndMakeVisible(*curve);
 
-    auto &fn = editor.patchCopy.filterNodes[instance];
     createComponent(editor, *this, fn.cutoff, cutoffK, cutoffD);
     cutoffD->onGuiSetValue = [this]() { curve->rebuild(); };
     cutoffD->labelOverride = "Cutoff";
@@ -425,6 +457,10 @@ FilterPanel::~FilterPanel() = default;
 
 void FilterPanel::resized()
 {
+    sst::jucegui::components::NamedPanel::resized();
+    if (!curve)
+        return;
+
     auto b = getContentArea().withHeight(170);
     curve->setBounds(b);
 
@@ -457,6 +493,14 @@ void FilterPanel::onModelChanged()
 
     modelMenu->setLabel(mn);
     configMenu->setLabel(cn);
+
+    auto act = fn.active > 0.5;
+    cutoffK->setEnabled(act);
+    resonanceK->setEnabled(act);
+    morphK->setEnabled(act && (xtra > 0));
+    modelMenu->setEnabled(act);
+    configMenu->setEnabled(act);
+    curve->setEnabled(act);
     repaint();
 }
 

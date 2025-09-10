@@ -60,6 +60,7 @@ RoutingPanel::RoutingPanel(PluginEditor &editor)
     addAndMakeVisible(*noisePowerT);
     noisePowerD->onGuiSetValue = [this]() { enableFB(); };
     editor.componentRefreshByID[rn.feedback.meta.id] = [this]() { enableFB(); };
+    editor.componentRefreshByID[rn.noisePower.meta.id] = [this]() { enableFB(); };
 
     enableFB();
 }
@@ -80,6 +81,7 @@ void RoutingPanel::resized()
     igK->setBounds(kr.translated(0, 2 * 80));
     ogK->setBounds(kr.translated(0, 3 * 80));
     noiseLevelK->setBounds(kr.translated(0, 4 * 80));
+
     auto tr = kr.withWidth(15).withHeight(15).translated(-10, -4);
     fbPowerT->setBounds(tr);
     auto nr = noiseLevelK->getBounds().withWidth(15).withHeight(15).translated(-10, -4);

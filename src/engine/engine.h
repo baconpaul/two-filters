@@ -391,6 +391,7 @@ struct Engine
         reassignLfos();
     }
 
+    bool activeFilter[2]{true, true};
     void setupFilter(int instance);
 
     std::atomic<bool> onMainRescanParams{false};

@@ -162,21 +162,27 @@ struct Patch : pats::PatchBase<Patch, Param>
                         .asPercent()
                         .withGroupName(groupName(instance))
                         .withName("Morph " + std::to_string(instance + 1))
-                        .withID(id(instance, 2)))
+                        .withID(id(instance, 2))),
+              active(boolMd()
+                         .asOnOffBool()
+                         .withDefault(1)
+                         .withGroupName(groupName(instance))
+                         .withName("Active " + std::to_string(instance + 1))
+                         .withID(id(instance, 3)))
         {
         }
 
         std::string groupName(int i) const { return "Filter " + std::to_string(i + 1); }
         uint32_t id(int instance, int f) const { return idBase + f + idStride * instance; }
 
-        Param cutoff, resonance, morph;
+        Param cutoff, resonance, morph, active;
 
         sst::filtersplusplus::FilterModel model{sst::filtersplusplus::FilterModel::None};
         sst::filtersplusplus::ModelConfig config{};
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&cutoff, &resonance, &morph};
+            std::vector<Param *> res{&cutoff, &resonance, &morph, &active};
             return res;
         }
     } filterNodes[numFilters]{0, 1};

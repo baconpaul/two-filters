@@ -92,6 +92,21 @@ void Engine::processControl(const clap_output_events_t *outq)
 {
     auto beatsPerMeasure = 4.0 * transport.signature.numerator / transport.signature.denominator;
 
+    auto a0 = patch.filterNodes[0].active > 0.5;
+    auto a1 = patch.filterNodes[1].active > 0.5;
+
+    if (a0 != activeFilter[0])
+    {
+        activeFilter[0] = a0;
+        setupFilter(0);
+    }
+
+    if (a1 != activeFilter[1])
+    {
+        activeFilter[1] = a1;
+        setupFilter(1);
+    }
+
     auto isPlaying = [](auto v)
     {
         auto b = (v & sst::basic_blocks::modulators::Transport::PLAYING) ||
@@ -415,8 +430,18 @@ void Engine::setupFilter(int f)
 {
     memset(combDelays[f], 0, sizeof(combDelays[f]));
     auto &fn = patch.filterNodes[f];
-    filters[f].setFilterModel(fn.model);
-    filters[f].setModelConfiguration(fn.config);
+
+    auto model = fn.model;
+    auto cfg = fn.config;
+
+    if (!activeFilter[f])
+    {
+        model = sst::filtersplusplus::FilterModel::None;
+        cfg = {};
+    }
+
+    filters[f].setFilterModel(model);
+    filters[f].setModelConfiguration(cfg);
     filters[f].setStereo();
     filters[f].setSampleRateAndBlockSize(sampleRate, blockSize);
     for (int i = 0; i < 4; ++i)

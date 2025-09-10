@@ -624,6 +624,7 @@ void PluginEditor::showPresetPopup()
                             f->onModelChanged();
                         for (auto &s : w->stepLFOPanel)
                             s->onModelChanged();
+                        w->routingPanel->enableFB();
                         w->repaint();
                     });
     }
@@ -792,6 +793,7 @@ void PluginEditor::postPatchChange(const std::string &s)
         f->onModelChanged();
     for (auto &f : stepLFOPanel)
         f->onModelChanged();
+    routingPanel->enableFB();
 
     presetDataBinding->setStateForDisplayName(s);
     for (auto [id, f] : componentRefreshByID)
@@ -862,6 +864,7 @@ void PluginEditor::setSkinFromDefaults()
         f->onModelChanged();
     for (auto &s : stepLFOPanel)
         s->onModelChanged();
+    routingPanel->enableFB();
 }
 
 void PluginEditor::setZoomFactor(float zf)
