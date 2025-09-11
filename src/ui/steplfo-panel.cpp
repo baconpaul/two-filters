@@ -155,8 +155,8 @@ struct StepEditor : juce::Component
 
         lfoPath.clear();
 
-        auto tx = [=](auto x) { return x / (stepBlocks * 16) * getWidth(); };
-        auto ty = [=](auto y) { return (1 - (y + 1) / 2.) * getHeight(); };
+        auto tx = [=, this](auto x) { return x / (stepBlocks * 16) * getWidth(); };
+        auto ty = [=, this](auto y) { return (1 - (y + 1) / 2.) * getHeight(); };
         for (int i = 0; i < steps * stepBlocks; ++i)
         {
             lfo.process(rate, 0, true, false, blockSize);
