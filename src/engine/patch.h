@@ -194,6 +194,7 @@ struct Patch : pats::PatchBase<Patch, Param>
         RoutingNode()
             : feedback(floatMd()
                            .asCubicDecibelAttenuation()
+                           .withDefault(0)
                            .withGroupName("Routing")
                            .withName("Feedback")
                            .withID(id(0))),
