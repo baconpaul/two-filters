@@ -1,11 +1,8 @@
 # Two Filters
 
-Two Filters, Two Step Sequencers, and some fixed mod paths.
+Two Filters, Two Step Sequencers, and some fixed mod paths. Download the plugin here
+https://github.com/baconpaul/two-filters/releases/tag/Nightly
 
-Really, its a test bed for our new Filter API. But you may find it fun.
+Really, its a test bed for our new Filter API. But you may find it fun. Some people have!
 
 ![Two Filters Screenshot](doc/TF.png)
-
-Later if it is popular:
-- show the modulated response in the ui also
-- CLAP non-destructive modulation
