@@ -33,6 +33,8 @@
 #include <sst/jucegui/accessibility/FocusDebugger.h>
 #include <sst/jucegui/data/Continuous.h>
 
+#include "sst/basic-blocks/dsp/RNG.h"
+
 #include "engine/engine.h"
 #include "engine/patch.h"
 #include "presets/preset-manager.h"
@@ -96,6 +98,8 @@ struct PluginEditor : jcmp::WindowPanel
     void resetEnablement();
 
     std::unique_ptr<defaultsProvder_t> defaultsProvider;
+
+    sst::basic_blocks::dsp::RNG rng;
 
     void setSkinFromDefaults();
 

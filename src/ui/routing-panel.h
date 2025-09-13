@@ -46,6 +46,8 @@ struct RoutingPanel : sst::jucegui::components::NamedPanel
 
     void enableFB();
 
+    void randomize();
+
     void beginEdit() {}
     void endEdit(int id) {}
 };

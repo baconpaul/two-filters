@@ -124,4 +124,5 @@ void RoutingPanel::enableFB()
     filterBlendParallelK->setVisible(m != 0);
 }
 
+void RoutingPanel::randomize() { SQLOG("RoutingPanel::randomize"); }
 } // namespace baconpaul::twofilters::ui

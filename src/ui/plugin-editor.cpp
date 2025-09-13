@@ -573,6 +573,33 @@ void PluginEditor::showPresetPopup()
     p.addSubMenu("Factory Presets", f);
     p.addSubMenu("User Presets", u);
     p.addSeparator();
+
+    auto rsm = juce::PopupMenu();
+    rsm.addItem("Filter 1",
+                [w = juce::Component::SafePointer(this)]() { w->filterPanel[0]->randomize(); });
+    rsm.addItem("Filter 2",
+                [w = juce::Component::SafePointer(this)]() { w->filterPanel[1]->randomize(); });
+    rsm.addSeparator();
+    rsm.addItem("Step 1", false, false,
+                [w = juce::Component::SafePointer(this)]() { w->stepLFOPanel[0]->randomize(); });
+    rsm.addItem("Step 2", false, false,
+                [w = juce::Component::SafePointer(this)]() { w->stepLFOPanel[1]->randomize(); });
+    rsm.addSeparator();
+    rsm.addItem("Main", false, false,
+                [w = juce::Component::SafePointer(this)]() { w->routingPanel->randomize(); });
+    rsm.addSeparator();
+    rsm.addItem("Everything", false, false,
+                [w = juce::Component::SafePointer(this)]()
+                {
+                    w->filterPanel[0]->randomize();
+                    w->filterPanel[1]->randomize();
+                    w->stepLFOPanel[0]->randomize();
+                    w->stepLFOPanel[1]->randomize();
+                    w->routingPanel->randomize();
+                });
+    p.addSubMenu("Randomize", rsm);
+
+    p.addSeparator();
     p.addItem("Load Patch",
               [w = juce::Component::SafePointer(this)]()
               {

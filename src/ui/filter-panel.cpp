@@ -652,4 +652,36 @@ void FilterPanel::onIdle() { curve->onIdle(); }
 
 void FilterPanel::endEdit(int id) { curve->rebuild(); }
 
+void FilterPanel::randomize()
+{
+    auto &fn = editor.patchCopy.filterNodes[instance];
+    auto wr = [&, this](auto &par, auto &cont, auto &wid)
+    {
+        auto range = par.meta.maxVal - par.meta.minVal;
+        auto nv = editor.rng.unif01() * range + par.meta.minVal;
+        wid->onBeginEdit();
+        cont->setValueFromGUI(nv);
+        wid->onEndEdit();
+    };
+
+    namespace sfpp = sst::filtersplusplus;
+    auto mods = sfpp::Filter::availableModels();
+    // 1 since we dont want off
+    auto mod = mods[editor.rng.unifInt(1, mods.size() - 1)];
+    fn.model = mod;
+
+    auto am = sfpp::Filter::availableModelConfigurations(fn.model, true);
+    auto cfg = am[editor.rng.unifInt(0, am.size() - 1)];
+    fn.config = cfg;
+
+    wr(fn.cutoff, cutoffD, cutoffK);
+    wr(fn.resonance, resonanceD, resonanceK);
+    wr(fn.morph, morphD, morphK);
+    wr(fn.pan, panD, panK);
+
+    editor.pushFilterSetup(instance);
+    onModelChanged();
+    repaint();
+}
+
 } // namespace baconpaul::twofilters::ui

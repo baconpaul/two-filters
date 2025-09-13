@@ -424,4 +424,6 @@ void StepLFOPanel::setCurrentLevel(float ph)
     }
 }
 
+void StepLFOPanel::randomize() { SQLOG("StepLFOPanel::randomize " << instance); }
+
 } // namespace baconpaul::twofilters::ui

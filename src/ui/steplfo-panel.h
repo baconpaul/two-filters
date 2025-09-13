@@ -62,6 +62,8 @@ struct StepLFOPanel : sst::jucegui::components::NamedPanel
     std::unique_ptr<sst::jucegui::components::Knob> rate, smooth;
     std::unique_ptr<PatchContinuous> rateD, smoothD;
 
+    void randomize();
+
     void onModelChanged();
     int instance;
 };
