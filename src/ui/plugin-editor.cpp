@@ -624,6 +624,31 @@ void PluginEditor::showPresetPopup()
     p.addSubMenu("User Presets", u);
     p.addSeparator();
 
+    p.addItem("Reset to Init",
+              [w = juce::Component::SafePointer(this)]()
+              {
+                  if (w)
+                  {
+                      w->resetToDefault();
+                  }
+              });
+
+    auto rsetm = juce::PopupMenu();
+    rsetm.addItem("Filter 1",
+                  [w = juce::Component::SafePointer(this)]() { w->filterPanel[0]->resetFilter(); });
+    rsetm.addItem("Filter 2",
+                  [w = juce::Component::SafePointer(this)]() { w->filterPanel[1]->resetFilter(); });
+    rsetm.addSeparator();
+    rsetm.addItem("LFO 1 Steps",
+                  [w = juce::Component::SafePointer(this)]() { w->stepLFOPanel[0]->resetSteps(); });
+    rsetm.addItem("LFO 1 Routes", [w = juce::Component::SafePointer(this)]()
+                  { w->stepLFOPanel[0]->resetRoutes(); });
+    rsetm.addItem("LFO 2 Steps",
+                  [w = juce::Component::SafePointer(this)]() { w->stepLFOPanel[1]->resetSteps(); });
+    rsetm.addItem("LFO 2 Routes", [w = juce::Component::SafePointer(this)]()
+                  { w->stepLFOPanel[1]->resetRoutes(); });
+    p.addSubMenu("Reset", rsetm);
+
     auto rsm = juce::PopupMenu();
     rsm.addItem("Filter 1",
                 [w = juce::Component::SafePointer(this)]() { w->filterPanel[0]->randomize(); });
@@ -665,15 +690,6 @@ void PluginEditor::showPresetPopup()
               {
                   if (w)
                       w->doSavePatch();
-              });
-    p.addSeparator();
-    p.addItem("Reset to Init",
-              [w = juce::Component::SafePointer(this)]()
-              {
-                  if (w)
-                  {
-                      w->resetToDefault();
-                  }
               });
     p.addSeparator();
 
