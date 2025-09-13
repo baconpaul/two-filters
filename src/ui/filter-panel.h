@@ -39,6 +39,9 @@ struct FilterPanel : sst::jucegui::components::NamedPanel
     void beginEdit() {}
     void endEdit(int id);
 
+    void jogModel(int dir);
+    void jogConfig(int dir);
+
     void onIdle();
 
     std::unique_ptr<FilterCurve> curve;

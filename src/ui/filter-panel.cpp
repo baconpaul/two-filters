@@ -452,9 +452,11 @@ FilterPanel::FilterPanel(PluginEditor &ed, int ins)
     modelMenu = std::make_unique<sst::jucegui::components::MenuButton>();
     addAndMakeVisible(*modelMenu);
     modelMenu->setOnCallback([this]() { showModelMenu(); });
+    modelMenu->setOnJogCallback([this](auto i) { jogModel(i); });
     configMenu = std::make_unique<sst::jucegui::components::MenuButton>();
     addAndMakeVisible(*configMenu);
     configMenu->setOnCallback([this]() { showConfigMenu(); });
+    configMenu->setOnJogCallback([this](auto i) { jogConfig(i); });
 }
 
 FilterPanel::~FilterPanel() = default;
@@ -584,6 +586,66 @@ void FilterPanel::showConfigMenu()
     }
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor));
+}
+
+void FilterPanel::jogConfig(int dir)
+{
+    namespace sfpp = sst::filtersplusplus;
+    auto &fn = editor.patchCopy.filterNodes[instance];
+
+    auto am = sfpp::Filter::availableModelConfigurations(fn.model, true);
+    int cm{-1};
+    auto currConf = editor.patchCopy.filterNodes[instance].config;
+    for (int i = 0; i < am.size(); ++i)
+    {
+        if (am[i] == currConf)
+        {
+            cm = i;
+            break;
+        }
+    }
+
+    cm = cm + dir;
+    if (cm < 0)
+        cm = am.size() - 1;
+    if (cm >= am.size())
+        cm = 0;
+    auto newConf = am[cm];
+    editor.patchCopy.filterNodes[instance].config = newConf;
+    editor.pushFilterSetup(instance);
+    onModelChanged();
+}
+
+void FilterPanel::jogModel(int dir)
+{
+    namespace sfpp = sst::filtersplusplus;
+    auto am = sfpp::Filter::availableModels();
+    int cm{-1};
+    auto currMod = editor.patchCopy.filterNodes[instance].model;
+    for (int i = 0; i < am.size(); ++i)
+    {
+        if (am[i] == currMod)
+        {
+            cm = i;
+            break;
+        }
+    }
+
+    cm = cm + dir;
+    if (cm < 0)
+        cm = am.size() - 1;
+    if (cm >= am.size())
+        cm = 0;
+    auto newMod = am[cm];
+    editor.patchCopy.filterNodes[instance].model = newMod;
+
+    auto configs = sfpp::Filter::availableModelConfigurations(newMod, true);
+    if (configs.empty())
+        editor.patchCopy.filterNodes[instance].config = {};
+    else
+        editor.patchCopy.filterNodes[instance].config = configs.front();
+    editor.pushFilterSetup(instance);
+    onModelChanged();
 }
 
 void FilterPanel::onIdle() { curve->onIdle(); }
