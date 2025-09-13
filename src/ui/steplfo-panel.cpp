@@ -212,7 +212,11 @@ struct StepEditor : juce::Component
     {
         if (e.mods.isPopupMenu())
         {
-            showPopup();
+            auto x = std::clamp(e.x, 0, getWidth());
+            auto bw = getWidth() * 1.0 / maxSteps;
+            auto step = std::clamp(int(x / bw), 0, (int)maxSteps - 1);
+
+            showPopup(step);
             return;
         }
         lastEditedStep = -1;
@@ -246,10 +250,13 @@ struct StepEditor : juce::Component
         adjustValue(e.position, true);
     }
 
-    void showPopup()
+    void showPopup(int step)
     {
         auto m = juce::PopupMenu();
-        m.addSectionHeader("Step LFO " + std::to_string(panel.instance + 1));
+        m.addSectionHeader("Step LFO " + std::to_string(panel.instance + 1) + ", Step " +
+                           std::to_string(step + 1));
+        m.addSeparator();
+        panel.editor.addTypeinToMenu(m, panel.stepDs[step].get());
         m.addSeparator();
         m.addItem("Reset Steps",
                   [w = juce::Component::SafePointer(this)]()

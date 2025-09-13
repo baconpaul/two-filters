@@ -52,6 +52,8 @@ struct FilterPanel;
 struct RoutingPanel;
 struct StepLFOPanel;
 
+struct PatchContinuous;
+
 struct PluginEditor : jcmp::WindowPanel
 {
     Patch patchCopy;
@@ -117,6 +119,7 @@ struct PluginEditor : jcmp::WindowPanel
     void hideTooltip();
 
     void popupMenuForContinuous(jcmp::ContinuousParamEditor *e);
+    void addTypeinToMenu(juce::PopupMenu &m, PatchContinuous *c);
 
     void hideAllSubPanels();
     std::unordered_map<uint32_t, juce::Component::SafePointer<juce::Component>> componentByID;

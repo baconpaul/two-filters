@@ -384,9 +384,22 @@ struct MenuValueTypein : HasEditor, juce::PopupMenu::CustomComponent, juce::Text
     std::unique_ptr<juce::TextEditor> textEditor;
     juce::Component::SafePointer<jcmp::ContinuousParamEditor> underComp;
 
+    PatchContinuous *contVal{nullptr};
+
     MenuValueTypein(PluginEditor &editor,
                     juce::Component::SafePointer<jcmp::ContinuousParamEditor> under)
         : juce::PopupMenu::CustomComponent(false), HasEditor(editor), underComp(under)
+    {
+        textEditor = std::make_unique<juce::TextEditor>();
+        textEditor->setWantsKeyboardFocus(true);
+        textEditor->addListener(this);
+        textEditor->setIndents(2, 0);
+
+        addAndMakeVisible(*textEditor);
+    }
+
+    MenuValueTypein(PluginEditor &editor, PatchContinuous *onto)
+        : juce::PopupMenu::CustomComponent(false), HasEditor(editor), contVal(onto)
     {
         textEditor = std::make_unique<juce::TextEditor>();
         textEditor->setWantsKeyboardFocus(true);
@@ -413,7 +426,13 @@ struct MenuValueTypein : HasEditor, juce::PopupMenu::CustomComponent, juce::Text
                 {
                     textEditor->setText(getInitialText(),
                                         juce::NotificationType::dontSendNotification);
-                    auto valCol = juce::Colour(0xFF, 0x90, 0x00);
+                    // Make tehse follow skin
+                    auto valCol = editor.style()->getColour(
+                        sst::jucegui::components::base_styles::ValueBearing::styleClass,
+                        sst::jucegui::components::base_styles::ValueBearing::value);
+                    auto labCol = editor.style()->getColour(
+                        sst::jucegui::components::base_styles::BaseLabel::styleClass,
+                        sst::jucegui::components::base_styles::BaseLabel::labelcolor);
                     textEditor->setColour(juce::TextEditor::ColourIds::backgroundColourId,
                                           valCol.withAlpha(0.1f));
                     textEditor->setColour(juce::TextEditor::ColourIds::highlightColourId,
@@ -423,6 +442,9 @@ struct MenuValueTypein : HasEditor, juce::PopupMenu::CustomComponent, juce::Text
                                           juce::Colours::black.withAlpha(0.f));
                     textEditor->setColour(juce::TextEditor::ColourIds::focusedOutlineColourId,
                                           juce::Colours::black.withAlpha(0.f));
+                    textEditor->setColour(juce::TextEditor::ColourIds::textColourId, labCol);
+                    textEditor->setColour(juce::TextEditor::ColourIds::highlightedTextColourId,
+                                          labCol);
                     textEditor->setBorder(juce::BorderSize<int>(3));
                     textEditor->applyColourToAllText(valCol, true);
                     textEditor->grabKeyboardFocus();
@@ -431,7 +453,14 @@ struct MenuValueTypein : HasEditor, juce::PopupMenu::CustomComponent, juce::Text
             });
     }
 
-    std::string getInitialText() const { return underComp->continuous()->getValueAsString(); }
+    std::string getInitialText() const
+    {
+        if (underComp)
+            return underComp->continuous()->getValueAsString();
+        if (contVal)
+            return contVal->getValueAsString();
+        return "";
+    }
 
     void setValueString(const std::string &s)
     {
@@ -453,6 +482,22 @@ struct MenuValueTypein : HasEditor, juce::PopupMenu::CustomComponent, juce::Text
             underComp->grabKeyboardFocus();
             underComp->notifyAccessibleChange();
         }
+        else if (contVal)
+        {
+            editor.mainToAudio.push({Engine::MainToAudioMsg::Action::BEGIN_EDIT, contVal->pid});
+
+            if (s.empty())
+            {
+                contVal->setValueFromGUI(contVal->getDefaultValue());
+            }
+            else
+            {
+                contVal->setValueAsString(s);
+            }
+            editor.mainToAudio.push({Engine::MainToAudioMsg::Action::END_EDIT, contVal->pid});
+
+            editor.repaint();
+        }
     }
 
     void textEditorReturnKeyPressed(juce::TextEditor &ed) override
@@ -463,6 +508,11 @@ struct MenuValueTypein : HasEditor, juce::PopupMenu::CustomComponent, juce::Text
     }
     void textEditorEscapeKeyPressed(juce::TextEditor &) override { triggerMenuItem(); }
 };
+
+void PluginEditor::addTypeinToMenu(juce::PopupMenu &m, PatchContinuous *c)
+{
+    m.addCustomItem(-1, std::make_unique<MenuValueTypein>(*this, c));
+}
 
 void PluginEditor::popupMenuForContinuous(jcmp::ContinuousParamEditor *e)
 {
