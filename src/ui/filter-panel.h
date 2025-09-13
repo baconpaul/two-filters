@@ -45,7 +45,7 @@ struct FilterPanel : sst::jucegui::components::NamedPanel
     void onIdle();
 
     void randomize();
-    void resetFilter() {}
+    void resetFilter();
 
     std::unique_ptr<FilterCurve> curve;
 

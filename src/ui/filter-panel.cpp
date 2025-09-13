@@ -205,7 +205,7 @@ struct FilterCurve : juce::Component
         auto m = juce::PopupMenu();
         m.addSectionHeader("Filter " + std::to_string(panel.instance + 1));
         m.addSeparator();
-        m.addItem("Reset", false, false,
+        m.addItem("Reset",
                   [w = juce::Component::SafePointer(this)]()
                   {
                       if (w)
@@ -711,6 +711,31 @@ void FilterPanel::randomize()
     wr(fn.resonance, resonanceD, resonanceK);
     wr(fn.morph, morphD, morphK);
     wr(fn.pan, panD, panK);
+
+    editor.pushFilterSetup(instance);
+    onModelChanged();
+    repaint();
+}
+
+void FilterPanel::resetFilter()
+{
+    namespace sfpp = sst::filtersplusplus;
+    auto &fn = editor.patchCopy.filterNodes[instance];
+
+    fn.model = sfpp::FilterModel::None;
+    fn.config = {};
+
+    auto wr = [&, this](auto &dat, auto &wid)
+    {
+        wid->onBeginEdit();
+        dat->setValueFromGUI(dat->getDefaultValue());
+        wid->onEndEdit();
+    };
+
+    wr(cutoffD, cutoffK);
+    wr(resonanceD, resonanceK);
+    wr(morphD, morphK);
+    wr(panD, panK);
 
     editor.pushFilterSetup(instance);
     onModelChanged();
