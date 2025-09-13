@@ -57,6 +57,9 @@ void Engine::setSampleRate(double sr)
     {
         setupFilter(i);
     }
+
+    for (auto &pl : panLag)
+        pl.setRateInMilliseconds(25, sampleRate, 1.0 / blockSize);
 }
 
 void Engine::updateLfoStorage()
@@ -194,6 +197,19 @@ void Engine::processControl(const clap_output_events_t *outq)
         blendLipol1.newValue(sqrt(1 - bv) * 1.4142135); // so blend of 0 == bv of 0.5 has lipol of 1
         blendLipol2.newValue(sqrt(bv) * 1.4142135);
     }
+
+    auto p1 = patch.filterNodes[0].pan + lfos[0].output * patch.stepLfoNodes[0].toPan[0] +
+              lfos[1].output * patch.stepLfoNodes[1].toPan[0];
+    auto p2 = patch.filterNodes[1].pan + lfos[0].output * patch.stepLfoNodes[0].toPan[1] +
+              lfos[1].output * patch.stepLfoNodes[1].toPan[1];
+    p1 = std::clamp(p1 * 0.5f + 0.5f, 0.f, 1.f);
+    p2 = std::clamp(p2 * 0.5f + 0.5f, 0.f, 1.f);
+    panLag[0].setTarget(p1);
+    panLag[1].setTarget(p2);
+    sst::basic_blocks::dsp::pan_laws::stereoEqualPower(panLag[0].getValue(), panMatrix[0]);
+    sst::basic_blocks::dsp::pan_laws::stereoEqualPower(panLag[1].getValue(), panMatrix[1]);
+    panLag[0].process();
+    panLag[1].process();
 
     useFeedback = patch.routingNode.feedbackPower > 0.5;
 

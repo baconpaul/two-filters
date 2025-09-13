@@ -448,7 +448,6 @@ FilterPanel::FilterPanel(PluginEditor &ed, int ins)
     createComponent(editor, *this, fn.pan, panK, panD);
     addAndMakeVisible(*panK);
     panD->labelOverride = "Pan";
-    panK->setEnabled(false);
 
     modelMenu = std::make_unique<sst::jucegui::components::MenuButton>();
     addAndMakeVisible(*modelMenu);

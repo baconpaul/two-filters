@@ -253,7 +253,6 @@ StepLFOPanel::StepLFOPanel(PluginEditor &editor, int instance)
     idx++;
     createComponent(editor, *this, sn.toPan[0], routeK[idx], routeD[idx]);
     routeD[idx]->labelOverride = "Pan";
-    routeK[idx]->setEnabled(false);
     idx++;
 
     createComponent(editor, *this, sn.toCO[1], routeK[idx], routeD[idx]);
@@ -267,7 +266,6 @@ StepLFOPanel::StepLFOPanel(PluginEditor &editor, int instance)
     idx++;
     createComponent(editor, *this, sn.toPan[1], routeK[idx], routeD[idx]);
     routeD[idx]->labelOverride = "Pan";
-    routeK[idx]->setEnabled(false);
     idx++;
 
     createComponent(editor, *this, sn.toPreG, routeK[idx], routeD[idx]);

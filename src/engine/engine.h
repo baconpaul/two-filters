@@ -25,6 +25,7 @@
 #include "sst/basic-blocks/dsp/Lag.h"
 #include "sst/basic-blocks/dsp/VUPeak.h"
 #include "sst/basic-blocks/dsp/RNG.h"
+#include "sst/basic-blocks/dsp/PanLaws.h"
 #include "sst/basic-blocks/tables/EqualTuningProvider.h"
 #include "sst/basic-blocks/modulators/StepLFO.h"
 #include "sst/cpputils/ring_buffer.h"
@@ -96,6 +97,16 @@ struct Engine
 
     float noiseState[2][2]{0, 0};
     sst::basic_blocks::dsp::lipol<float, blockSize, true> blendLipol1, blendLipol2;
+    sst::basic_blocks::dsp::pan_laws::panmatrix_t panMatrix[2];
+    sst::basic_blocks::dsp::OnePoleLag<float, true> panLag[2];
+
+    void applyPan(float &L, float &R, int which)
+    {
+        auto tL = (panMatrix[which][0] * L + panMatrix[which][2] * R);
+        auto tR = (panMatrix[which][1] * R + panMatrix[which][3] * L);
+        L = tL;
+        R = tR;
+    }
 
     template <RoutingModes mode, bool fb, bool withNoise>
     void processAudio(float inL, float inR, float &outL, float &outR)
@@ -142,7 +153,10 @@ struct Engine
 
             float out1L, out1R, out2L, out2R;
             filters[0].processStereoSample(inL, inR, out1L, out1R);
+            applyPan(out1L, out1R, 0);
+
             filters[1].processStereoSample(out1L, out1R, out2L, out2R);
+            applyPan(out2L, out2R, 1);
 
             outL = blendLipol1.v * out1L + blendLipol2.v * out2L;
             outR = blendLipol1.v * out1R + blendLipol2.v * out2R;
@@ -177,6 +191,8 @@ struct Engine
             filters[0].processStereoSample(inL, inR, t0L, t0R);
             filters[1].processStereoSample(inL, inR, t1L, t1R);
 
+            applyPan(t0L, t0R, 0);
+            applyPan(t1L, t1R, 1);
             outL = blendLipol1.v * t0L + blendLipol2.v * t1L;
             outR = blendLipol1.v * t0R + blendLipol2.v * t1R;
 
@@ -209,6 +225,8 @@ struct Engine
             }
             filters[0].processStereoSample(inL, inR, t0L, t0R);
 
+            applyPan(t0L, t0R, 0);
+            applyPan(t1L, t1R, 1);
             outL = blendLipol1.v * t0L + blendLipol2.v * t1L;
             outR = blendLipol1.v * t0R + blendLipol2.v * t1R;
 
@@ -247,6 +265,8 @@ struct Engine
             }
             filters[1].processStereoSample(i2L, i2R, t1L, t1R);
 
+            applyPan(t0L, t0R, 0);
+            applyPan(t1L, t1R, 1);
             outL = blendLipol1.v * t0L + blendLipol2.v * t1L;
             outR = blendLipol1.v * t0R + blendLipol2.v * t1R;
 
