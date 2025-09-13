@@ -175,13 +175,15 @@ struct StepEditor : juce::Component
 
     int lastEditedStep{-1};
     int paintStep{-1};
-    void adjustValue(const juce::Point<float> &e, bool endAlways)
+    void adjustValue(const juce::Point<float> &e, bool endAlways, bool resetValue = false)
     {
         auto x = std::clamp(e.x, 0.f, 1.f * getWidth());
         auto y = std::clamp(e.y, 0.f, 1.f * getHeight());
         auto bw = getWidth() * 1.0 / maxSteps;
         auto step = std::clamp(int(x / bw), 0, (int)maxSteps - 1);
         auto val = std::clamp(1 - y / getHeight(), 0.f, 1.f) * 2 - 1;
+        if (resetValue)
+            val = 0.f;
 
         if (step != lastEditedStep)
         {
@@ -211,6 +213,13 @@ struct StepEditor : juce::Component
         lastEditedStep = -1;
         adjustValue(e.position, false);
     }
+
+    void mouseDoubleClick(const juce::MouseEvent &e) override
+    {
+        lastEditedStep = -1;
+        adjustValue(e.position, false, true);
+    }
+
     void mouseDrag(const juce::MouseEvent &e) override { adjustValue(e.position, false); }
     void mouseUp(const juce::MouseEvent &e) override { adjustValue(e.position, true); }
     StepLFOPanel &panel;
