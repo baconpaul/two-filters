@@ -141,8 +141,7 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             }                                                                                      \
         }
 
-            CSRM(Engine::RoutingModes::Serial_Post1)
-            CSRM(Engine::RoutingModes::Serial_Post2)
+            CSRM(Engine::RoutingModes::Serial)
             CSRM(Engine::RoutingModes::Parallel_FBOne)
             CSRM(Engine::RoutingModes::Parallel_FBBoth)
             CSRM(Engine::RoutingModes::Parallel_FBEach)

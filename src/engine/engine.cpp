@@ -173,6 +173,28 @@ void Engine::processControl(const clap_output_events_t *outq)
         filters[i].prepareBlock();
     }
 
+    auto mode = (RoutingModes)(int)patch.routingNode.routingMode;
+
+    if (mode == RoutingModes::Serial)
+    {
+        auto bv = patch.routingNode.filterBlendSerial +
+                  lfos[0].output * patch.stepLfoNodes[0].toFiltBlend +
+                  lfos[1].output * patch.stepLfoNodes[1].toFiltBlend;
+        bv = std::clamp(bv, 0.f, 1.f);
+        blendLipol1.newValue(sqrt(1 - bv)); // so blend of 0 is all 1 or all 2 with sum at half
+        blendLipol2.newValue(sqrt(bv));
+    }
+    else
+    {
+        auto bv = patch.routingNode.filterBlendParallel +
+                  lfos[0].output * patch.stepLfoNodes[0].toFiltBlend +
+                  lfos[1].output * patch.stepLfoNodes[1].toFiltBlend;
+        bv = (std::clamp(bv, -1.f, 1.f) + 1) * 0.5;
+
+        blendLipol1.newValue(sqrt(1 - bv) * 1.4142135); // so blend of 0 == bv of 0.5 has lipol of 1
+        blendLipol2.newValue(sqrt(bv) * 1.4142135);
+    }
+
     useFeedback = patch.routingNode.feedbackPower > 0.5;
 
     processUIQueue(outq);

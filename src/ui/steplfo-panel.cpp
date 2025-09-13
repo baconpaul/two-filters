@@ -251,6 +251,10 @@ StepLFOPanel::StepLFOPanel(PluginEditor &editor, int instance)
     createComponent(editor, *this, sn.toMorph[0], routeK[idx], routeD[idx]);
     routeD[idx]->labelOverride = "Morph";
     idx++;
+    createComponent(editor, *this, sn.toPan[0], routeK[idx], routeD[idx]);
+    routeD[idx]->labelOverride = "Pan";
+    routeK[idx]->setEnabled(false);
+    idx++;
 
     createComponent(editor, *this, sn.toCO[1], routeK[idx], routeD[idx]);
     routeD[idx]->labelOverride = "Cutoff";
@@ -261,11 +265,29 @@ StepLFOPanel::StepLFOPanel(PluginEditor &editor, int instance)
     createComponent(editor, *this, sn.toMorph[1], routeK[idx], routeD[idx]);
     routeD[idx]->labelOverride = "Morph";
     idx++;
-    createComponent(editor, *this, sn.toFB, routeK[idx], routeD[idx]);
-    routeD[idx]->labelOverride = "F/Back";
+    createComponent(editor, *this, sn.toPan[1], routeK[idx], routeD[idx]);
+    routeD[idx]->labelOverride = "Pan";
+    routeK[idx]->setEnabled(false);
+    idx++;
+
+    createComponent(editor, *this, sn.toPreG, routeK[idx], routeD[idx]);
+    routeD[idx]->labelOverride = "Pre";
+    idx++;
+    createComponent(editor, *this, sn.toPostG, routeK[idx], routeD[idx]);
+    routeD[idx]->labelOverride = "Post";
     idx++;
     createComponent(editor, *this, sn.toMix, routeK[idx], routeD[idx]);
     routeD[idx]->labelOverride = "Mix";
+    idx++;
+
+    createComponent(editor, *this, sn.toFB, routeK[idx], routeD[idx]);
+    routeD[idx]->labelOverride = "F/Back";
+    idx++;
+    createComponent(editor, *this, sn.toNoise, routeK[idx], routeD[idx]);
+    routeD[idx]->labelOverride = "Noise";
+    idx++;
+    createComponent(editor, *this, sn.toFiltBlend, routeK[idx], routeD[idx]);
+    routeD[idx]->labelOverride = "Blend";
     idx++;
 
     for (int i = 0; i < numRoutes; i++)
@@ -293,32 +315,65 @@ StepLFOPanel::StepLFOPanel(PluginEditor &editor, int instance)
 StepLFOPanel::~StepLFOPanel() = default;
 void StepLFOPanel::resized()
 {
-    auto rPad{80}, bPad{90};
+    auto rPad{80}, bPad{160};
     auto q = getContentArea().withTrimmedRight(rPad).withTrimmedBottom(bPad);
     auto rA = getContentArea().withWidth(rPad).translated(q.getWidth(), 0).withTrimmedBottom(bPad);
     stepCount->setBounds(rA.withHeight(20));
     rA = rA.withTrimmedTop(30);
-    auto ka = rA.withHeight(63).reduced((rA.getWidth() - 44) / 2, 0);
+    auto ka = rA.withHeight(66).reduced((rA.getWidth() - 49) / 2, 0);
     rate->setBounds(ka);
-    ka = ka.translated(0, 65);
+    ka = ka.translated(0, 68);
     smooth->setBounds(ka);
 
     stepEditor->setBounds(q);
 
     auto bA = getContentArea().withTrimmedTop(getContentArea().getHeight() - bPad);
-    auto kw = bA.getWidth() / numRoutes;
+    auto kw = 45;
+    auto kmarg = 10;
 
     auto lA = bA.withHeight(25).reduced(0, 2);
-    toF1->setBounds(lA.withWidth(3 * kw).reduced(4, 0));
-    toF2->setBounds(lA.withWidth(3 * kw).translated(3 * kw, 0).reduced(4, 0));
-    toRt->setBounds(lA.withWidth(2 * kw).translated(6 * kw, 0).reduced(4, 0));
+    toF1->setBounds(lA.withWidth(2 * kw + 3 * kmarg).reduced(4, 0));
+    toF2->setBounds(
+        lA.withWidth(2 * kw + 3 * kmarg).translated(2 * kw + 3 * kmarg, 0).reduced(4, 0));
+    toRt->setBounds(
+        lA.withWidth(3 * kw + 4 * kmarg).translated(4 * kw + 6 * kmarg, 0).reduced(4, 0));
 
     auto kA = bA.withWidth(kw).withTrimmedTop(25).withTrimmedBottom(2);
-    for (int i = 0; i < numRoutes; i++)
+    auto kT = kA.withHeight(kA.getHeight() / 2);
+    auto kB = kA.withTrimmedTop(kA.getHeight() / 2);
+
+    // we want the filters as
+    // 0 1   4 5
+    // 2 3   6 6
+    auto placeTop = [&, this](int idx)
     {
-        routeK[i]->setBounds(kA.reduced(6, 0));
-        kA = kA.translated(kw, 0);
+        routeK[idx]->setBounds(kT);
+        kT = kT.translated(kw + kmarg, 0);
+    };
+    auto placeBot = [&, this](int idx)
+    {
+        routeK[idx]->setBounds(kB);
+        kB = kB.translated(kw + kmarg, 0);
+    };
+    for (auto F = 0; F < numFilters; ++F)
+    {
+        kT = kT.translated(kmarg, 0);
+        kB = kB.translated(kmarg, 0);
+        auto i0 = F * 4;
+        placeTop(i0);
+        placeTop(i0 + 1);
+        placeBot(i0 + 2);
+        placeBot(i0 + 3);
     }
+
+    kT = kT.translated(kmarg, 0);
+    kB = kB.translated(kmarg, 0);
+    placeTop(8);
+    placeTop(9);
+    placeTop(13);
+    placeBot(10);
+    placeBot(11);
+    placeBot(12);
 }
 
 void StepLFOPanel::onModelChanged()
@@ -327,9 +382,16 @@ void StepLFOPanel::onModelChanged()
     {
         auto &fn = editor.patchCopy.filterNodes[i];
         auto xtra = sst::filtersplusplus::Filter::coefficientsExtraCount(fn.model, fn.config);
-        routeK[i * 3 + 2]->setEnabled(xtra > 0);
-        routeK[i * 3 + 2]->repaint();
+        routeK[i * 4 + 2]->setEnabled(xtra > 0);
+        routeK[i * 4 + 2]->repaint();
     }
+
+    auto fbP = editor.patchCopy.routingNode.feedbackPower > 0.5;
+    auto nsP = editor.patchCopy.routingNode.noisePower > 0.5;
+    routeK[11]->setEnabled(fbP);
+    routeK[12]->setEnabled(nsP);
+    routeK[11]->repaint();
+    routeK[12]->repaint();
     stepEditor->invalidatePath();
     repaint();
 }

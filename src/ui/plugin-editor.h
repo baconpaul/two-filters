@@ -28,6 +28,7 @@
 #include <sst/jucegui/components/ToggleButton.h>
 #include <sst/jucegui/components/MenuButton.h>
 #include <sst/jucegui/components/JogUpDownButton.h>
+#include <sst/jucegui/components/GlyphButton.h>
 #include <sst/jucegui/components/VUMeter.h>
 #include <sst/jucegui/accessibility/FocusDebugger.h>
 #include <sst/jucegui/data/Continuous.h>
@@ -81,6 +82,7 @@ struct PluginEditor : jcmp::WindowPanel
     std::unique_ptr<presets::PresetManager> presetManager;
     std::unique_ptr<PresetDataBinding> presetDataBinding;
     std::unique_ptr<jcmp::JogUpDownButton> presetButton;
+
     void showPresetPopup();
     void doLoadPatch();
     void doSavePatch();
@@ -90,6 +92,8 @@ struct PluginEditor : jcmp::WindowPanel
     void setPatchNameTo(const std::string &);
     void pushFilterSetup(int instance);
     std::unique_ptr<juce::FileChooser> fileChooser;
+
+    void resetEnablement();
 
     std::unique_ptr<defaultsProvder_t> defaultsProvider;
 

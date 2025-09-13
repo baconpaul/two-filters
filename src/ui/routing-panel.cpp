@@ -18,12 +18,15 @@
 namespace baconpaul::twofilters::ui
 {
 
-RoutingPanel::RoutingPanel(PluginEditor &editor)
-    : sst::jucegui::components::NamedPanel("Main"), editor(editor)
+RoutingPanel::RoutingPanel(PluginEditor &ed)
+    : sst::jucegui::components::NamedPanel("Main"), editor(ed)
 {
     auto rn = editor.patchCopy.routingNode;
     createComponent(editor, *this, rn.routingMode, routingModeS, routingModeD);
     addAndMakeVisible(*routingModeS);
+    routingModeD->onGuiSetValue = [this]() { editor.resetEnablement(); };
+    editor.componentRefreshByID[rn.routingMode.meta.id] = [this]() { editor.resetEnablement(); };
+
     retriggerModeL = std::make_unique<sst::jucegui::components::Label>();
     retriggerModeL->setText("Retrigger");
     addAndMakeVisible(*retriggerModeL);
@@ -47,20 +50,34 @@ RoutingPanel::RoutingPanel(PluginEditor &editor)
     addAndMakeVisible(*noiseLevelK);
     noiseLevelD->labelOverride = "Noise";
 
+    createComponent(editor, *this, rn.filterBlendSerial, filterBlendSerialK, filterBlendSerialD);
+    addAndMakeVisible(*filterBlendSerialK);
+    filterBlendSerialD->labelOverride = "Blend";
+
+    createComponent(editor, *this, rn.filterBlendParallel, filterBlendParallelK,
+                    filterBlendParallelD);
+    addChildComponent(*filterBlendParallelK);
+    filterBlendParallelD->labelOverride = "Blend";
+
     createComponent(editor, *this, rn.feedbackPower, fbPowerT, fbPowerD);
     fbPowerT->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
     fbPowerT->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
     addAndMakeVisible(*fbPowerT);
-    fbPowerD->onGuiSetValue = [this]() { enableFB(); };
-    editor.componentRefreshByID[rn.feedback.meta.id] = [this]() { enableFB(); };
+    fbPowerD->onGuiSetValue = [this]() { editor.resetEnablement(); };
+    editor.componentRefreshByID[rn.feedbackPower.meta.id] = [this]() { editor.resetEnablement(); };
 
     createComponent(editor, *this, rn.noisePower, noisePowerT, noisePowerD);
     noisePowerT->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::GLYPH);
     noisePowerT->setGlyph(sst::jucegui::components::GlyphPainter::POWER);
     addAndMakeVisible(*noisePowerT);
-    noisePowerD->onGuiSetValue = [this]() { enableFB(); };
-    editor.componentRefreshByID[rn.feedback.meta.id] = [this]() { enableFB(); };
-    editor.componentRefreshByID[rn.noisePower.meta.id] = [this]() { enableFB(); };
+    noisePowerD->onGuiSetValue = [this]() { editor.resetEnablement(); };
+    editor.componentRefreshByID[rn.noisePower.meta.id] = [this]() { editor.resetEnablement(); };
+
+    createComponent(editor, *this, rn.oversample, oversampleT, oversampleD);
+    oversampleT->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::LABELED);
+    oversampleT->setLabel("Oversample");
+    oversampleT->setEnabled(false);
+    addAndMakeVisible(*oversampleT);
 
     enableFB();
 }
@@ -68,21 +85,27 @@ void RoutingPanel::resized()
 {
     auto ca = getContentArea().reduced(2, 0);
 
-    routingModeS->setBounds(ca.withHeight(90));
-    ca = ca.withTrimmedTop(93);
+    routingModeS->setBounds(ca.withHeight(70));
+    ca = ca.withTrimmedTop(73);
 
-    retriggerModeL->setBounds(ca.withHeight(18));
-    retriggerModeS->setBounds(ca.withHeight(20).translated(0, 20));
+    oversampleT->setBounds(ca.withHeight(20));
 
-    ca = ca.withTrimmedTop(54);
+    retriggerModeL->setBounds(ca.withHeight(18).translated(0, 22));
+    retriggerModeS->setBounds(ca.withHeight(20).translated(0, 42));
+
+    ca = ca.withTrimmedTop(76);
     auto kr = ca.withHeight(75).reduced(15, 0);
-    feedbackK->setBounds(kr);
-    mixK->setBounds(kr.translated(0, 80));
-    igK->setBounds(kr.translated(0, 2 * 80));
-    ogK->setBounds(kr.translated(0, 3 * 80));
-    noiseLevelK->setBounds(kr.translated(0, 4 * 80));
 
-    auto tr = kr.withWidth(15).withHeight(15).translated(-10, -4);
+    auto kH = 77;
+    igK->setBounds(kr.translated(0, 0 * kH));
+    ogK->setBounds(kr.translated(0, 1 * kH));
+    filterBlendSerialK->setBounds(kr.translated(0, 2 * kH));
+    filterBlendParallelK->setBounds(kr.translated(0, 2 * kH));
+    mixK->setBounds(kr.translated(0, 3 * kH));
+    feedbackK->setBounds(kr.translated(0, 4 * kH));
+    noiseLevelK->setBounds(kr.translated(0, 5 * kH));
+
+    auto tr = feedbackK->getBounds().withHeight(15).translated(-10, -4);
     fbPowerT->setBounds(tr);
     auto nr = noiseLevelK->getBounds().withWidth(15).withHeight(15).translated(-10, -4);
     noisePowerT->setBounds(nr);
@@ -95,6 +118,10 @@ void RoutingPanel::enableFB()
 
     noiseLevelK->setEnabled(editor.patchCopy.routingNode.noisePower.value > 0.5f);
     noiseLevelK->repaint();
+
+    auto m = (int)editor.patchCopy.routingNode.routingMode;
+    filterBlendSerialK->setVisible(m == 0);
+    filterBlendParallelK->setVisible(m != 0);
 }
 
 } // namespace baconpaul::twofilters::ui

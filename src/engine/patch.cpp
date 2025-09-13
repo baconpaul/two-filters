@@ -19,7 +19,32 @@ namespace baconpaul::twofilters
 
 float Patch::migrateParamValueFromVersion(Param *p, float value, uint32_t version) { return value; }
 
-void Patch::migratePatchFromVersion(uint32_t version) {}
+void Patch::migratePatchFromVersion(uint32_t version)
+{
+    if (version == 1)
+    {
+        // version 1-> had serial mode split and no blend, so bring the
+        // mode to serial with blend set for the old types.
+        auto m = (int)routingNode.routingMode;
+        switch (m)
+        {
+        case 0:
+            routingNode.filterBlendSerial = 1.f;
+            routingNode.routingMode = 0;
+            break;
+
+        case 1:
+            routingNode.filterBlendSerial = 0.f;
+            routingNode.routingMode = 0;
+            break;
+
+        default:
+            routingNode.filterBlendParallel = 0.f;
+            routingNode.routingMode = m - 1;
+            break;
+        }
+    }
+}
 
 void Patch::additionalToStateImpl(TiXmlElement &root)
 {

@@ -134,6 +134,10 @@ PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQu
     zoomFactor = pzf * 0.01;
     setTransform(juce::AffineTransform().scaled(zoomFactor));
 
+    // randomButton =
+    // std::make_unique<jcmp::GlyphButton>(sst::jucegui::components::GlyphPainter::GlyphType::DICE);
+    // addAndMakeVisible(*randomButton);
+
     setSize(edWidth, edHeight);
 #define DEBUG_FOCUS 0
 #if DEBUG_FOCUS
@@ -304,9 +308,10 @@ void PluginEditor::resized()
     auto panelMargin{2};
     auto uicMargin{4};
     // Preset button
-    auto but = presetArea.reduced(121, 0).withTrimmedTop(uicMargin);
+    auto but = presetArea.reduced(191, 0).withTrimmedTop(uicMargin);
     presetButton->setBounds(but);
-    but = but.withLeft(presetButton->getRight() + uicMargin).withRight(getWidth() - uicMargin);
+
+    but = but.withLeft(presetButton->getRight() + uicMargin + 20).withRight(getWidth() - uicMargin);
 
     vuMeter->setBounds(but);
 
@@ -315,11 +320,13 @@ void PluginEditor::resized()
     routingPanel->setBounds(ra.reduced(panelMargin));
 
     panelArea = panelArea.withTrimmedLeft(routingWidth).withTrimmedRight(3);
-    auto fa = panelArea.withHeight(300).withWidth(panelArea.getWidth() / 2);
+
+    auto fH = 290;
+    auto fa = panelArea.withHeight(fH).withWidth(panelArea.getWidth() / 2);
     filterPanel[0]->setBounds(fa.reduced(panelMargin));
     filterPanel[1]->setBounds(fa.translated(fa.getWidth(), 0).reduced(panelMargin));
 
-    auto ma = panelArea.withTrimmedTop(300);
+    auto ma = panelArea.withTrimmedTop(fH);
 
     auto sp = ma.withWidth(ma.getWidth() / 2);
     stepLFOPanel[0]->setBounds(sp.reduced(panelMargin));
@@ -620,11 +627,7 @@ void PluginEditor::showPresetPopup()
                         w->defaultsProvider->updateUserDefaultValue(Defaults::useLowCpuGraphics,
                                                                     um);
                         w->cpuGraphicsMode = um;
-                        for (auto &f : w->filterPanel)
-                            f->onModelChanged();
-                        for (auto &s : w->stepLFOPanel)
-                            s->onModelChanged();
-                        w->routingPanel->enableFB();
+                        w->resetEnablement();
                         w->repaint();
                     });
     }
@@ -787,14 +790,18 @@ void PluginEditor::setPatchNameDisplay()
     presetButton->repaint();
 }
 
-void PluginEditor::postPatchChange(const std::string &s)
+void PluginEditor::resetEnablement()
 {
     for (auto &f : filterPanel)
         f->onModelChanged();
     for (auto &f : stepLFOPanel)
         f->onModelChanged();
     routingPanel->enableFB();
+}
 
+void PluginEditor::postPatchChange(const std::string &s)
+{
+    resetEnablement();
     presetDataBinding->setStateForDisplayName(s);
     for (auto [id, f] : componentRefreshByID)
         f();
@@ -860,11 +867,7 @@ void PluginEditor::setSkinFromDefaults()
             ->getFont(jcmp::MenuButton::Styles::styleClass, jcmp::MenuButton::Styles::labelfont)
             .withHeight(18));
 
-    for (auto &f : filterPanel)
-        f->onModelChanged();
-    for (auto &s : stepLFOPanel)
-        s->onModelChanged();
-    routingPanel->enableFB();
+    resetEnablement();
 }
 
 void PluginEditor::setZoomFactor(float zf)

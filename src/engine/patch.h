@@ -64,7 +64,7 @@ struct Param : pats::ParamBase, sst::cpputils::active_set_overlay<Param>::partic
 
 struct Patch : pats::PatchBase<Patch, Param>
 {
-    static constexpr uint32_t patchVersion{1};
+    static constexpr uint32_t patchVersion{2};
     static constexpr const char *id{"org.baconpaul.two-filters"};
 
     static constexpr uint32_t floatFlags{CLAP_PARAM_IS_AUTOMATABLE};
@@ -168,21 +168,26 @@ struct Patch : pats::PatchBase<Patch, Param>
                          .withDefault(1)
                          .withGroupName(groupName(instance))
                          .withName("Active " + std::to_string(instance + 1))
-                         .withID(id(instance, 3)))
+                         .withID(id(instance, 3))),
+              pan(floatMd()
+                      .asPan()
+                      .withGroupName(groupName(instance))
+                      .withName("Pan " + std::to_string(instance + 1))
+                      .withID(id(instance, 4)))
         {
         }
 
         std::string groupName(int i) const { return "Filter " + std::to_string(i + 1); }
         uint32_t id(int instance, int f) const { return idBase + f + idStride * instance; }
 
-        Param cutoff, resonance, morph, active;
+        Param cutoff, resonance, morph, pan, active;
 
         sst::filtersplusplus::FilterModel model{sst::filtersplusplus::FilterModel::None};
         sst::filtersplusplus::ModelConfig config{};
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&cutoff, &resonance, &morph, &active};
+            std::vector<Param *> res{&cutoff, &resonance, &morph, &pan, &active};
             return res;
         }
     } filterNodes[numFilters]{0, 1};
@@ -204,16 +209,16 @@ struct Patch : pats::PatchBase<Patch, Param>
                                 .withName("Feedback Power")
                                 .withID(id(1))),
               routingMode(intMd()
-                              .withRange(0, 4)
+                              .withRange(0, 3)
                               .withGroupName("Routing")
                               .withDefault(0)
                               .withName("Mode")
                               .withID(3)
                               .withUnorderedMapFormatting({{0, "Serial"},
-                                                           {1, "Serial (F1)"},
-                                                           {2, "Par"},
-                                                           {3, "Par / FB 1"},
-                                                           {4, "Par / FB Each"}})),
+                                                           //{1, "Serial (F1)"}, // MUST migrate
+                                                           {1, "Par"},
+                                                           {2, "Par / FB 1"},
+                                                           {3, "Par / FB Each"}})),
               retriggerMode(
                   intMd()
                       .withRange(0, 3)
@@ -249,7 +254,29 @@ struct Patch : pats::PatchBase<Patch, Param>
                              .asOnOffBool()
                              .withGroupName("Routing")
                              .withName("Noise Power")
-                             .withID(id(8)))
+                             .withID(id(8))),
+              oversample(intMd()
+                             .asOnOffBool()
+                             .withGroupName("Routing")
+                             .withName("Oversample")
+                             .withID(id(9))),
+              filterBlendSerial(floatMd()
+                                    .asPercent()
+                                    .withGroupName("Routing")
+                                    .withDefault(1.0)
+                                    .withCustomMaxDisplay("F1 + F2")
+                                    .withCustomMinDisplay("F1")
+                                    .withName("Filter Blend Serial")
+                                    .withID(id(10))),
+              filterBlendParallel(floatMd()
+                                      .asPercentBipolar()
+                                      .withGroupName("Routing")
+                                      .withDefault(0.0)
+                                      .withName("Filter Blend Parallel")
+                                      .withCustomDefaultDisplay("F1 + F2")
+                                      .withCustomMaxDisplay("F2")
+                                      .withCustomMinDisplay("F1")
+                                      .withID(id(11)))
         {
         }
 
@@ -260,11 +287,14 @@ struct Patch : pats::PatchBase<Patch, Param>
         Param routingMode, retriggerMode;
         Param inputGain, outputGain;
         Param noiseLevel, noisePower;
+        Param oversample, filterBlendSerial, filterBlendParallel;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res{&feedback,  &feedbackPower, &routingMode, &retriggerMode, &mix,
-                                     &inputGain, &outputGain,    &noiseLevel,  &noisePower};
+            std::vector<Param *> res{
+                &feedback,   &feedbackPower, &routingMode,       &retriggerMode,
+                &mix,        &inputGain,     &outputGain,        &noiseLevel,
+                &noisePower, &oversample,    &filterBlendSerial, &filterBlendParallel};
             return res;
         }
     } routingNode;
@@ -300,28 +330,53 @@ struct Patch : pats::PatchBase<Patch, Param>
             .withGroupName(gn).withName("To F2 Morph")
             .withID(id0 + 7),
         },
+
+
+        toPan{
+            floatMd().asPercentBipolar()
+            .withGroupName(gn).withName("To F1 Pan")
+            .withID(id0 + 3),
+
+            floatMd().asPercentBipolar()
+            .withGroupName(gn).withName("To F2 Pan")
+            .withID(id0 + 8),
+        },
         toFB(floatMd().asPercentBipolar()
             .withGroupName(gn).withName("To FB")
             .withID(id0 + 10)),
 
         toMix(floatMd().asPercentBipolar()
             .withGroupName(gn).withName("To Mix")
-            .withID(id0 + 11))
+            .withID(id0 + 11)),
+        toNoise(floatMd().asPercentBipolar()
+            .withGroupName(gn).withName("To Noise")
+            .withID(id0 + 12)),
+        toPreG(floatMd().asPercentBipolar()
+            .withGroupName(gn).withName("To PreGain")
+            .withID(id0 + 13)),
+        toPostG(floatMd().asPercentBipolar()
+            .withGroupName(gn).withName("To PostGain")
+            .withID(id0 + 14)),
+        toFiltBlend(floatMd().asPercentBipolar()
+         .withGroupName(gn).withName("To Filter Blend")
+         .withID(id0 + 15))
         {
         }
 
-        Param toCO[numFilters], toRes[numFilters], toMorph[numFilters];
-        Param toFB, toMix;
+        Param toCO[numFilters], toRes[numFilters], toMorph[numFilters], toPan[numFilters];
+        Param toFB, toMix, toNoise, toPreG, toPostG, toFiltBlend;
 
         std::vector<Param *> params()
         {
-            std::vector<Param *> res = {&toFB, &toMix};
+            std::vector<Param *> res = {&toFB, &toMix, &toNoise, &toPreG, &toPostG, &toFiltBlend};
             res.push_back(&toCO[0]);
             res.push_back(&toCO[1]);
             res.push_back(&toRes[0]);
             res.push_back(&toRes[1]);
             res.push_back(&toMorph[0]);
             res.push_back(&toMorph[1]);
+            res.push_back(&toPan[0]);
+            res.push_back(&toPan[1]);
 
             return res;
         }
