@@ -263,11 +263,18 @@ struct StepEditor : juce::Component
                       if (w)
                           w->panel.resetRoutes();
                   });
-        m.addItem("Randomize",
+        m.addSeparator();
+        m.addItem("Randomize Steps",
                   [w = juce::Component::SafePointer(this)]()
                   {
                       if (w)
-                          w->panel.randomize();
+                          w->panel.randomizeSteps();
+                  });
+        m.addItem("Randomize Mod Routes",
+                  [w = juce::Component::SafePointer(this)]()
+                  {
+                      if (w)
+                          w->panel.randomizeRoutes();
                   });
         m.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&panel.editor));
     }
@@ -484,13 +491,21 @@ void StepLFOPanel::setCurrentLevel(float ph)
 
 void StepLFOPanel::randomize()
 {
+    randomizeSteps();
+    randomizeRoutes();
+}
+
+void StepLFOPanel::randomizeSteps()
+{
     for (int s = 0; s < maxSteps; ++s)
     {
         editor.mainToAudio.push({Engine::MainToAudioMsg::Action::BEGIN_EDIT, stepDs[s]->pid});
         stepDs[s]->setValueFromGUI(editor.rng.unifPM1());
         editor.mainToAudio.push({Engine::MainToAudioMsg::Action::END_EDIT, stepDs[s]->pid});
     }
-
+}
+void StepLFOPanel::randomizeRoutes()
+{
     auto rst = [&, this](auto &D, auto &K)
     {
         auto mx = D->getMax();

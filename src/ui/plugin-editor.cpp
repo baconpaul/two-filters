@@ -580,10 +580,14 @@ void PluginEditor::showPresetPopup()
     rsm.addItem("Filter 2",
                 [w = juce::Component::SafePointer(this)]() { w->filterPanel[1]->randomize(); });
     rsm.addSeparator();
-    rsm.addItem("Step 1",
-                [w = juce::Component::SafePointer(this)]() { w->stepLFOPanel[0]->randomize(); });
-    rsm.addItem("Step 2",
-                [w = juce::Component::SafePointer(this)]() { w->stepLFOPanel[1]->randomize(); });
+    rsm.addItem("LFO 1 Steps", [w = juce::Component::SafePointer(this)]()
+                { w->stepLFOPanel[0]->randomizeSteps(); });
+    rsm.addItem("LFO 1 Routes", [w = juce::Component::SafePointer(this)]()
+                { w->stepLFOPanel[0]->randomizeRoutes(); });
+    rsm.addItem("LFO 2 Steps", [w = juce::Component::SafePointer(this)]()
+                { w->stepLFOPanel[1]->randomizeSteps(); });
+    rsm.addItem("LFO 2 Routes", [w = juce::Component::SafePointer(this)]()
+                { w->stepLFOPanel[1]->randomizeRoutes(); });
     rsm.addSeparator();
     rsm.addItem("Main", false, false,
                 [w = juce::Component::SafePointer(this)]() { w->routingPanel->randomize(); });
