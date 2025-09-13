@@ -435,7 +435,7 @@ FilterPanel::FilterPanel(PluginEditor &ed, int ins)
 
     createComponent(editor, *this, fn.resonance, resonanceK, resonanceD);
     addAndMakeVisible(*resonanceK);
-    resonanceD->labelOverride = "Resonance";
+    resonanceD->labelOverride = "Res";
     editor.componentRefreshByID[fn.resonance.meta.id] = [this]() { curve->rebuild(); };
     resonanceD->onGuiSetValue = [this]() { curve->rebuild(); };
 
@@ -444,6 +444,11 @@ FilterPanel::FilterPanel(PluginEditor &ed, int ins)
     editor.componentRefreshByID[fn.morph.meta.id] = [this]() { curve->rebuild(); };
     morphD->onGuiSetValue = [this]() { curve->rebuild(); };
     morphD->labelOverride = "Morph";
+
+    createComponent(editor, *this, fn.pan, panK, panD);
+    addAndMakeVisible(*panK);
+    panD->labelOverride = "Pan";
+    panK->setEnabled(false);
 
     modelMenu = std::make_unique<sst::jucegui::components::MenuButton>();
     addAndMakeVisible(*modelMenu);
@@ -461,19 +466,22 @@ void FilterPanel::resized()
     if (!curve)
         return;
 
-    auto b = getContentArea().withHeight(170);
+    auto plotH = 190 - (300 - getHeight());
+
+    auto b = getContentArea().withHeight(plotH);
     curve->setBounds(b);
 
-    auto rs = getContentArea().withTrimmedTop(180);
-    auto q = 70;
-    auto pad = 5;
+    auto rs = getContentArea().withTrimmedTop(plotH + 5);
+    auto q = 62;
+    auto pad = 3;
 
     auto bk = rs.withWidth(q).withTrimmedLeft(5).withTrimmedRight(5);
     cutoffK->setBounds(bk);
     resonanceK->setBounds(bk.translated(q + pad, 0));
     morphK->setBounds(bk.translated(2 * q + 2 * pad, 0));
+    panK->setBounds(bk.translated(3 * q + 3 * pad, 0));
 
-    auto rest = rs.withTrimmedLeft(3 * q + 3 * pad);
+    auto rest = rs.withTrimmedLeft(4 * q + 4 * pad);
     modelMenu->setBounds(rest.withHeight(20));
     configMenu->setBounds(rest.withHeight(20).translated(0, 22));
 }

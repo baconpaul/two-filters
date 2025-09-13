@@ -54,7 +54,7 @@ struct StepLFOPanel : sst::jucegui::components::NamedPanel
     std::unique_ptr<sst::jucegui::components::JogUpDownButton> stepCount;
     std::unique_ptr<PatchDiscrete> stepCountD;
 
-    static constexpr int numRoutes{8};
+    static constexpr int numRoutes{2 * 4 + 6};
     std::array<std::unique_ptr<PatchContinuous>, numRoutes> routeD;
     std::array<std::unique_ptr<sst::jucegui::components::Knob>, numRoutes> routeK;
     std::unique_ptr<sst::jucegui::components::RuledLabel> toF1, toF2, toRt;

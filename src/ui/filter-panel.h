@@ -32,9 +32,6 @@ struct FilterPanel : sst::jucegui::components::NamedPanel
     ~FilterPanel();
     void resized() override;
 
-    std::vector<std::unique_ptr<sst::jucegui::components::Knob>> knobs;
-    std::vector<std::unique_ptr<PatchContinuous>> knobAs;
-
     PluginEditor &editor;
 
     void onModelChanged();
@@ -46,10 +43,10 @@ struct FilterPanel : sst::jucegui::components::NamedPanel
 
     std::unique_ptr<FilterCurve> curve;
 
-    std::unique_ptr<PatchContinuous> cutoffD, resonanceD, morphD;
+    std::unique_ptr<PatchContinuous> cutoffD, resonanceD, morphD, panD;
     std::unique_ptr<PatchDiscrete> activeD;
 
-    std::unique_ptr<sst::jucegui::components::Knob> cutoffK, resonanceK, morphK;
+    std::unique_ptr<sst::jucegui::components::Knob> cutoffK, resonanceK, morphK, panK;
 
     std::unique_ptr<sst::jucegui::components::MenuButton> modelMenu, configMenu;
 

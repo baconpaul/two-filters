@@ -37,6 +37,7 @@
 
 #include "sst/basic-blocks/dsp/LagCollection.h"
 #include "sst/basic-blocks/dsp/CorrelatedNoise.h"
+#include "sst/basic-blocks/dsp/BlockInterpolators.h"
 #include "sst/filters++.h"
 
 namespace baconpaul::twofilters
@@ -47,11 +48,10 @@ struct Engine
 
     enum struct RoutingModes
     {
-        Serial_Post2 = 0,
-        Serial_Post1 = 1,
-        Parallel_FBBoth = 2,
-        Parallel_FBOne = 3,
-        Parallel_FBEach = 4
+        Serial = 0,
+        Parallel_FBBoth = 1,
+        Parallel_FBOne = 2,
+        Parallel_FBEach = 3
     };
 
     enum struct RetrigModes
@@ -95,6 +95,7 @@ struct Engine
     void processControl(const clap_output_events_t *);
 
     float noiseState[2][2]{0, 0};
+    sst::basic_blocks::dsp::lipol<float, blockSize, true> blendLipol1, blendLipol2;
 
     template <RoutingModes mode, bool fb, bool withNoise>
     void processAudio(float inL, float inR, float &outL, float &outR)
@@ -109,14 +110,19 @@ struct Engine
         auto origL = inL;
         auto origR = inR;
 
-        float inG = patch.routingNode.inputGain;
+        float inG = patch.routingNode.inputGain + lfos[0].output * patch.stepLfoNodes[0].toPreG +
+                    lfos[1].output * patch.stepLfoNodes[1].toPreG;
+        inG = std::clamp(inG, 0.f, 1.f);
         inG = inG * inG * inG;
         inL *= inG;
         inR *= inG;
 
         if constexpr (withNoise)
         {
-            float nsG = patch.routingNode.noiseLevel;
+            float nsG = std::clamp(patch.routingNode.noiseLevel +
+                                       lfos[0].output * patch.stepLfoNodes[0].toNoise +
+                                       lfos[1].output * patch.stepLfoNodes[1].toNoise,
+                                   0.f, 1.f);
             nsG = nsG * nsG * nsG;
             auto n1 = sst::basic_blocks::dsp::correlated_noise_o2mk2_supplied_value(
                 noiseState[0][0], noiseState[0][1], 0, rng.unifPM1());
@@ -126,7 +132,7 @@ struct Engine
             inR += nsG * n2;
         }
 
-        if constexpr (mode == RoutingModes::Serial_Post2)
+        if constexpr (mode == RoutingModes::Serial)
         {
             if constexpr (fb)
             {
@@ -134,8 +140,13 @@ struct Engine
                 inR += fbR;
             }
 
-            filters[0].processStereoSample(inL, inR, outL, outR);
-            filters[1].processStereoSample(outL, outR, outL, outR);
+            float out1L, out1R, out2L, out2R;
+            filters[0].processStereoSample(inL, inR, out1L, out1R);
+            filters[1].processStereoSample(out1L, out1R, out2L, out2R);
+
+            outL = blendLipol1.v * out1L + blendLipol2.v * out2L;
+            outR = blendLipol1.v * out1R + blendLipol2.v * out2R;
+
             if constexpr (fb)
             {
                 float fblev = patch.routingNode.feedback;
@@ -154,35 +165,6 @@ struct Engine
                 fbR = sat(fblev * outR);
             }
         }
-        else if constexpr (mode == RoutingModes::Serial_Post1)
-        {
-            if constexpr (fb)
-            {
-                inL += fbL;
-                inR += fbR;
-            }
-
-            filters[0].processStereoSample(inL, inR, outL, outR);
-
-            if constexpr (fb)
-            {
-                // Only need to run 1 if we have feedback
-                float tmpL, tmpR;
-                filters[1].processStereoSample(outL, outR, tmpL, tmpR);
-
-                float fblev = patch.routingNode.feedback;
-                fblev += lfos[0].output * patch.stepLfoNodes[0].toFB +
-                         lfos[1].output * patch.stepLfoNodes[1].toFB;
-                fblev = std::clamp(fblev, 0.f, 1.f);
-
-                fblev = fblev * fblev * fblev;
-
-                // y = x * ( 27 + x * x ) / ( 27 + 9 * x * x );
-                auto sat = [](float x) { return x * (27 + x * x) / (27 + 9 * x * x); };
-                fbL = sat(fblev * tmpL);
-                fbR = sat(fblev * tmpR);
-            }
-        }
         else if constexpr (mode == RoutingModes::Parallel_FBBoth)
         {
             if constexpr (fb)
@@ -195,8 +177,10 @@ struct Engine
             filters[0].processStereoSample(inL, inR, t0L, t0R);
             filters[1].processStereoSample(inL, inR, t1L, t1R);
 
-            outL = t0L + t1L;
-            outR = t0R + t1R;
+            outL = blendLipol1.v * t0L + blendLipol2.v * t1L;
+            outR = blendLipol1.v * t0R + blendLipol2.v * t1R;
+
+            // SQLOG(SQD(blendLipol1.v) << SQD(blendLipol2.v));
             if constexpr (fb)
             {
                 // Only need to run 1 if we have feedback
@@ -225,8 +209,9 @@ struct Engine
             }
             filters[0].processStereoSample(inL, inR, t0L, t0R);
 
-            outL = t0L + t1L;
-            outR = t0R + t1R;
+            outL = blendLipol1.v * t0L + blendLipol2.v * t1L;
+            outR = blendLipol1.v * t0R + blendLipol2.v * t1R;
+
             if constexpr (fb)
             {
                 // Only need to run 1 if we have feedback
@@ -262,8 +247,9 @@ struct Engine
             }
             filters[1].processStereoSample(i2L, i2R, t1L, t1R);
 
-            outL = t0L + t1L;
-            outR = t0R + t1R;
+            outL = blendLipol1.v * t0L + blendLipol2.v * t1L;
+            outR = blendLipol1.v * t0R + blendLipol2.v * t1R;
+
             if constexpr (fb)
             {
                 // Only need to run 1 if we have feedback
@@ -288,7 +274,9 @@ struct Engine
               lfos[1].output * patch.stepLfoNodes[1].toMix;
         mx = std::clamp(mx, 0.f, 1.f);
 
-        float outG = patch.routingNode.outputGain;
+        float outG = patch.routingNode.outputGain + lfos[0].output * patch.stepLfoNodes[0].toPostG +
+                     lfos[1].output * patch.stepLfoNodes[1].toPostG;
+        outG = std::clamp(outG, 0.f, 1.f);
         outG = outG * outG * outG;
         outL *= outG;
         outR *= outG;
@@ -298,6 +286,9 @@ struct Engine
 
         outL = std::clamp(outL, -2.5f, 2.5f);
         outR = std::clamp(outR, -2.5f, 2.5f);
+
+        blendLipol1.process();
+        blendLipol2.process();
 
         if (isEditorAttached)
         {
