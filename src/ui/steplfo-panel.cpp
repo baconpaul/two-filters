@@ -210,18 +210,67 @@ struct StepEditor : juce::Component
 
     void mouseDown(const juce::MouseEvent &e) override
     {
+        if (e.mods.isPopupMenu())
+        {
+            showPopup();
+            return;
+        }
         lastEditedStep = -1;
         adjustValue(e.position, false);
     }
 
     void mouseDoubleClick(const juce::MouseEvent &e) override
     {
+        if (e.mods.isPopupMenu())
+        {
+            return;
+        }
         lastEditedStep = -1;
         adjustValue(e.position, false, true);
     }
 
-    void mouseDrag(const juce::MouseEvent &e) override { adjustValue(e.position, false); }
-    void mouseUp(const juce::MouseEvent &e) override { adjustValue(e.position, true); }
+    void mouseDrag(const juce::MouseEvent &e) override
+    {
+        if (e.mods.isPopupMenu())
+        {
+            return;
+        }
+        adjustValue(e.position, false);
+    }
+    void mouseUp(const juce::MouseEvent &e) override
+    {
+        if (e.mods.isPopupMenu())
+        {
+            return;
+        }
+        adjustValue(e.position, true);
+    }
+
+    void showPopup()
+    {
+        auto m = juce::PopupMenu();
+        m.addSectionHeader("Step LFO " + std::to_string(panel.instance + 1));
+        m.addSeparator();
+        m.addItem("Reset Steps",
+                  [w = juce::Component::SafePointer(this)]()
+                  {
+                      if (w)
+                          w->panel.resetSteps();
+                  });
+        m.addItem("Reset Mod Routes",
+                  [w = juce::Component::SafePointer(this)]()
+                  {
+                      if (w)
+                          w->panel.resetRoutes();
+                  });
+        m.addItem("Randomize",
+                  [w = juce::Component::SafePointer(this)]()
+                  {
+                      if (w)
+                          w->panel.randomize();
+                  });
+        m.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&panel.editor));
+    }
     StepLFOPanel &panel;
 };
 
@@ -433,6 +482,55 @@ void StepLFOPanel::setCurrentLevel(float ph)
     }
 }
 
-void StepLFOPanel::randomize() { SQLOG("StepLFOPanel::randomize " << instance); }
+void StepLFOPanel::randomize()
+{
+    for (int s = 0; s < maxSteps; ++s)
+    {
+        editor.mainToAudio.push({Engine::MainToAudioMsg::Action::BEGIN_EDIT, stepDs[s]->pid});
+        stepDs[s]->setValueFromGUI(editor.rng.unifPM1());
+        editor.mainToAudio.push({Engine::MainToAudioMsg::Action::END_EDIT, stepDs[s]->pid});
+    }
 
+    auto rst = [&, this](auto &D, auto &K)
+    {
+        auto mx = D->getMax();
+        auto mn = D->getMin();
+        auto nv = editor.rng.unif(mn, mx);
+        K->onBeginEdit();
+        D->setValueFromGUI(nv);
+        K->onEndEdit();
+    };
+
+    rst(smoothD, smooth);
+    rst(rateD, rate);
+    rst(stepCountD, stepCount);
+
+    for (int s = 0; s < numRoutes; ++s)
+    {
+        rst(routeD[s], routeK[s]);
+    }
+
+    repaint();
+}
+
+void StepLFOPanel::resetSteps()
+{
+    for (int s = 0; s < maxSteps; ++s)
+    {
+        editor.mainToAudio.push({Engine::MainToAudioMsg::Action::BEGIN_EDIT, stepDs[s]->pid});
+        stepDs[s]->setValueFromGUI(0.f);
+        editor.mainToAudio.push({Engine::MainToAudioMsg::Action::END_EDIT, stepDs[s]->pid});
+    }
+    repaint();
+}
+void StepLFOPanel::resetRoutes()
+{
+    for (int s = 0; s < numRoutes; ++s)
+    {
+        routeK[s]->onBeginEdit();
+        routeD[s]->setValueFromGUI(routeD[s]->getDefaultValue());
+        routeK[s]->onEndEdit();
+    }
+    repaint();
+}
 } // namespace baconpaul::twofilters::ui

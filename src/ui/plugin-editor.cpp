@@ -580,9 +580,9 @@ void PluginEditor::showPresetPopup()
     rsm.addItem("Filter 2",
                 [w = juce::Component::SafePointer(this)]() { w->filterPanel[1]->randomize(); });
     rsm.addSeparator();
-    rsm.addItem("Step 1", false, false,
+    rsm.addItem("Step 1",
                 [w = juce::Component::SafePointer(this)]() { w->stepLFOPanel[0]->randomize(); });
-    rsm.addItem("Step 2", false, false,
+    rsm.addItem("Step 2",
                 [w = juce::Component::SafePointer(this)]() { w->stepLFOPanel[1]->randomize(); });
     rsm.addSeparator();
     rsm.addItem("Main", false, false,

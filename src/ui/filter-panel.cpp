@@ -169,6 +169,11 @@ struct FilterCurve : juce::Component
     }
     void mouseDown(const juce::MouseEvent &event) override
     {
+        if (event.mods.isPopupMenu())
+        {
+            showPopup();
+            return;
+        }
         panel.cutoffK->onBeginEdit();
         panel.resonanceK->onBeginEdit();
         positionToCoRes(event.position.toFloat());
@@ -177,14 +182,42 @@ struct FilterCurve : juce::Component
 
     void mouseDrag(const juce::MouseEvent &event) override
     {
+        if (event.mods.isPopupMenu())
+        {
+            return;
+        }
         positionToCoRes(event.position.toFloat());
         repaint();
     }
 
     void mouseUp(const juce::MouseEvent &event) override
     {
+        if (event.mods.isPopupMenu())
+        {
+            return;
+        }
         panel.resonanceK->onEndEdit();
         panel.cutoffK->onEndEdit();
+    }
+
+    void showPopup()
+    {
+        auto m = juce::PopupMenu();
+        m.addSectionHeader("Filter " + std::to_string(panel.instance + 1));
+        m.addSeparator();
+        m.addItem("Reset", false, false,
+                  [w = juce::Component::SafePointer(this)]()
+                  {
+                      if (w)
+                          w->panel.resetFilter();
+                  });
+        m.addItem("Randomize",
+                  [w = juce::Component::SafePointer(this)]()
+                  {
+                      if (w)
+                          w->panel.randomize();
+                  });
+        m.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&panel.editor));
     }
 
     float xsc = 1.0 / (log10(20000) - log10(6));

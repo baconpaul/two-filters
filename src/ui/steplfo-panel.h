@@ -63,6 +63,8 @@ struct StepLFOPanel : sst::jucegui::components::NamedPanel
     std::unique_ptr<PatchContinuous> rateD, smoothD;
 
     void randomize();
+    void resetRoutes();
+    void resetSteps();
 
     void onModelChanged();
     int instance;
