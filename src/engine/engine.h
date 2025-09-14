@@ -100,7 +100,10 @@ struct Engine
     sst::filters::HalfRate::HalfRateFilter hrUp, hrDn;
 
     float noiseState[2][2]{0, 0};
-    sst::basic_blocks::dsp::lipol<float, blockSize, true> blendLipol1, blendLipol2;
+    using lipol_t = sst::basic_blocks::dsp::lipol<float, blockSize, true>;
+    lipol_t blendLipol1, blendLipol2;
+    lipol_t inGainLipol, outGainLipol, noiseGainLipol, fbLevelLipol, mixLipol;
+
     sst::basic_blocks::dsp::pan_laws::panmatrix_t panMatrix[2];
     sst::basic_blocks::dsp::OnePoleLag<float, true> panLag[2];
 
@@ -120,15 +123,36 @@ struct Engine
             float inLU[2], inRU[2], outLU[2], outRU[2];
             hrUp.process_sample_U2(inL, inR, inLU, inRU);
             processAudioNoOS<mode, fb, withNoise>(inLU[0], inRU[0], outLU[0], outRU[0]);
+            blendLipol1.processPartial(0.5);
+            blendLipol2.processPartial(0.5);
+            inGainLipol.processPartial(0.5);
+            outGainLipol.processPartial(0.5);
+            noiseGainLipol.processPartial(0.5);
+            fbLevelLipol.processPartial(0.5);
+            mixLipol.processPartial(0.5);
+
             processAudioNoOS<mode, fb, withNoise>(inLU[1], inRU[1], outLU[1], outRU[1]);
+            blendLipol1.processPartial(0.5);
+            blendLipol2.processPartial(0.5);
+            inGainLipol.processPartial(0.5);
+            outGainLipol.processPartial(0.5);
+            noiseGainLipol.processPartial(0.5);
+            fbLevelLipol.processPartial(0.5);
+            mixLipol.processPartial(0.5);
+
             hrDn.process_sample_D2(outLU, outRU, outL, outR);
         }
         else
         {
             processAudioNoOS<mode, fb, withNoise>(inL, inR, outL, outR);
+            blendLipol1.process();
+            blendLipol2.process();
+            inGainLipol.process();
+            outGainLipol.process();
+            noiseGainLipol.process();
+            fbLevelLipol.process();
+            mixLipol.process();
         }
-        blendLipol1.process();
-        blendLipol2.process();
 
         if (isEditorAttached)
         {
@@ -136,10 +160,16 @@ struct Engine
         }
     }
 
+    // y = x * ( 27 + x * x ) / ( 27 + 9 * x * x );
+    inline float sat(float x) const
+    {
+        x = std::clamp(x, -2.f, 2.f);
+        return x * (27 + x * x) / (27 + 9 * x * x);
+    };
+
     template <RoutingModes mode, bool fb, bool withNoise>
     void processAudioNoOS(float inL, float inR, float &outL, float &outR)
     {
-
         if (!audioRunning)
         {
             outL = 0;
@@ -150,20 +180,13 @@ struct Engine
         auto origL = inL;
         auto origR = inR;
 
-        float inG = patch.routingNode.inputGain + lfos[0].output * patch.stepLfoNodes[0].toPreG +
-                    lfos[1].output * patch.stepLfoNodes[1].toPreG;
-        inG = std::clamp(inG, 0.f, 1.f);
-        inG = inG * inG * inG;
+        float inG = inGainLipol.v;
         inL *= inG;
         inR *= inG;
 
         if constexpr (withNoise)
         {
-            float nsG = std::clamp(patch.routingNode.noiseLevel +
-                                       lfos[0].output * patch.stepLfoNodes[0].toNoise +
-                                       lfos[1].output * patch.stepLfoNodes[1].toNoise,
-                                   0.f, 1.f);
-            nsG = nsG * nsG * nsG;
+            float nsG = noiseGainLipol.v;
             auto n1 = sst::basic_blocks::dsp::correlated_noise_o2mk2_supplied_value(
                 noiseState[0][0], noiseState[0][1], 0, rng.unifPM1());
             auto n2 = sst::basic_blocks::dsp::correlated_noise_o2mk2_supplied_value(
@@ -192,18 +215,8 @@ struct Engine
 
             if constexpr (fb)
             {
-                float fblev = patch.routingNode.feedback;
-                fblev += lfos[0].output * patch.stepLfoNodes[0].toFB +
-                         lfos[1].output * patch.stepLfoNodes[1].toFB;
-                fblev = std::clamp(fblev, 0.f, 1.f);
-                fblev = fblev * fblev * fblev;
+                auto fblev = fbLevelLipol.v;
 
-                // y = x * ( 27 + x * x ) / ( 27 + 9 * x * x );
-                auto sat = [](float x)
-                {
-                    x = std::clamp(x, -2.f, 2.f);
-                    return x * (27 + x * x) / (27 + 9 * x * x);
-                };
                 fbL = sat(fblev * outL);
                 fbR = sat(fblev * outR);
             }
@@ -228,16 +241,7 @@ struct Engine
             // SQLOG(SQD(blendLipol1.v) << SQD(blendLipol2.v));
             if constexpr (fb)
             {
-                // Only need to run 1 if we have feedback
-                float fblev = patch.routingNode.feedback;
-                fblev += lfos[0].output * patch.stepLfoNodes[0].toFB +
-                         lfos[1].output * patch.stepLfoNodes[1].toFB;
-                fblev = std::clamp(fblev, 0.f, 1.f);
-
-                fblev = fblev * fblev * fblev;
-
-                // y = x * ( 27 + x * x ) / ( 27 + 9 * x * x );
-                auto sat = [](float x) { return x * (27 + x * x) / (27 + 9 * x * x); };
+                float fblev = fbLevelLipol.v;
                 fbL = sat(fblev * outL);
                 fbR = sat(fblev * outR);
             }
@@ -262,15 +266,8 @@ struct Engine
             if constexpr (fb)
             {
                 // Only need to run 1 if we have feedback
-                float fblev = patch.routingNode.feedback;
-                fblev += lfos[0].output * patch.stepLfoNodes[0].toFB +
-                         lfos[1].output * patch.stepLfoNodes[1].toFB;
-                fblev = std::clamp(fblev, 0.f, 1.f);
+                float fblev = fbLevelLipol.v;
 
-                fblev = fblev * fblev * fblev;
-
-                // y = x * ( 27 + x * x ) / ( 27 + 9 * x * x );
-                auto sat = [](float x) { return x * (27 + x * x) / (27 + 9 * x * x); };
                 fbL = sat(fblev * t0L);
                 fbR = sat(fblev * t0R);
             }
@@ -302,15 +299,8 @@ struct Engine
             if constexpr (fb)
             {
                 // Only need to run 1 if we have feedback
-                float fblev = patch.routingNode.feedback;
-                fblev += lfos[0].output * patch.stepLfoNodes[0].toFB +
-                         lfos[1].output * patch.stepLfoNodes[1].toFB;
-                fblev = std::clamp(fblev, 0.f, 1.f);
+                float fblev = fbLevelLipol.v;
 
-                fblev = fblev * fblev * fblev;
-
-                // y = x * ( 27 + x * x ) / ( 27 + 9 * x * x );
-                auto sat = [](float x) { return x * (27 + x * x) / (27 + 9 * x * x); };
                 fbL = sat(fblev * t0L);
                 fbR = sat(fblev * t0R);
                 fb2L = sat(fblev * t1L);
@@ -318,15 +308,9 @@ struct Engine
             }
         }
 
-        float mx = patch.routingNode.mix;
-        mx += lfos[0].output * patch.stepLfoNodes[0].toMix +
-              lfos[1].output * patch.stepLfoNodes[1].toMix;
-        mx = std::clamp(mx, 0.f, 1.f);
+        auto mx = mixLipol.v;
+        auto outG = outGainLipol.v;
 
-        float outG = patch.routingNode.outputGain + lfos[0].output * patch.stepLfoNodes[0].toPostG +
-                     lfos[1].output * patch.stepLfoNodes[1].toPostG;
-        outG = std::clamp(outG, 0.f, 1.f);
-        outG = outG * outG * outG;
         outL *= outG;
         outR *= outG;
 

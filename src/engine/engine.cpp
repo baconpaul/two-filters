@@ -225,6 +225,38 @@ void Engine::processControl(const clap_output_events_t *outq)
 
     useFeedback = patch.routingNode.feedbackPower > 0.5;
 
+    float inG = patch.routingNode.inputGain + lfos[0].output * patch.stepLfoNodes[0].toPreG +
+                lfos[1].output * patch.stepLfoNodes[1].toPreG;
+    inG = std::clamp(inG, 0.f, patch.routingNode.inputGain.meta.maxVal);
+    inG = inG * inG * inG;
+    inGainLipol.newValue(inG);
+
+    float nsG =
+        std::clamp(patch.routingNode.noiseLevel + lfos[0].output * patch.stepLfoNodes[0].toNoise +
+                       lfos[1].output * patch.stepLfoNodes[1].toNoise,
+                   0.f, 1.f);
+    nsG = nsG * nsG * nsG;
+    noiseGainLipol.newValue(nsG);
+
+    float fblev = patch.routingNode.feedback;
+    fblev +=
+        lfos[0].output * patch.stepLfoNodes[0].toFB + lfos[1].output * patch.stepLfoNodes[1].toFB;
+    fblev = std::clamp(fblev, 0.f, 1.f);
+    fblev = fblev * fblev * fblev;
+    fbLevelLipol.newValue(fblev);
+
+    float mx = patch.routingNode.mix;
+    mx +=
+        lfos[0].output * patch.stepLfoNodes[0].toMix + lfos[1].output * patch.stepLfoNodes[1].toMix;
+    mx = std::clamp(mx, 0.f, 1.f);
+    mixLipol.newValue(mx);
+
+    float outG = patch.routingNode.outputGain + lfos[0].output * patch.stepLfoNodes[0].toPostG +
+                 lfos[1].output * patch.stepLfoNodes[1].toPostG;
+    outG = std::clamp(outG, 0.f, patch.routingNode.outputGain.meta.maxVal);
+    outG = outG * outG * outG;
+    outGainLipol.newValue(outG);
+
     for (auto it = paramLagSet.begin(); it != paramLagSet.end();)
     {
         it->lag.process();
