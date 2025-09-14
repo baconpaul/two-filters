@@ -95,6 +95,8 @@ void Engine::processControl(const clap_output_events_t *outq)
 {
     auto beatsPerMeasure = 4.0 * transport.signature.numerator / transport.signature.denominator;
 
+    processUIQueue(outq);
+
     auto a0 = patch.filterNodes[0].active > 0.5;
     auto a1 = patch.filterNodes[1].active > 0.5;
 
@@ -212,8 +214,6 @@ void Engine::processControl(const clap_output_events_t *outq)
     panLag[1].process();
 
     useFeedback = patch.routingNode.feedbackPower > 0.5;
-
-    processUIQueue(outq);
 
     for (auto it = paramLagSet.begin(); it != paramLagSet.end();)
     {
