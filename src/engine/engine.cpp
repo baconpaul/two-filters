@@ -28,7 +28,7 @@ int debugLevel{0};
 namespace mech = sst::basic_blocks::mechanics;
 namespace sdsp = sst::basic_blocks::dsp;
 
-Engine::Engine() : lfos{tuningProvider, tuningProvider}
+Engine::Engine() : lfos{tuningProvider, tuningProvider}, hrUp{6, true}, hrDn{6, true}
 {
     tuningProvider.init();
     updateLfoStorage();
@@ -96,6 +96,16 @@ void Engine::processControl(const clap_output_events_t *outq)
     auto beatsPerMeasure = 4.0 * transport.signature.numerator / transport.signature.denominator;
 
     processUIQueue(outq);
+
+    auto pos = patch.routingNode.oversample > 0.5;
+    if (pos != overSampling)
+    {
+        overSampling = pos;
+        hrUp.reset();
+        hrDn.reset();
+        setupFilter(0);
+        setupFilter(1);
+    }
 
     auto a0 = patch.filterNodes[0].active > 0.5;
     auto a1 = patch.filterNodes[1].active > 0.5;
@@ -278,6 +288,7 @@ void Engine::processUIQueue(const clap_output_events_t *outq)
             bool notify = uiM->action == MainToAudioMsg::SET_PARAM;
 
             auto dest = patch.paramMap.at(uiM->paramId);
+            notify = notify && (dest->meta.flags & CLAP_PARAM_IS_AUTOMATABLE);
             if (notify)
             {
                 if (beginEndParamGestureCount == 0)
@@ -325,25 +336,30 @@ void Engine::processUIQueue(const clap_output_events_t *outq)
         case MainToAudioMsg::BEGIN_EDIT:
         case MainToAudioMsg::END_EDIT:
         {
-            if (uiM->action == MainToAudioMsg::BEGIN_EDIT)
+            auto dest = patch.paramMap.at(uiM->paramId);
+            bool notify = (dest->meta.flags & CLAP_PARAM_IS_AUTOMATABLE);
+            if (notify)
             {
-                beginEndParamGestureCount++;
-            }
-            else
-            {
-                beginEndParamGestureCount--;
-            }
-            clap_event_param_gesture_t p;
-            p.header.size = sizeof(clap_event_param_gesture_t);
-            p.header.time = 0;
-            p.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
-            p.header.type = uiM->action == MainToAudioMsg::BEGIN_EDIT
-                                ? CLAP_EVENT_PARAM_GESTURE_BEGIN
-                                : CLAP_EVENT_PARAM_GESTURE_END;
-            p.header.flags = 0;
-            p.param_id = uiM->paramId;
+                if (uiM->action == MainToAudioMsg::BEGIN_EDIT)
+                {
+                    beginEndParamGestureCount++;
+                }
+                else
+                {
+                    beginEndParamGestureCount--;
+                }
+                clap_event_param_gesture_t p;
+                p.header.size = sizeof(clap_event_param_gesture_t);
+                p.header.time = 0;
+                p.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+                p.header.type = uiM->action == MainToAudioMsg::BEGIN_EDIT
+                                    ? CLAP_EVENT_PARAM_GESTURE_BEGIN
+                                    : CLAP_EVENT_PARAM_GESTURE_END;
+                p.header.flags = 0;
+                p.param_id = uiM->paramId;
 
-            outq->try_push(outq, &p.header);
+                outq->try_push(outq, &p.header);
+            }
         }
         break;
         case MainToAudioMsg::STOP_AUDIO:
@@ -478,10 +494,11 @@ void Engine::setupFilter(int f)
         cfg = {};
     }
 
+    auto osf = overSampling ? 2 : 1;
     filters[f].setFilterModel(model);
     filters[f].setModelConfiguration(cfg);
     filters[f].setStereo();
-    filters[f].setSampleRateAndBlockSize(sampleRate, blockSize);
+    filters[f].setSampleRateAndBlockSize(osf * sampleRate, osf * blockSize);
     for (int i = 0; i < 4; ++i)
         filters[f].provideDelayLine(i, combDelays[f][i]);
     if (!filters[f].prepareInstance())

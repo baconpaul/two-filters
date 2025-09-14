@@ -112,45 +112,57 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     {
         auto useFeedback = engine->patch.routingNode.feedbackPower > 0.5;
         auto useNoise = engine->patch.routingNode.noisePower > 0.5;
+        auto useOS = engine->overSampling;
         auto mode = (Engine::RoutingModes)std::round(engine->patch.routingNode.routingMode);
 
         switch (mode)
         {
+#define CWNS(x, vf, vn)                                                                            \
+    if (useOS)                                                                                     \
+    {                                                                                              \
+        processForRouting<x, vf, vn, true>(process);                                               \
+    }                                                                                              \
+    else                                                                                           \
+    {                                                                                              \
+        processForRouting<x, vf, vn, false>(process);                                              \
+    }
+
+#define CWFB(x, v)                                                                                 \
+    if (useNoise)                                                                                  \
+    {                                                                                              \
+        CWNS(x, v, true);                                                                          \
+    }                                                                                              \
+    else                                                                                           \
+    {                                                                                              \
+        CWNS(x, v, false);                                                                         \
+    }
+
 #define CSRM(x)                                                                                    \
     case x:                                                                                        \
         if (useFeedback)                                                                           \
         {                                                                                          \
-            if (useNoise)                                                                          \
-            {                                                                                      \
-                return processForRouting<x, true, true>(process);                                  \
-            }                                                                                      \
-            else                                                                                   \
-            {                                                                                      \
-                return processForRouting<x, true, false>(process);                                 \
-            }                                                                                      \
+            CWFB(x, true)                                                                          \
         }                                                                                          \
         else                                                                                       \
         {                                                                                          \
-            if (useNoise)                                                                          \
-            {                                                                                      \
-                return processForRouting<x, false, true>(process);                                 \
-            }                                                                                      \
-            else                                                                                   \
-            {                                                                                      \
-                return processForRouting<x, false, false>(process);                                \
-            }                                                                                      \
-        }
+            CWFB(x, false)                                                                         \
+        }                                                                                          \
+        break;
 
             CSRM(Engine::RoutingModes::Serial)
             CSRM(Engine::RoutingModes::Parallel_FBOne)
             CSRM(Engine::RoutingModes::Parallel_FBBoth)
             CSRM(Engine::RoutingModes::Parallel_FBEach)
 #undef CSRM
+#undef CWFB
+#undef CWNS
         }
+
+        return CLAP_PROCESS_CONTINUE;
     }
 
     int priorBarNumber{-1};
-    template <Engine::RoutingModes routingMode, bool withFeedback, bool withNoise>
+    template <Engine::RoutingModes routingMode, bool withFeedback, bool withNoise, bool withOS>
     clap_process_status processForRouting(const clap_process *process) noexcept
     {
         auto fpuguard = sst::plugininfra::cpufeatures::FPUStateGuard();
@@ -190,8 +202,8 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                 engine->processControl(outq);
             }
 
-            engine->processAudio<routingMode, withFeedback, withNoise>(inD[0][s], inD[1][s],
-                                                                       outD[0][s], outD[1][s]);
+            engine->processAudio<routingMode, withFeedback, withNoise, withOS>(
+                inD[0][s], inD[1][s], outD[0][s], outD[1][s]);
 
             blockPos = (blockPos + 1) & (blockSize - 1);
         }
@@ -385,7 +397,7 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
         return nullptr;
     }
-};
+}; // namespace baconpaul::twofilters
 
 } // namespace clapimpl
 

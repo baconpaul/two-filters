@@ -76,6 +76,7 @@ struct Patch : pats::PatchBase<Patch, Param>
         return md_t().asFloat().withFlags(floatFlags).as25SecondExpTime();
     }
     static md_t boolMd() { return md_t().asBool().withFlags(boolFlags); }
+    static md_t boolMdNoAuto() { return md_t().asBool().withFlags(CLAP_PARAM_IS_STEPPED); }
     static md_t intMd() { return md_t().asInt().withFlags(boolFlags); }
 
     Patch() : pats::PatchBase<Patch, Param>()
@@ -255,7 +256,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                              .withGroupName("Routing")
                              .withName("Noise Power")
                              .withID(id(8))),
-              oversample(intMd()
+              oversample(boolMdNoAuto()
                              .asOnOffBool()
                              .withGroupName("Routing")
                              .withName("Oversample")

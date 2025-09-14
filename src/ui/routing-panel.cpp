@@ -76,7 +76,6 @@ RoutingPanel::RoutingPanel(PluginEditor &ed)
     createComponent(editor, *this, rn.oversample, oversampleT, oversampleD);
     oversampleT->setDrawMode(sst::jucegui::components::ToggleButton::DrawMode::LABELED);
     oversampleT->setLabel("Oversample");
-    oversampleT->setEnabled(false);
     addAndMakeVisible(*oversampleT);
 
     enableFB();
