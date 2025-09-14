@@ -147,6 +147,8 @@ PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQu
 }
 PluginEditor::~PluginEditor()
 {
+    juce::PopupMenu::dismissAllActiveMenus();
+
     mainToAudio.push({Engine::MainToAudioMsg::EDITOR_ATTACH_DETATCH, false});
     idleTimer->stopTimer();
     setLookAndFeel(nullptr);
@@ -664,10 +666,10 @@ void PluginEditor::showPresetPopup()
     rsm.addItem("LFO 2 Routes", [w = juce::Component::SafePointer(this)]()
                 { w->stepLFOPanel[1]->randomizeRoutes(); });
     rsm.addSeparator();
-    rsm.addItem("Main", false, false,
+    rsm.addItem("Main",
                 [w = juce::Component::SafePointer(this)]() { w->routingPanel->randomize(); });
     rsm.addSeparator();
-    rsm.addItem("Everything", false, false,
+    rsm.addItem("Everything",
                 [w = juce::Component::SafePointer(this)]()
                 {
                     w->filterPanel[0]->randomize();

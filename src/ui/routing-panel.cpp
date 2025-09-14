@@ -124,5 +124,42 @@ void RoutingPanel::enableFB()
     filterBlendParallelK->setVisible(m != 0);
 }
 
-void RoutingPanel::randomize() { SQLOG("RoutingPanel::randomize"); }
+void RoutingPanel::randomize()
+{
+    auto &rn = editor.patchCopy.routingNode;
+    auto wr = [&, this](auto &par, auto &cont, auto &wid, float clmp = 1.0)
+    {
+        auto range = par.meta.maxVal - par.meta.minVal;
+        auto nv = editor.rng.unif01() * range * clmp + par.meta.minVal;
+        wid->onBeginEdit();
+        cont->setValueFromGUI(nv);
+        wid->onEndEdit();
+    };
+    auto wri = [&, this](auto &par, auto &cont, auto &wid)
+    {
+        auto range = par.meta.maxVal - par.meta.minVal;
+        auto nv = editor.rng.unif01() * range + par.meta.minVal;
+        wid->onBeginEdit();
+        cont->setValueFromGUI(std::round(nv));
+        wid->onEndEdit();
+    };
+
+    wr(rn.inputGain, igD, igK);
+    wr(rn.outputGain, ogD, ogK);
+    wr(rn.filterBlendSerial, filterBlendSerialD, filterBlendSerialK);
+    wr(rn.filterBlendParallel, filterBlendParallelD, filterBlendParallelK);
+    wr(rn.mix, mixD, mixK);
+    // editorial - don't randomize feedback high!
+    wr(rn.feedback, feedbackD, feedbackK, 0.8);
+    wr(rn.noiseLevel, noiseLevelD, noiseLevelK);
+    wri(rn.routingMode, routingModeD, routingModeS);
+    wri(rn.retriggerMode, retriggerModeD, retriggerModeS);
+    wri(rn.feedbackPower, fbPowerD, fbPowerT);
+    wri(rn.noisePower, noisePowerD, noisePowerT);
+
+    // purposefully skip oversample
+
+    enableFB();
+    repaint();
+}
 } // namespace baconpaul::twofilters::ui
