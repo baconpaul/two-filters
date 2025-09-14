@@ -40,6 +40,7 @@
 #include "sst/basic-blocks/dsp/CorrelatedNoise.h"
 #include "sst/basic-blocks/dsp/BlockInterpolators.h"
 #include "sst/filters++.h"
+#include "sst/filters/HalfRateFilter.h"
 
 namespace baconpaul::twofilters
 {
@@ -95,6 +96,9 @@ struct Engine
     void beginLargerBlock() { didResetInLargerBlock = false; }
     void processControl(const clap_output_events_t *);
 
+    bool overSampling{false};
+    sst::filters::HalfRate::HalfRateFilter hrUp, hrDn;
+
     float noiseState[2][2]{0, 0};
     sst::basic_blocks::dsp::lipol<float, blockSize, true> blendLipol1, blendLipol2;
     sst::basic_blocks::dsp::pan_laws::panmatrix_t panMatrix[2];
@@ -108,9 +112,34 @@ struct Engine
         R = tR;
     }
 
-    template <RoutingModes mode, bool fb, bool withNoise>
+    template <RoutingModes mode, bool fb, bool withNoise, bool withOversampling>
     void processAudio(float inL, float inR, float &outL, float &outR)
     {
+        if (withOversampling)
+        {
+            float inLU[2], inRU[2], outLU[2], outRU[2];
+            hrUp.process_sample_U2(inL, inR, inLU, inRU);
+            processAudioNoOS<mode, fb, withNoise>(inLU[0], inRU[0], outLU[0], outRU[0]);
+            processAudioNoOS<mode, fb, withNoise>(inLU[1], inRU[1], outLU[1], outRU[1]);
+            hrDn.process_sample_D2(outLU, outRU, outL, outR);
+        }
+        else
+        {
+            processAudioNoOS<mode, fb, withNoise>(inL, inR, outL, outR);
+        }
+        blendLipol1.process();
+        blendLipol2.process();
+
+        if (isEditorAttached)
+        {
+            vuPeak.process(outL, outR);
+        }
+    }
+
+    template <RoutingModes mode, bool fb, bool withNoise>
+    void processAudioNoOS(float inL, float inR, float &outL, float &outR)
+    {
+
         if (!audioRunning)
         {
             outL = 0;
@@ -306,14 +335,6 @@ struct Engine
 
         outL = std::clamp(outL, -2.5f, 2.5f);
         outR = std::clamp(outR, -2.5f, 2.5f);
-
-        blendLipol1.process();
-        blendLipol2.process();
-
-        if (isEditorAttached)
-        {
-            vuPeak.process(outL, outR);
-        }
     }
 
     void processUIQueue(const clap_output_events_t *);
