@@ -21,6 +21,7 @@
 
 #include "sst/filters/FilterPlotter.h"
 #include "sst/jucegui/components/BaseStyles.h"
+#include "sst/jucegui/component-adapters/ComponentTags.h"
 
 namespace baconpaul::twofilters::ui
 {
@@ -490,6 +491,17 @@ FilterPanel::FilterPanel(PluginEditor &ed, int ins)
     addAndMakeVisible(*configMenu);
     configMenu->setOnCallback([this]() { showConfigMenu(); });
     configMenu->setOnJogCallback([this](auto i) { jogConfig(i); });
+
+    namespace jcad = sst::jucegui::component_adapters;
+
+    auto bi = (instance + 1) * 1000;
+    jcad::setTraversalId(toggleButton.get(), bi++);
+    jcad::setTraversalId(cutoffK.get(), bi++);
+    jcad::setTraversalId(resonanceK.get(), bi++);
+    jcad::setTraversalId(morphK.get(), bi++);
+    jcad::setTraversalId(panK.get(), bi++);
+    jcad::setTraversalId(modelMenu.get(), bi++);
+    jcad::setTraversalId(configMenu.get(), bi++);
 }
 
 FilterPanel::~FilterPanel() = default;

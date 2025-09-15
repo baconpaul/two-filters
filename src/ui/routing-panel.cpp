@@ -79,6 +79,22 @@ RoutingPanel::RoutingPanel(PluginEditor &ed)
     addAndMakeVisible(*oversampleT);
 
     enableFB();
+
+    namespace jcad = sst::jucegui::component_adapters;
+
+    auto bi = 300;
+    jcad::setTraversalId(routingModeS.get(), bi++);
+    jcad::setTraversalId(oversampleT.get(), bi++);
+    jcad::setTraversalId(retriggerModeS.get(), bi++);
+    jcad::setTraversalId(igK.get(), bi++);
+    jcad::setTraversalId(ogK.get(), bi++);
+    jcad::setTraversalId(filterBlendSerialK.get(), bi++);
+    jcad::setTraversalId(filterBlendParallelK.get(), bi++);
+    jcad::setTraversalId(mixK.get(), bi++);
+    jcad::setTraversalId(fbPowerT.get(), bi++);
+    jcad::setTraversalId(feedbackK.get(), bi++);
+    jcad::setTraversalId(noisePowerT.get(), bi++);
+    jcad::setTraversalId(noiseLevelK.get(), bi++);
 }
 void RoutingPanel::resized()
 {

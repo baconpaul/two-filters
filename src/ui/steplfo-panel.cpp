@@ -346,18 +346,18 @@ StepLFOPanel::StepLFOPanel(PluginEditor &editor, int instance)
     createComponent(editor, *this, sn.toPostG, routeK[idx], routeD[idx]);
     routeD[idx]->labelOverride = "Post";
     idx++;
+    createComponent(editor, *this, sn.toFiltBlend, routeK[idx], routeD[idx]);
+    routeD[idx]->labelOverride = "Blend";
+    idx++;
+
     createComponent(editor, *this, sn.toMix, routeK[idx], routeD[idx]);
     routeD[idx]->labelOverride = "Mix";
     idx++;
-
     createComponent(editor, *this, sn.toFB, routeK[idx], routeD[idx]);
     routeD[idx]->labelOverride = "F/Back";
     idx++;
     createComponent(editor, *this, sn.toNoise, routeK[idx], routeD[idx]);
     routeD[idx]->labelOverride = "Noise";
-    idx++;
-    createComponent(editor, *this, sn.toFiltBlend, routeK[idx], routeD[idx]);
-    routeD[idx]->labelOverride = "Blend";
     idx++;
 
     for (int i = 0; i < numRoutes; i++)
@@ -381,8 +381,22 @@ StepLFOPanel::StepLFOPanel(PluginEditor &editor, int instance)
     createComponent(editor, *this, sn.smooth, smooth, smoothD);
     smoothD->onGuiSetValue = [this]() { stepEditor->invalidatePath(); };
     addAndMakeVisible(*smooth);
+
+    namespace jcad = sst::jucegui::component_adapters;
+
+    auto bi = (instance + 1) * 5000;
+    jcad::setTraversalId(stepCount.get(), bi++);
+    jcad::setTraversalId(rate.get(), bi++);
+    jcad::setTraversalId(smooth.get(), bi++);
+
+    for (int i = 0; i < numRoutes; ++i)
+    {
+        jcad::setTraversalId(routeK[i].get(), bi++);
+    }
 }
+
 StepLFOPanel::~StepLFOPanel() = default;
+
 void StepLFOPanel::resized()
 {
     auto rPad{80}, bPad{160};
@@ -440,10 +454,10 @@ void StepLFOPanel::resized()
     kB = kB.translated(kmarg, 0);
     placeTop(8);
     placeTop(9);
-    placeTop(13);
-    placeBot(10);
+    placeTop(10);
     placeBot(11);
     placeBot(12);
+    placeBot(13);
 }
 
 void StepLFOPanel::onModelChanged()
@@ -458,10 +472,10 @@ void StepLFOPanel::onModelChanged()
 
     auto fbP = editor.patchCopy.routingNode.feedbackPower > 0.5;
     auto nsP = editor.patchCopy.routingNode.noisePower > 0.5;
-    routeK[11]->setEnabled(fbP);
-    routeK[12]->setEnabled(nsP);
-    routeK[11]->repaint();
+    routeK[12]->setEnabled(fbP);
+    routeK[13]->setEnabled(nsP);
     routeK[12]->repaint();
+    routeK[13]->repaint();
     stepEditor->invalidatePath();
     repaint();
 }
