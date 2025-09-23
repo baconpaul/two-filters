@@ -64,7 +64,7 @@ struct Param : pats::ParamBase, sst::cpputils::active_set_overlay<Param>::partic
 
 struct Patch : pats::PatchBase<Patch, Param>
 {
-    static constexpr uint32_t patchVersion{2};
+    static constexpr uint32_t patchVersion{3};
     static constexpr const char *id{"org.baconpaul.two-filters"};
 
     static constexpr uint32_t floatFlags{CLAP_PARAM_IS_AUTOMATABLE};
