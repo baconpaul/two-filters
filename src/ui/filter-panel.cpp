@@ -218,6 +218,19 @@ struct FilterCurve : juce::Component
                       if (w)
                           w->panel.randomize();
                   });
+        m.addSeparator();
+        m.addItem("Swap Filters",
+                  [w = juce::Component::SafePointer(this)]()
+                  {
+                      if (w)
+                          w->panel.editor.swapFilters(false);
+                  });
+        m.addItem("Swap Filters and Modulation",
+                  [w = juce::Component::SafePointer(this)]()
+                  {
+                      if (w)
+                          w->panel.editor.swapFilters(true);
+                  });
         m.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&panel.editor));
     }
 
