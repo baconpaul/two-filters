@@ -1037,4 +1037,59 @@ void PluginEditor::pushFilterSetup(int instance)
     mainToAudio.push(msg);
 }
 
+void PluginEditor::swapFilters(bool alsoSwapMod)
+{
+    auto &fn1 = patchCopy.filterNodes[0];
+    auto &fn2 = patchCopy.filterNodes[1];
+
+    auto snd = [this](auto &par)
+    {
+        mainToAudio.push({Engine::MainToAudioMsg::Action::BEGIN_EDIT, par.meta.id});
+        mainToAudio.push({Engine::MainToAudioMsg::Action::SET_PARAM, par.meta.id, par.value});
+        mainToAudio.push({Engine::MainToAudioMsg::Action::END_EDIT, par.meta.id});
+    };
+    auto swp = [this, snd](auto &p1, auto &p2)
+    {
+        float v1 = p1.value;
+        float v2 = p2.value;
+        p1.value = v2;
+        p2.value = v1;
+        snd(p1);
+        snd(p2);
+    };
+    auto p1 = fn1.params();
+    auto p2 = fn2.params();
+    for (int i = 0; i < p1.size(); ++i)
+    {
+        swp(*p1[i], *p2[i]);
+    }
+
+    auto m1 = fn1.model;
+    auto m2 = fn2.model;
+    auto c1 = fn1.config;
+    auto c2 = fn2.config;
+    fn1.model = m2;
+    fn2.model = m1;
+    fn1.config = c2;
+    fn2.config = c1;
+    pushFilterSetup(0);
+    pushFilterSetup(1);
+
+    if (alsoSwapMod)
+    {
+        for (int lf = 0; lf < numStepLFOs; ++lf)
+        {
+            auto &lm = patchCopy.stepLfoNodes[lf];
+            swp(lm.toCO[0], lm.toCO[1]);
+            swp(lm.toRes[0], lm.toRes[1]);
+            swp(lm.toMorph[0], lm.toMorph[1]);
+            swp(lm.toPan[0], lm.toPan[1]);
+        }
+    }
+
+    requestParamsFlush();
+    resetEnablement();
+    repaint();
+}
+
 } // namespace baconpaul::twofilters::ui

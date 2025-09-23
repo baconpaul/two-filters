@@ -97,6 +97,8 @@ struct PluginEditor : jcmp::WindowPanel
     void pushFilterSetup(int instance);
     std::unique_ptr<juce::FileChooser> fileChooser;
 
+    void swapFilters(bool alsoSwapMod);
+
     void resetEnablement();
 
     std::unique_ptr<defaultsProvder_t> defaultsProvider;
