@@ -78,6 +78,8 @@ function(add_clapfirst_installer)
                 PATHS ${CMAKE_BINARY_DIR}/innosetup-6.5.4
         )
 
+        message(STATUS "ISCE = ${INNOSETUP_COMPILER_EXECUTABLE}")
+
         cmake_path(REMOVE_EXTENSION INST_ZIP OUTPUT_VARIABLE WIN_INSTALLER)
         set(WINCOL ${CIN_ASSET_OUTPUT_DIRECTORY}/installer_copy)
         file(MAKE_DIRECTORY ${WINCOL})
