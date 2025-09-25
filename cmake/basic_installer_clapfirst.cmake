@@ -59,24 +59,39 @@ function(add_clapfirst_installer)
         include(InnoSetup)
         install_inno_setup()
         cmake_path(REMOVE_EXTENSION INST_ZIP OUTPUT_VARIABLE WIN_INSTALLER)
+        set(WINCOL ${CIN_ASSET_OUTPUT_DIRECTORY}/installer_copy)
+        file(MAKE_DIRECTORY ${WINCOL})
+
+        foreach (INST ${CIN_TARGETS})
+            if (TARGET ${INST})
+                message(STATUS "Copying ${INST} installer copy")
+                add_custom_command(TARGET ${TGT}
+                        POST_BUILD
+                        USES_TERMINAL
+                        COMMAND cmake -E echo "Staging " $<TARGET_FILE:${INST}> " to " ${WINCOL}
+                        COMMAND cmake -E copy "$<TARGET_FILE:${INST}>" "${WINCOL}"
+                )
+            endif()
+        endforeach()
         add_custom_command(
             TARGET ${TGT}
             POST_BUILD
             USES_TERMINAL
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
             COMMAND ${CMAKE_COMMAND} -E make_directory installer
-            COMMAND 7z a -r installer/${INST_ZIP} ${ASSET_OUTPUT_DIRECTORY}/
+            COMMAND 7z a -r installer/${INST_ZIP} ${WINCOL}
             COMMAND ${CMAKE_COMMAND} -E echo "ZIP Installer in: installer/${INST_ZIP}"
             COMMAND ${INNOSETUP_COMPILER_EXECUTABLE}
                 /O"${CMAKE_BINARY_DIR}/installer" /F"${WIN_INSTALLER}" /DName="${PRODUCT_NAME}"
                 /DNameCondensed="${PRODUCT_NAME}" /DVersion="${GIT_COMMIT_HASH}"
                 /DID="a74e3385-ee81-404d-b2ce-93452c512018"
-                /DCLAP /DVST3 /DSA
-                /DIcon="${CMAKE_SOURCE_DIR}/resources/installer/logo.ico"
-                /DBanner="${CMAKE_SOURCE_DIR}/resources/installer/banner.png"
+                /DPublisher="BaconPaul"
+                /DCLAP /DVST3 /DVST3_IS_SINGLE_FILE /DSA
+                # /DIcon="${CMAKE_SOURCE_DIR}/resources/installer/logo.ico"
+                # /DBanner="${CMAKE_SOURCE_DIR}/resources/installer/banner.png"
                 /DArch="${INNOSETUP_ARCH_ID}"
-                /DLicense="${CMAKE_SOURCE_DIR}/LICENSE"
-                /DStagedAssets="${ASSETS_OUTPUT_DIRECTORY}"
+                /DLicense="${CMAKE_SOURCE_DIR}/resources/LICENSE_GPL3"
+                /DStagedAssets="${WINCOL}"
                 "${INNOSETUP_INSTALL_SCRIPT}"
         )
     else ()
