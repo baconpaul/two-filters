@@ -61,7 +61,8 @@ jobs:
           cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Debug -DCOPY_AFTER_BUILD=FALSE  -DGITHUB_ACTIONS_BUILD=TRUE
           
           echo "\n\nWheres the innos at"
-          find ./build -name "inno*exe" -print
+          find ./build -name "inno*" -print
+          find ./build -name "*iscc*" -print
           echo "thats where\n\n";
           
           cmake --build ./build --config Debug --target ${TARGET_NAME}-installer --parallel 3
