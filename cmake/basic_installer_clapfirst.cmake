@@ -57,8 +57,14 @@ function(add_clapfirst_installer)
     elseif (WIN32)
         message(STATUS "Configuring for win installer")
         include(InnoSetup)
-        install_inno_setup()
-        message(STATUS "InnoSetup : iscc = ${INNOSETUP_COMPILER_EXECUTABLE}")
+        find_program(INNOSETUP_COMPILER_EXECUTABLE iscc)
+
+        if(NOT INNOSETUP_COMPILER_EXECUTABLE)
+            # install_inno_setup()
+            message(STATUS "ISCC not found; skipping inno install stage")
+        else()
+            message(STATUS "InnoSetup : iscc = ${INNOSETUP_COMPILER_EXECUTABLE}")
+        endif()
 
         cmake_path(REMOVE_EXTENSION INST_ZIP OUTPUT_VARIABLE WIN_INSTALLER)
         set(WINCOL ${CIN_ASSET_OUTPUT_DIRECTORY}/installer_copy)
@@ -83,7 +89,18 @@ function(add_clapfirst_installer)
             COMMAND ${CMAKE_COMMAND} -E make_directory installer
             COMMAND 7z a -r installer/${INST_ZIP} ${WINCOL}
             COMMAND ${CMAKE_COMMAND} -E echo "ZIP Installer in: installer/${INST_ZIP}"
-            COMMAND ${INNOSETUP_COMPILER_EXECUTABLE}
+        )
+
+
+        if(INNOSETUP_COMPILER_EXECUTABLE)
+            message(STATUS "Ejecting rule for innosetup")
+            add_custom_command(
+                TARGET ${TGT}
+                POST_BUILD
+                USES_TERMINAL
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                COMMAND ${CMAKE_COMMAND} -E make_directory installer
+                COMMAND ${INNOSETUP_COMPILER_EXECUTABLE}
                 /O"${CMAKE_BINARY_DIR}/installer" /F"${WIN_INSTALLER}" /DName="${PRODUCT_NAME}"
                 /DNameCondensed="${PRODUCT_NAME}" /DVersion="${GIT_COMMIT_HASH}"
                 /DID="a74e3385-ee81-404d-b2ce-93452c512018"
@@ -95,7 +112,8 @@ function(add_clapfirst_installer)
                 /DLicense="${CMAKE_SOURCE_DIR}/resources/LICENSE_GPL3"
                 /DStagedAssets="${WINCOL}"
                 "${INNOSETUP_INSTALL_SCRIPT}"
-        )
+            )
+        endif()
 
     else ()
         message(STATUS "Basic Installer: Target is installer/${OBXF_ZIP}")
