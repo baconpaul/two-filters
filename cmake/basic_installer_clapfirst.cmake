@@ -81,19 +81,20 @@ function(add_clapfirst_installer)
             COMMAND ${CMAKE_COMMAND} -E make_directory installer
             COMMAND 7z a -r installer/${INST_ZIP} ${WINCOL}
             COMMAND ${CMAKE_COMMAND} -E echo "ZIP Installer in: installer/${INST_ZIP}"
-            COMMAND ${INNOSETUP_COMPILER_EXECUTABLE}
-                /O"${CMAKE_BINARY_DIR}/installer" /F"${WIN_INSTALLER}" /DName="${PRODUCT_NAME}"
-                /DNameCondensed="${PRODUCT_NAME}" /DVersion="${GIT_COMMIT_HASH}"
-                /DID="a74e3385-ee81-404d-b2ce-93452c512018"
-                /DPublisher="BaconPaul"
-                /DCLAP /DVST3 /DVST3_IS_SINGLE_FILE /DSA
-                # /DIcon="${CMAKE_SOURCE_DIR}/resources/installer/logo.ico"
-                # /DBanner="${CMAKE_SOURCE_DIR}/resources/installer/banner.png"
-                /DArch="${INNOSETUP_ARCH_ID}"
-                /DLicense="${CMAKE_SOURCE_DIR}/resources/LICENSE_GPL3"
-                /DStagedAssets="${WINCOL}"
-                "${INNOSETUP_INSTALL_SCRIPT}"
         )
+         #   COMMAND ${INNOSETUP_COMPILER_EXECUTABLE}
+         #       /O"${CMAKE_BINARY_DIR}/installer" /F"${WIN_INSTALLER}" /DName="${PRODUCT_NAME}"
+         #       /DNameCondensed="${PRODUCT_NAME}" /DVersion="${GIT_COMMIT_HASH}"
+         #       /DID="a74e3385-ee81-404d-b2ce-93452c512018"
+         #       /DPublisher="BaconPaul"
+         #       /DCLAP /DVST3 /DVST3_IS_SINGLE_FILE /DSA
+         #       # /DIcon="${CMAKE_SOURCE_DIR}/resources/installer/logo.ico"
+         #       # /DBanner="${CMAKE_SOURCE_DIR}/resources/installer/banner.png"
+         #       /DArch="${INNOSETUP_ARCH_ID}"
+         #       /DLicense="${CMAKE_SOURCE_DIR}/resources/LICENSE_GPL3"
+         #       /DStagedAssets="${WINCOL}"
+         #       "${INNOSETUP_INSTALL_SCRIPT}"
+
     else ()
         message(STATUS "Basic Installer: Target is installer/${OBXF_ZIP}")
         add_custom_command(
