@@ -78,6 +78,10 @@ jobs:
           
           cmake --build ./build --config Debug --target ${TARGET_NAME}-installer --parallel 3
 
+      - name: Show Installer Directory
+        run: |
+          ls -l build/installer
+
       - name: Upload artifact
         if: github.event_name != 'pull_request' && runner.os != 'Linux'  # We get this through docker
         uses: actions/upload-artifact@v4
