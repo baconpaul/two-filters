@@ -46,3 +46,6 @@
 [submodule "libs/sst/sst-jucegui"]
 	path = libs/sst/sst-jucegui
 	url = https://github.com/surge-synthesizer/sst-jucegui
+[submodule "libs/sst/sst-cmake"]
+	path = libs/sst/sst-cmake
+	url = https://github.com/surge-synthesizer/sst-cmake
