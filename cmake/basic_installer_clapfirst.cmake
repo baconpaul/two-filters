@@ -97,11 +97,12 @@ function(add_clapfirst_installer)
     else ()
         message(STATUS "Basic Installer: Target is installer/${OBXF_ZIP}")
         add_custom_command(
-                TARGET obxf-installer
+                TARGET ${TGT}
                 POST_BUILD
                 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                 COMMAND ${CMAKE_COMMAND} -E make_directory installer
-                COMMAND ${CMAKE_COMMAND} -E tar cvf installer/${INST_ZIP} --format=zip ${ASSET_OUTPUT_DIRECTORY}/
+                COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/resources/LICENSE_GPL3 ${CIN_ASSET_OUTPUT_DIRECTORY}
+                COMMAND ${CMAKE_COMMAND} -E tar cvf installer/${INST_ZIP} --format=zip ${CIN_ASSET_OUTPUT_DIRECTORY}/
                 COMMAND ${CMAKE_COMMAND} -E echo "Installer in: installer/${INST_ZIP}")
 
         #add_custom_command(
