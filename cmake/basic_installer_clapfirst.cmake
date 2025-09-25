@@ -58,6 +58,26 @@ function(add_clapfirst_installer)
         message(STATUS "Configuring for win installer")
         include(InnoSetup)
         install_inno_setup()
+
+
+        execute_process(
+                COMMAND
+                "${CMAKE_BINARY_DIR}/innosetup-6.5.4.exe" /VERYSILENT
+                /CURRENTUSER /DIR=${CMAKE_BINARY_DIR}/innosetup-6.5.4
+
+                OUTPUT_VARIABLE isout
+                ERROR_VARIABLE iserr
+        )
+
+        message(STATUS "OV = ${isout}")
+        message(STATUS "EG = ${iserr}")
+
+        find_program(
+                INNOSETUP_COMPILER_EXECUTABLE
+                iscc
+                PATHS ${CMAKE_BINARY_DIR}/innosetup-6.5.4
+        )
+
         cmake_path(REMOVE_EXTENSION INST_ZIP OUTPUT_VARIABLE WIN_INSTALLER)
         set(WINCOL ${CIN_ASSET_OUTPUT_DIRECTORY}/installer_copy)
         file(MAKE_DIRECTORY ${WINCOL})
