@@ -74,7 +74,7 @@ function(add_clapfirst_installer)
             endif()
         endforeach()
 
-        add_dependencies(${TGT} ${TGT}_wincollect innosetup_compiler)
+        add_dependencies(${TGT} ${TGT}_wincollect innosetup::compiler)
 
         add_custom_command(
             TARGET ${TGT}
@@ -93,7 +93,7 @@ function(add_clapfirst_installer)
                     POST_BUILD
                     USES_TERMINAL
                     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                    COMMAND ${CMAKE_COMMAND} -E echo Building exe installer for windows with $<TARGET_PROPERTY:innosetup_compiler,COMPILER_EXECUTABLE> compiler
+                    COMMAND ${CMAKE_COMMAND} -E echo Building exe installer for windows with $<TARGET_PROPERTY:innosetup::compiler,IMPORTED_LOCATION> compiler
                     COMMAND ${CMAKE_COMMAND} -E make_directory installer
                     COMMAND innosetup::compiler
                         /O"${CMAKE_BINARY_DIR}/installer"
