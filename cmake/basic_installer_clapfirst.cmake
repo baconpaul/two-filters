@@ -74,7 +74,7 @@ function(add_clapfirst_installer)
             endif()
         endforeach()
 
-        add_dependencies(${TGT} ${TGT}_wincollect innosetup_compiler)
+        add_dependencies(${TGT} ${TGT}_wincollect innosetup::compiler)
 
         add_custom_command(
             TARGET ${TGT}
@@ -85,29 +85,33 @@ function(add_clapfirst_installer)
             COMMAND ${CMAKE_COMMAND} -E make_directory installer
             COMMAND 7z a -r installer/${INST_ZIP} ${WINCOL}
         )
-        add_custom_command(
-                TARGET ${TGT}
-                POST_BUILD
-                USES_TERMINAL
-                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                COMMAND ${CMAKE_COMMAND} -E echo Building exe installer for windows with $<TARGET_PROPERTY:innosetup_compiler,COMPILER_EXECUTABLE> compiler
-                COMMAND ${CMAKE_COMMAND} -E make_directory installer
-                COMMAND $<TARGET_PROPERTY:innosetup_compiler,COMPILER_EXECUTABLE>
-                    /O"${CMAKE_BINARY_DIR}/installer"
-                    /F"${WIN_INSTALLER}"
-                    /DName="${PRODUCT_NAME}"
-                    /DNameCondensed="${PRODUCT_NAME}"
-                    /DVersion="${GIT_COMMIT_HASH}"
-                    /DID="a74e3385-ee81-404d-b2ce-93452c512018"
-                    /DPublisher="BaconPaul"
-                    /DCLAP /DVST3 /DVST3_IS_SINGLE_FILE /DSA
-                    /DIcon="${CMAKE_SOURCE_DIR}/resources/SideQuestIcon.ico"
-                    /DBanner="${CMAKE_SOURCE_DIR}/resources/SideQuestBanner.png"
-                    /DArch="x64compatible"
-                    /DLicense="${CMAKE_SOURCE_DIR}/resources/LICENSE_GPL3"
-                    /DStagedAssets="${WINCOL}"
-                    "$<TARGET_PROPERTY:innosetup_compiler,INSTALL_SCRIPT>"
-        )
+
+        if (TARGET innosetup::compiler)
+            message(STATUS "Ejecting innosetup installer rules")
+            add_custom_command(
+                    TARGET ${TGT}
+                    POST_BUILD
+                    USES_TERMINAL
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                    COMMAND ${CMAKE_COMMAND} -E echo Building exe installer for windows with $<TARGET_PROPERTY:innosetup::compiler,IMPORTED_LOCATION> compiler
+                    COMMAND ${CMAKE_COMMAND} -E make_directory installer
+                    COMMAND innosetup::compiler
+                        /O"${CMAKE_BINARY_DIR}/installer"
+                        /F"${WIN_INSTALLER}"
+                        /DName="${PRODUCT_NAME}"
+                        /DNameCondensed="${PRODUCT_NAME}"
+                        /DVersion="${GIT_COMMIT_HASH}"
+                        /DID="a74e3385-ee81-404d-b2ce-93452c512018"
+                        /DPublisher="BaconPaul"
+                        /DCLAP /DVST3 /DVST3_IS_SINGLE_FILE /DSA
+                        /DIcon="${CMAKE_SOURCE_DIR}/resources/SideQuestIcon.ico"
+                        /DBanner="${CMAKE_SOURCE_DIR}/resources/SideQuestBanner.png"
+                        /DArch="x64compatible"
+                        /DLicense="${CMAKE_SOURCE_DIR}/resources/LICENSE_GPL3"
+                        /DStagedAssets="${WINCOL}"
+                        "$<TARGET_PROPERTY:innosetup::compiler,INSTALL_SCRIPT>"
+            )
+        endif()
 
     else ()
         message(STATUS "Basic Installer: Target is installer/${OBXF_ZIP}")
