@@ -56,18 +56,16 @@ function(add_clapfirst_installer)
         )
     elseif (WIN32)
         message(STATUS "Configuring for win installer")
-        include(InnoSetup)
-        install_inno_setup()
-        message(STATUS "InnoSetup : iscc = ${INNOSETUP_COMPILER_EXECUTABLE}")
-
         cmake_path(REMOVE_EXTENSION INST_ZIP OUTPUT_VARIABLE WIN_INSTALLER)
         set(WINCOL ${CIN_ASSET_OUTPUT_DIRECTORY}/installer_copy)
         file(MAKE_DIRECTORY ${WINCOL})
 
+        add_custom_target(${TGT}_wincollect)
         foreach (INST ${CIN_TARGETS})
             if (TARGET ${INST})
                 message(STATUS "Copying ${INST} installer copy")
-                add_custom_command(TARGET ${TGT}
+                add_dependencies(${TGT}_wincollect ${INST})
+                add_custom_command(TARGET ${TGT}_wincollect
                         POST_BUILD
                         USES_TERMINAL
                         COMMAND cmake -E echo "Staging " $<TARGET_FILE:${INST}> " to " ${WINCOL}
@@ -75,26 +73,40 @@ function(add_clapfirst_installer)
                 )
             endif()
         endforeach()
+
+        add_dependencies(${TGT} ${TGT}_wincollect innosetup_compiler)
+
         add_custom_command(
             TARGET ${TGT}
             POST_BUILD
             USES_TERMINAL
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+            COMMAND ${CMAKE_COMMAND} -E echo Building zip for windoes
             COMMAND ${CMAKE_COMMAND} -E make_directory installer
             COMMAND 7z a -r installer/${INST_ZIP} ${WINCOL}
-            COMMAND ${CMAKE_COMMAND} -E echo "ZIP Installer in: installer/${INST_ZIP}"
-            COMMAND ${INNOSETUP_COMPILER_EXECUTABLE}
-                /O"${CMAKE_BINARY_DIR}/installer" /F"${WIN_INSTALLER}" /DName="${PRODUCT_NAME}"
-                /DNameCondensed="${PRODUCT_NAME}" /DVersion="${GIT_COMMIT_HASH}"
-                /DID="a74e3385-ee81-404d-b2ce-93452c512018"
-                /DPublisher="BaconPaul"
-                /DCLAP /DVST3 /DVST3_IS_SINGLE_FILE /DSA
-                /DIcon="${CMAKE_SOURCE_DIR}/resources/SideQuestIcon.ico"
-                # /DBanner="${CMAKE_SOURCE_DIR}/resources/installer/banner.png"
-                /DArch="${INNOSETUP_ARCH_ID}"
-                /DLicense="${CMAKE_SOURCE_DIR}/resources/LICENSE_GPL3"
-                /DStagedAssets="${WINCOL}"
-                "${INNOSETUP_INSTALL_SCRIPT}"
+        )
+        add_custom_command(
+                TARGET ${TGT}
+                POST_BUILD
+                USES_TERMINAL
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                COMMAND ${CMAKE_COMMAND} -E echo Building exe installer for windows with $<TARGET_PROPERTY:innosetup_compiler,COMPILER_EXECUTABLE> compiler
+                COMMAND ${CMAKE_COMMAND} -E make_directory installer
+                COMMAND $<TARGET_PROPERTY:innosetup_compiler,COMPILER_EXECUTABLE>
+                    /O"${CMAKE_BINARY_DIR}/installer"
+                    /F"${WIN_INSTALLER}"
+                    /DName="${PRODUCT_NAME}"
+                    /DNameCondensed="${PRODUCT_NAME}"
+                    /DVersion="${GIT_COMMIT_HASH}"
+                    /DID="a74e3385-ee81-404d-b2ce-93452c512018"
+                    /DPublisher="BaconPaul"
+                    /DCLAP /DVST3 /DVST3_IS_SINGLE_FILE /DSA
+                    /DIcon="${CMAKE_SOURCE_DIR}/resources/SideQuestIcon.ico"
+                    /DBanner="${CMAKE_SOURCE_DIR}/resources/SideQuestBanner.png"
+                    /DArch="x64compatible"
+                    /DLicense="${CMAKE_SOURCE_DIR}/resources/LICENSE_GPL3"
+                    /DStagedAssets="${WINCOL}"
+                    "$<TARGET_PROPERTY:innosetup_compiler,INSTALL_SCRIPT>"
         )
 
     else ()
