@@ -327,10 +327,15 @@ void Engine::processUIQueue(const clap_output_events_t *outq)
                 {
                     SQLOG("Non-begin/end bound param edit for '" << dest->meta.name << "'");
                 }
-                if (dest->meta.type == md_t::FLOAT)
+                if (dest->meta.type == md_t::FLOAT &&
+                    (dest->adhocFeatures & Param::AdHocFeatureValues::DONT_SMOOTH) == 0)
+                {
                     lagHandler.setNewDestination(&(dest->value), uiM->value);
+                }
                 else
+                {
                     dest->value = uiM->value;
+                }
 
                 clap_event_param_value_t p;
                 p.header.size = sizeof(clap_event_param_value_t);
