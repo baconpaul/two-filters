@@ -47,6 +47,7 @@ struct Param : pats::ParamBase, sst::cpputils::active_set_overlay<Param>::partic
     uint64_t adhocFeatures{0};
     enum AdHocFeatureValues : uint64_t
     {
+        DONT_SMOOTH = 1 << 0
     };
 
     bool isTemposynced() const
@@ -419,6 +420,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                   })),
               MorphTargetMixin(gn(i), id(20, i))
         {
+            rate.adhocFeatures = Param::AdHocFeatureValues::DONT_SMOOTH;
         }
 
         std::string gn(int i) const { return "Step LFO " + std::to_string(i + 1); }
