@@ -84,6 +84,7 @@ struct Engine
     void updateLfoStorage();
     static void updateLfoStorageFromTo(const Patch &p, int node, stepLfo_t::Storage &to);
 
+    int64_t lastRestartBeat{-1};
     void restartLfos();
 
     bool audioRunning{true};
