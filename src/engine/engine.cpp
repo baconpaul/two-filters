@@ -144,8 +144,7 @@ void Engine::processControl(const clap_output_events_t *outq)
     {
         auto mMul = 1 << rtm;
         auto isCand = (int)transport.timeInBeats % ((int)(mMul * beatsPerMeasure));
-        if (transport.timeInBeats >= transport.lastBarStartInBeats + beatsPerMeasure &&
-            !didResetInLargerBlock)
+        if (transport.timeInBeats >= lastRestartBeat + beatsPerMeasure && !didResetInLargerBlock)
         {
             if (isCand == 0)
             {
@@ -552,6 +551,11 @@ void Engine::restartLfos()
     lfos[0].retrigger();
     lfos[1].retrigger();
     sendUpdateLfo();
+
+    // An assumption here that we are at a tempo where blockSize < 1 quarter note.
+    // Since blockSize == 8, thats basically capping us out at 6000bpm, which I think
+    // is fine :)
+    lastRestartBeat = (int64_t)std::floor(transport.timeInBeats);
 }
 
 void Engine::sendUpdateLfo()

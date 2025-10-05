@@ -161,7 +161,6 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         return CLAP_PROCESS_CONTINUE;
     }
 
-    int priorBarNumber{-1};
     template <Engine::RoutingModes routingMode, bool withFeedback, bool withNoise, bool withOS>
     clap_process_status processForRouting(const clap_process *process) noexcept
     {
