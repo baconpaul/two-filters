@@ -152,11 +152,11 @@ struct FilterCurve : juce::Component
 
     void positionToCoRes(juce::Point<float> p)
     {
-        auto res = 1 - p.y / getHeight();
+        auto res = 1 - std::clamp(p.y / getHeight(), 0.f, 1.f);
 
         // x px = (xoff + x) * xsc * getWidth();
         // x = xpx / getWidth / xsc - xoff
-        auto lfr = p.x / getWidth() / xsc - xoff;
+        auto lfr = std::clamp(p.x / getWidth(), 0.f, 1.f) / xsc - xoff;
         auto fr = pow(10.0, lfr);
         // fr = 440 pow(2, key/12)
         // key = 12*log2(fr / 440)
@@ -500,10 +500,27 @@ FilterPanel::FilterPanel(PluginEditor &ed, int ins)
     addAndMakeVisible(*modelMenu);
     modelMenu->setOnCallback([this]() { showModelMenu(); });
     modelMenu->setOnJogCallback([this](auto i) { jogModel(i); });
+
     configMenu = std::make_unique<sst::jucegui::components::MenuButton>();
     addAndMakeVisible(*configMenu);
     configMenu->setOnCallback([this]() { showConfigMenu(); });
     configMenu->setOnJogCallback([this](auto i) { jogConfig(i); });
+
+    pbMenu = std::make_unique<sst::jucegui::components::MenuButton>();
+    pbMenu->setOnCallback([this]() { showConfigStructuredMenu(0); });
+    addChildComponent(*pbMenu);
+
+    slpMenu = std::make_unique<sst::jucegui::components::MenuButton>();
+    slpMenu->setOnCallback([this]() { showConfigStructuredMenu(1); });
+    addChildComponent(*slpMenu);
+
+    drvMenu = std::make_unique<sst::jucegui::components::MenuButton>();
+    drvMenu->setOnCallback([this]() { showConfigStructuredMenu(2); });
+    addChildComponent(*drvMenu);
+
+    fsmMenu = std::make_unique<sst::jucegui::components::MenuButton>();
+    fsmMenu->setOnCallback([this]() { showConfigStructuredMenu(3); });
+    addChildComponent(*fsmMenu);
 
     namespace jcad = sst::jucegui::component_adapters;
 
@@ -515,6 +532,10 @@ FilterPanel::FilterPanel(PluginEditor &ed, int ins)
     jcad::setTraversalId(panK.get(), bi++);
     jcad::setTraversalId(modelMenu.get(), bi++);
     jcad::setTraversalId(configMenu.get(), bi++);
+    jcad::setTraversalId(pbMenu.get(), bi++);
+    jcad::setTraversalId(slpMenu.get(), bi++);
+    jcad::setTraversalId(drvMenu.get(), bi++);
+    jcad::setTraversalId(fsmMenu.get(), bi++);
 }
 
 FilterPanel::~FilterPanel() = default;
@@ -543,12 +564,47 @@ void FilterPanel::resized()
     auto rest = rs.withTrimmedLeft(4 * q + 4 * pad);
     modelMenu->setBounds(rest.withHeight(20));
     configMenu->setBounds(rest.withHeight(20).translated(0, 22));
+    auto bx = rest.translated(0, 22).withHeight(20);
+    auto bxw = bx.getWidth() / 2;
+    pbMenu->setBounds(bx.withTrimmedRight(bxw - 2));
+    slpMenu->setBounds(bx.withTrimmedLeft(bxw + 2));
+    bx = bx.translated(0, 22);
+    drvMenu->setBounds(bx.withTrimmedRight(bxw - 2));
+    fsmMenu->setBounds(bx.withTrimmedLeft(bxw + 2));
+}
+
+template <typename E> void setSub(auto &a, auto &m, E val)
+{
+    namespace sfpp = sst::filtersplusplus;
+
+    if (sfpp::supportsChoice<E>(m))
+    {
+        if (val == E::UNSUPPORTED)
+        {
+            a->setLabel("-");
+        }
+        else
+        {
+            a->setLabel(sfpp::toString(val));
+        }
+        a->setEnabled(true);
+    }
+    else
+    {
+        a->setLabel("");
+        a->setEnabled(false);
+    }
 }
 
 void FilterPanel::onModelChanged()
 {
+    displayMode = (PluginEditor::ConfigDisplayMode)editor.defaultsProvider->getUserDefaultValue(
+        Defaults::modelConfigMode, PluginEditor::ConfigDisplayMode::SINGLE_LIST);
+
+    namespace sfpp = sst::filtersplusplus;
+
     auto &fn = editor.patchCopy.filterNodes[instance];
-    auto mn = sst::filtersplusplus::toString(fn.model);
+    auto mn = sfpp::toString(fn.model);
     auto cn = fn.config.toString();
 
     auto xtra = sst::filtersplusplus::Filter::coefficientsExtraCount(fn.model, fn.config);
@@ -561,6 +617,33 @@ void FilterPanel::onModelChanged()
     modelMenu->setLabel(mn);
     configMenu->setLabel(cn);
 
+    setSub(pbMenu, fn.model, fn.config.pt);
+    setSub(slpMenu, fn.model, fn.config.st);
+    setSub(drvMenu, fn.model, fn.config.dt);
+    setSub(fsmMenu, fn.model, fn.config.mt);
+
+    switch (displayMode)
+    {
+    case PluginEditor::SINGLE_LIST:
+        pbMenu->setVisible(false);
+        slpMenu->setVisible(false);
+        drvMenu->setVisible(false);
+        fsmMenu->setVisible(false);
+        configMenu->setVisible(true);
+        break;
+    case PluginEditor::FOUR_ALL:
+        pbMenu->setVisible(true);
+        slpMenu->setVisible(true);
+        drvMenu->setVisible(true);
+        fsmMenu->setVisible(true);
+        configMenu->setVisible(false);
+        break;
+    case PluginEditor::FOUR_HIDE:
+        updateFourHideMenuVisibility();
+        configMenu->setVisible(false);
+        break;
+    }
+
     auto act = fn.active > 0.5;
     cutoffK->setEnabled(act);
     resonanceK->setEnabled(act);
@@ -569,6 +652,25 @@ void FilterPanel::onModelChanged()
     configMenu->setEnabled(act);
     curve->setEnabled(act);
     repaint();
+}
+
+void FilterPanel::updateFourHideMenuVisibility()
+{
+    if (displayMode != PluginEditor::FOUR_HIDE)
+        return;
+
+    namespace sfpp = sst::filtersplusplus;
+    auto &fn = editor.patchCopy.filterNodes[instance];
+
+    pbMenu->setVisible(sfpp::supportsChoice<sfpp::Passband>(fn.model));
+    slpMenu->setVisible(sfpp::supportsChoice<sfpp::Slope>(fn.model) &&
+                        !sfpp::noChoicesOrOnlyUnsupported<sfpp::Slope>(fn.model, fn.config.pt));
+    drvMenu->setVisible(
+        sfpp::supportsChoice<sfpp::DriveMode>(fn.model) &&
+        !sfpp::noChoicesOrOnlyUnsupported<sfpp::DriveMode>(fn.model, fn.config.pt, fn.config.st));
+    fsmMenu->setVisible(sfpp::supportsChoice<sfpp::FilterSubModel>(fn.model) &&
+                        !sfpp::noChoicesOrOnlyUnsupported<sfpp::FilterSubModel>(
+                            fn.model, fn.config.pt, fn.config.st, fn.config.dt));
 }
 
 void FilterPanel::showModelMenu()
@@ -596,6 +698,9 @@ void FilterPanel::showModelMenu()
                           s->onModelChanged();
                   });
     }
+
+    p.addSeparator();
+    p.addSubMenu("Configuration UI", editor.configDisplayMenu());
 
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor));
 }
@@ -765,6 +870,90 @@ void FilterPanel::resetFilter()
     editor.pushFilterSetup(instance);
     onModelChanged();
     repaint();
+}
+
+void FilterPanel::showConfigStructuredMenu(int component)
+{
+    namespace sfpp = sst::filtersplusplus;
+    auto &fn = editor.patchCopy.filterNodes[instance];
+
+    auto p = juce::PopupMenu();
+
+    switch (component)
+    {
+    case 0:
+        addConfigStructuredMenu<sfpp::Passband>(p, "Passband");
+        break;
+
+    case 1:
+        addConfigStructuredMenu<sfpp::Slope>(p, "Slope");
+        break;
+
+    case 2:
+        addConfigStructuredMenu<sfpp::DriveMode>(p, "Drive Mode");
+        break;
+
+    case 3:
+        addConfigStructuredMenu<sfpp::FilterSubModel>(p, "Sub Model");
+        break;
+    }
+    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor));
+}
+
+template <sst::filtersplusplus::is_modelconfig_enum E>
+void FilterPanel::addConfigStructuredMenu(juce::PopupMenu &p, const std::string &sh)
+{
+    namespace sfpp = sst::filtersplusplus;
+    auto &fn = editor.patchCopy.filterNodes[instance];
+
+    auto applyCf = [fn, this](const auto &cfc)
+    {
+        auto nc = sfpp::closestValidModelTo(fn.model, cfc);
+
+        editor.patchCopy.filterNodes[instance].config = nc;
+        editor.pushFilterSetup(instance);
+        onModelChanged();
+        for (auto &s : editor.stepLFOPanel)
+            s->onModelChanged();
+        updateFourHideMenuVisibility();
+    };
+
+    p.addSectionHeader(sh);
+    p.addSeparator();
+
+    std::vector<std::pair<E, bool>> opts;
+    if constexpr (std::is_same_v<E, sfpp::Passband>)
+    {
+        opts = sfpp::valuesAndValidityForPartialConfig<E>(fn.model);
+    }
+    if constexpr (std::is_same_v<E, sfpp::Slope>)
+    {
+        opts = sfpp::valuesAndValidityForPartialConfig<E>(fn.model, fn.config.pt);
+    }
+    if constexpr (std::is_same_v<E, sfpp::DriveMode>)
+    {
+        opts = sfpp::valuesAndValidityForPartialConfig<E>(fn.model, fn.config.pt, fn.config.st);
+    }
+    if constexpr (std::is_same_v<E, sfpp::FilterSubModel>)
+    {
+        opts = sfpp::valuesAndValidityForPartialConfig<E>(fn.model, fn.config.pt, fn.config.st,
+                                                          fn.config.dt);
+    }
+    for (auto &[o, active] : opts)
+    {
+        if (displayMode == PluginEditor::FOUR_HIDE && !active)
+            continue;
+        auto m = sfpp::toString(o);
+        if (o == E::UNSUPPORTED)
+            m = "None";
+        p.addItem(m, active, o == sfpp::get<E>(fn.config),
+                  [applyCf, fn, val = o, this]()
+                  {
+                      auto cfc = fn.config;
+                      sfpp::set<E>(cfc, val);
+                      applyCf(cfc);
+                  });
+    }
 }
 
 } // namespace baconpaul::twofilters::ui

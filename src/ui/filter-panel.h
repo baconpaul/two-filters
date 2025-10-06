@@ -56,8 +56,18 @@ struct FilterPanel : sst::jucegui::components::NamedPanel
 
     std::unique_ptr<sst::jucegui::components::MenuButton> modelMenu, configMenu;
 
+    std::unique_ptr<sst::jucegui::components::MenuButton> pbMenu, slpMenu, drvMenu, fsmMenu;
+
     void showModelMenu();
     void showConfigMenu();
+
+    void showConfigStructuredMenu(int component);
+
+    template <sst::filtersplusplus::is_modelconfig_enum E>
+    void addConfigStructuredMenu(juce::PopupMenu &p, const std::string &);
+
+    PluginEditor::ConfigDisplayMode displayMode{PluginEditor::SINGLE_LIST};
+    void updateFourHideMenuVisibility();
 
     int instance;
 };

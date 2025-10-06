@@ -98,10 +98,17 @@ struct PluginEditor : jcmp::WindowPanel
     std::unique_ptr<juce::FileChooser> fileChooser;
 
     void swapFilters(bool alsoSwapMod);
+    juce::PopupMenu configDisplayMenu();
+    enum ConfigDisplayMode
+    {
+        SINGLE_LIST = 0,
+        FOUR_ALL = 1,
+        FOUR_HIDE = 2
+    };
 
     void resetEnablement();
 
-    std::unique_ptr<defaultsProvder_t> defaultsProvider;
+    std::unique_ptr<defaultsProvider_t> defaultsProvider;
 
     sst::basic_blocks::dsp::RNG rng;
 

@@ -112,7 +112,7 @@ PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQu
     sst::jucegui::component_adapters::setTraversalId(presetButton.get(), 174);
 
     // this needs a cleanup
-    defaultsProvider = std::make_unique<defaultsProvder_t>(
+    defaultsProvider = std::make_unique<defaultsProvider_t>(
         presetManager->userPath, "TwoFilters", defaultName,
         [](auto e, auto b) { SQLOG("[ERROR]" << e << " " << b); });
     setSkinFromDefaults();
@@ -775,7 +775,7 @@ void PluginEditor::showPresetPopup()
 #endif
 
     p.addSubMenu("User Interface", uim);
-
+    p.addSubMenu("Filter Configuration", configDisplayMenu());
     p.addSeparator();
     p.addItem("Read the Manual",
               []()
@@ -1090,6 +1090,34 @@ void PluginEditor::swapFilters(bool alsoSwapMod)
     requestParamsFlush();
     resetEnablement();
     repaint();
+}
+
+juce::PopupMenu PluginEditor::configDisplayMenu()
+{
+    auto p = juce::PopupMenu();
+    auto m = defaultsProvider->getUserDefaultValue(Defaults::modelConfigMode,
+                                                   ConfigDisplayMode::SINGLE_LIST);
+
+    p.addItem("Single List", true, m == 0,
+              [this]()
+              {
+                  defaultsProvider->updateUserDefaultValue(Defaults::modelConfigMode, 0);
+                  resetEnablement();
+              });
+    p.addItem("Four-Way, Always On", true, m == 1,
+              [this]()
+              {
+                  defaultsProvider->updateUserDefaultValue(Defaults::modelConfigMode, 1);
+                  resetEnablement();
+              });
+    p.addItem("Four-Way, Hide Unused", true, m == 2,
+              [this]()
+              {
+                  defaultsProvider->updateUserDefaultValue(Defaults::modelConfigMode, 2);
+                  resetEnablement();
+              });
+
+    return p;
 }
 
 } // namespace baconpaul::twofilters::ui
