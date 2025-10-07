@@ -27,6 +27,7 @@ enum Defaults
     zoomLevel,
     useSoftwareRenderer, // only used on windows
     useLowCpuGraphics,
+    modelConfigMode,
     numDefaults
 };
 
@@ -42,6 +43,8 @@ inline std::string defaultName(Defaults d)
         return "useSoftwareRenderer";
     case useLowCpuGraphics:
         return "useLowCpuGraphics";
+    case modelConfigMode:
+        return "modelConfigMode";
     case numDefaults:
     {
         SQLOG("Software Error - defaults found");
@@ -51,7 +54,7 @@ inline std::string defaultName(Defaults d)
     return "";
 }
 
-using defaultsProvder_t = sst::plugininfra::defaults::Provider<Defaults, Defaults::numDefaults>;
+using defaultsProvider_t = sst::plugininfra::defaults::Provider<Defaults, Defaults::numDefaults>;
 } // namespace baconpaul::twofilters::ui
 
 #endif // UI_DEFAULTS_H
