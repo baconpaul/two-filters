@@ -61,7 +61,7 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
         clapJuceShim->setResizable(true);
     }
-    virtual ~TwoFilters(){};
+    virtual ~TwoFilters() {}
 
     std::unique_ptr<Engine> engine;
     size_t blockPos{0};

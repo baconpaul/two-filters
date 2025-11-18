@@ -91,6 +91,7 @@ struct Engine
     int beginEndParamGestureCount{0};
 
     double sampleRate{1}, sampleRateInv{1};
+    double maxCutoff{0};
     void setSampleRate(double sampleRate);
 
     bool didResetInLargerBlock{false};

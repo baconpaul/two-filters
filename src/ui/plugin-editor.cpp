@@ -112,9 +112,9 @@ PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQu
     sst::jucegui::component_adapters::setTraversalId(presetButton.get(), 174);
 
     // this needs a cleanup
-    defaultsProvider = std::make_unique<defaultsProvider_t>(
-        presetManager->userPath, "TwoFilters", defaultName,
-        [](auto e, auto b) { SQLOG("[ERROR]" << e << " " << b); });
+    defaultsProvider = std::make_unique<defaultsProvider_t>(presetManager->userPath, "TwoFilters",
+                                                            defaultName, [](auto e, auto b)
+                                                            { SQLOG("[ERROR]" << e << " " << b); });
     setSkinFromDefaults();
 
     lnf = std::make_unique<sst::jucegui::style::LookAndFeelManager>(this);
@@ -570,10 +570,9 @@ void PluginEditor::showPresetPopup()
             {
                 noExt = noExt.substr(0, ps);
             }
-            em.addItem(noExt,
-                       [cat = c, pat = e, this]() {
-                           this->presetManager->loadFactoryPreset(patchCopy, mainToAudio, cat, pat);
-                       });
+            em.addItem(
+                noExt, [cat = c, pat = e, this]()
+                { this->presetManager->loadFactoryPreset(patchCopy, mainToAudio, cat, pat); });
         }
         f.addSubMenu(c, em);
     }

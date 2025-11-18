@@ -460,13 +460,11 @@ FilterPanel::FilterPanel(PluginEditor &ed, int ins)
 
     activeD = std::make_unique<PatchDiscrete>(editor, fn.active.meta.id);
     setToggleDataSource(activeD.get());
-    toggleButton->onBeginEdit = [this, &fn]() {
-        editor.mainToAudio.push({Engine::MainToAudioMsg::Action::BEGIN_EDIT, fn.active.meta.id});
-    };
+    toggleButton->onBeginEdit = [this, &fn]()
+    { editor.mainToAudio.push({Engine::MainToAudioMsg::Action::BEGIN_EDIT, fn.active.meta.id}); };
 
-    toggleButton->onEndEdit = [this, &fn]() {
-        editor.mainToAudio.push({Engine::MainToAudioMsg::Action::END_EDIT, fn.active.meta.id});
-    };
+    toggleButton->onEndEdit = [this, &fn]()
+    { editor.mainToAudio.push({Engine::MainToAudioMsg::Action::END_EDIT, fn.active.meta.id}); };
     editor.componentRefreshByID[fn.active.meta.id] = [this]() { onModelChanged(); };
 
     activeD->onGuiSetValue = [this]() { onModelChanged(); };
