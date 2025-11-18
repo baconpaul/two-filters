@@ -51,6 +51,11 @@ void Engine::setSampleRate(double sr)
 
     audioToUi.push({AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
 
+    auto nq = sampleRate * 0.495;
+    // so we are note from 69 which is 440
+    // freq = 440 2^(note/12)
+    // 12 log2(freq/440) = note
+    maxCutoff = 12.0 * log2(nq / 440.0);
     reassignLfos();
     sendUpdateLfo();
     for (int i = 0; i < numFilters; ++i)
@@ -170,7 +175,7 @@ void Engine::processControl(const clap_output_events_t *outq)
         auto &fn = patch.filterNodes[i];
         auto &sn = patch.stepLfoNodes[i];
 
-        float co = fn.cutoff;
+        float co = std::min((float)fn.cutoff, (float)(maxCutoff * (overSampling + 1)));
         float re = fn.resonance;
         float mo = fn.morph;
         for (int j = 0; j < numStepLFOs; ++j)
