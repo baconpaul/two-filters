@@ -52,8 +52,6 @@ jobs:
       - name: Install Inno Setup
         if: runner.os == 'Windows'
         uses: surge-synthesizer/sst-githubactions/install-innosetup@main
-        with:
-          version: 6.5.4
 
       # onc signing is set up
       - uses: apple-actions/import-codesign-certs@v3
