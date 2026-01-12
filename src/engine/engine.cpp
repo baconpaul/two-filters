@@ -137,29 +137,30 @@ void Engine::processControl(const clap_output_events_t *outq)
     if (!isPlaying(lastStatus) && isPlaying(transport.status))
     {
         restartLfos();
+        didResetInLargerBlock = true;
     }
-    lastStatus = transport.status;
 
-    auto btIncr = blockSize * transport.tempo / (60 * sampleRate);
-    transport.hostTimeInBeats += btIncr;
-    transport.timeInBeats += btIncr;
-
-    auto rtm = (int)std::round(patch.routingNode.retriggerMode);
-    if (rtm != (int)RetrigModes::OnTransport)
+    if (std::floor(lastTimeInBeats) != std::floor(transport.timeInBeats))
     {
+        auto rtm = (int)std::round(patch.routingNode.retriggerMode);
         auto mMul = 1 << rtm;
-        auto isCand = (int)transport.timeInBeats % ((int)(mMul * beatsPerMeasure));
-        if (transport.timeInBeats >= lastRestartBeat + beatsPerMeasure && !didResetInLargerBlock)
+
+        if (rtm != (int)RetrigModes::OnTransport)
         {
-            if (isCand == 0)
+            auto isCand = (int)transport.timeInBeats % ((int)(mMul * beatsPerMeasure));
+            if (isCand == 0 && !didResetInLargerBlock)
             {
                 restartLfos();
+                didResetInLargerBlock = true;
             }
-            if (!isPlaying(transport.status))
-                transport.lastBarStartInBeats += beatsPerMeasure;
-            didResetInLargerBlock = true;
         }
     }
+
+    lastStatus = transport.status;
+    lastTimeInBeats = transport.timeInBeats;
+
+    auto btIncr = blockSize * transport.tempo / (60 * sampleRate);
+    transport.timeInBeats += btIncr;
 
     updateLfoStorage();
 
@@ -556,11 +557,6 @@ void Engine::restartLfos()
     lfos[0].retrigger();
     lfos[1].retrigger();
     sendUpdateLfo();
-
-    // An assumption here that we are at a tempo where blockSize < 1 quarter note.
-    // Since blockSize == 8, thats basically capping us out at 6000bpm, which I think
-    // is fine :)
-    lastRestartBeat = (int64_t)std::floor(transport.timeInBeats);
 }
 
 void Engine::sendUpdateLfo()

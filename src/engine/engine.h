@@ -79,12 +79,13 @@ struct Engine
     sst::basic_blocks::tables::EqualTuningProvider tuningProvider;
     sst::basic_blocks::modulators::Transport transport;
     uint32_t lastStatus{sst::basic_blocks::modulators::Transport::STOPPED};
+
     void sendUpdateLfo();
     void reassignLfos();
     void updateLfoStorage();
     static void updateLfoStorageFromTo(const Patch &p, int node, stepLfo_t::Storage &to);
 
-    int64_t lastRestartBeat{-1};
+    double lastTimeInBeats{-1};
     void restartLfos();
 
     bool audioRunning{true};
