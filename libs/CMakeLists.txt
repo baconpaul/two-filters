@@ -14,7 +14,6 @@ target_include_directories(simde INTERFACE simde)
 add_subdirectory(sst/sst-cpputils)
 add_subdirectory(sst/sst-basic-blocks)
 add_subdirectory(sst/sst-jucegui)
-set(SST_FILTERS_HAS_HUOV_2010 TRUE)
 add_subdirectory(sst/sst-filters)
 add_subdirectory(sst/sst-waveshapers)
 
