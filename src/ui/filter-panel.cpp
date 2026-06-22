@@ -85,6 +85,8 @@ struct FilterCurve : juce::Component
             if (running && nur != lur)
             {
                 float lco, lre, lmo;
+                sst::filtersplusplus::FilterModel lmodel;
+                sst::filtersplusplus::ModelConfig lconfig;
 
                 {
                     std::unique_lock<std::mutex> l(dataM);
@@ -95,10 +97,10 @@ struct FilterCurve : juce::Component
                     lco = co;
                     lre = res;
                     lmo = morph;
+                    lmodel = snapModel;
+                    lconfig = snapConfig;
                 }
-                // TODO - really we should snap these values on audio thread in lock
-                auto &fn = panel.editor.patchCopy.filterNodes[panel.instance];
-                if (fn.model == sst::filtersplusplus::FilterModel::None)
+                if (lmodel == sst::filtersplusplus::FilterModel::None)
                 {
                     {
                         std::unique_lock<std::mutex> l(dataM);
@@ -114,14 +116,14 @@ struct FilterCurve : juce::Component
                 }
                 else
                 {
-                    if (sst::filtersplusplus::Filter::coefficientsExtraIsBipolar(fn.model,
-                                                                                 fn.config, 0))
+                    if (sst::filtersplusplus::Filter::coefficientsExtraIsBipolar(lmodel, lconfig,
+                                                                                 0))
                         lmo = lmo * 2 - 1;
 
                     auto par = sst::filters::FilterPlotParameters();
                     par.freqSmoothOctaves = 1.0 / 36.0;
-                    auto crv = plotter.plotFilterMagnitudeResponse(fn.model, fn.config, lco, lre,
-                                                                   lmo, 0, 0, par);
+                    auto crv = plotter.plotFilterMagnitudeResponse(lmodel, lconfig, lco, lre, lmo,
+                                                                   0, 0, par);
                     auto tcX = crv.first;
                     for (auto &x : tcX)
                         x = (x > 0 ? log10(x) : 0);
@@ -438,10 +440,14 @@ struct FilterCurve : juce::Component
         co = fn.cutoff;
         res = fn.resonance;
         morph = fn.morph;
+        snapModel = fn.model;
+        snapConfig = fn.config;
         sendCV.notify_one();
     }
 
     float co, res, morph;
+    sst::filtersplusplus::FilterModel snapModel{sst::filtersplusplus::FilterModel::None};
+    sst::filtersplusplus::ModelConfig snapConfig{};
 
     FilterPanel &panel;
 

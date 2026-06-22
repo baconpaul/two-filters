@@ -86,7 +86,7 @@ void Engine::updateLfoStorageFromTo(const Patch &p, int node, stepLfo_t::Storage
 void Engine::reassignLfos()
 {
     updateLfoStorage();
-    for (int i = 0; i < numFilters; ++i)
+    for (int i = 0; i < numStepLFOs; ++i)
     {
         lfos[i].assign(&lfoStorage[i], patch.stepLfoNodes[i].rate, &transport, rng, true);
         lfos[i].setSampleRate(sampleRate, sampleRateInv);
