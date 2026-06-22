@@ -84,7 +84,7 @@ const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const clap_h
 static bool clap_get_auv2_info(const clap_plugin_factory_as_auv2 *factory, uint32_t index,
                                clap_plugin_info_as_auv2_t *info)
 {
-    if (index > 1)
+    if (index > 0)
         return false;
 
     if (index == 0)

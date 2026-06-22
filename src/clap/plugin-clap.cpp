@@ -278,12 +278,12 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
     bool stateLoad(const clap_istream *istream) noexcept override
     {
-        Patch patchCopy;
-        if (!sst::plugininfra::patch_support::inStreamToPatch(istream, patchCopy))
+        auto patchCopy = std::make_unique<Patch>();
+        if (!sst::plugininfra::patch_support::inStreamToPatch(istream, *patchCopy))
             return false;
 
-        presets::PresetManager::sendEntirePatchToAudio(patchCopy, engine->mainToAudio,
-                                                       patchCopy.name, _host.host());
+        presets::PresetManager::sendEntirePatchToAudio(*patchCopy, engine->mainToAudio,
+                                                       patchCopy->name, _host.host());
         if (_host.canUseParams())
         {
             _host.paramsRescan(CLAP_PARAM_RESCAN_VALUES);

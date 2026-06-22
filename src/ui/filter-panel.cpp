@@ -828,12 +828,14 @@ void FilterPanel::randomize()
     namespace sfpp = sst::filtersplusplus;
     auto mods = sfpp::Filter::availableModels();
     // 1 since we dont want off
-    auto mod = mods[editor.rng.unifInt(1, mods.size() - 1)];
+    auto &rng = editor.rng;
+    // unifInt is half open [min,max) supposedly. but paranoia clamps it anyway.
+    auto mod = mods[std::clamp(rng.unifInt(1, (int)mods.size()), 1, (int)mods.size() - 1)];
     fn.model = mod;
 
     auto am = sfpp::Filter::availableModelConfigurations(fn.model, true);
-    auto cfg = am[editor.rng.unifInt(0, am.size() - 1)];
-    fn.config = cfg;
+    if (!am.empty())
+        fn.config = am[std::clamp(rng.unifInt(0, (int)am.size()), 0, (int)am.size() - 1)];
 
     wr(fn.cutoff, cutoffD, cutoffK);
     wr(fn.resonance, resonanceD, resonanceK);

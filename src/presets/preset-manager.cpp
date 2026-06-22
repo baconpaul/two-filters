@@ -264,7 +264,7 @@ void PresetManager::sendEntirePatchToAudio(Patch &patch, Engine::mainToAudioQueu
     char *tmpDat = stringBuffer[currentString];
     currentString = (currentString + 1) % 128;
 
-    memset(tmpDat, 0, 128 * sizeof(char));
+    memset(tmpDat, 0, sizeof(stringBuffer[0]));
     strncpy(tmpDat, name.c_str(), 255);
     mainToAudio.push({Engine::MainToAudioMsg::SEND_PATCH_NAME, 0, 0.f, tmpDat});
     mainToAudio.push({Engine::MainToAudioMsg::STOP_AUDIO});

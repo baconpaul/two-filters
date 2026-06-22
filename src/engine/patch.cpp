@@ -73,11 +73,12 @@ void Patch::additionalFromStateImpl(TiXmlElement *root, uint32_t version)
         while (k)
         {
             int idx;
-            if (k->QueryIntAttribute("idx", &idx) == TIXML_SUCCESS)
+            if ((k->QueryIntAttribute("idx", &idx) == TIXML_SUCCESS) &&
+                (idx >= 0 && idx < numFilters))
             {
                 auto &nd = filterNodes[idx];
 
-                int tmp;
+                int tmp{0};
                 k->QueryIntAttribute("model", &tmp);
                 nd.model = (sst::filtersplusplus::FilterModel)tmp;
 
@@ -93,7 +94,7 @@ void Patch::additionalFromStateImpl(TiXmlElement *root, uint32_t version)
                 k->QueryIntAttribute("mt", &tmp);
                 nd.config.mt = (sst::filtersplusplus::FilterSubModel)tmp;
 
-                if (version == 2)
+                if (version <= 2)
                 {
                     // version 2 -> version 3 is a.liv's rename of cutofdf, res, and trip
                     if (nd.model == sst::filtersplusplus::FilterModel::CutoffWarp ||
