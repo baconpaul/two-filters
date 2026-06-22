@@ -166,7 +166,6 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     {
         auto fpuguard = sst::plugininfra::cpufeatures::FPUStateGuard();
 
-        engine->beginLargerBlock();
         sst::basic_blocks::modulators::fromClapTransport(engine->transport, process->transport);
 
         auto ev = process->in_events;

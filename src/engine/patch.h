@@ -221,15 +221,17 @@ struct Patch : pats::PatchBase<Patch, Param>
                                                            {1, "Par"},
                                                            {2, "Par / FB 1"},
                                                            {3, "Par / FB Each"}})),
-              retriggerMode(
-                  intMd()
-                      .withRange(0, 3)
-                      .withDefault(0)
-                      .withGroupName("Routing")
-                      .withName("Retrigger")
-                      .withID(9)
-                      .withUnorderedMapFormatting(
-                          {{0, "Each Bar"}, {1, "2 Bars"}, {2, "4 Bars"}, {3, "On Start"}})),
+              retriggerMode(intMd()
+                                .withRange(-1, 3)
+                                .withDefault(-1)
+                                .withGroupName("Routing")
+                                .withName("Retrigger")
+                                .withID(9)
+                                .withUnorderedMapFormatting({{-1, "Song Pos"},
+                                                             {0, "Each Bar"},
+                                                             {1, "2 Bars"},
+                                                             {2, "4 Bars"},
+                                                             {3, "On Start"}})),
               mix(floatMd()
                       .asPercent()
                       .withGroupName("Routing")

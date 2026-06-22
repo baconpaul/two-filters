@@ -58,6 +58,7 @@ struct Engine
 
     enum struct RetrigModes
     {
+        SongPos = -1,
         EveryBar = 0,
         Every2Bars = 1,
         Every4Bars = 2,
@@ -85,7 +86,6 @@ struct Engine
     void updateLfoStorage();
     static void updateLfoStorageFromTo(const Patch &p, int node, stepLfo_t::Storage &to);
 
-    double lastTimeInBeats{-1};
     void restartLfos();
 
     bool audioRunning{true};
@@ -95,8 +95,6 @@ struct Engine
     double maxCutoff{0};
     void setSampleRate(double sampleRate);
 
-    bool didResetInLargerBlock{false};
-    void beginLargerBlock() { didResetInLargerBlock = false; }
     void processControl(const clap_output_events_t *);
 
     bool overSampling{false};

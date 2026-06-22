@@ -14,6 +14,7 @@
  */
 
 #include "engine/engine.h"
+#include "engine/steplfo_songpos.h"
 #include "sst/cpputils/constructors.h"
 #include "sst/basic-blocks/mechanics/block-ops.h"
 #include "sst/basic-blocks/dsp/PanLaws.h"
@@ -134,39 +135,43 @@ void Engine::processControl(const clap_output_events_t *outq)
         return b;
     };
 
-    if (!isPlaying(lastStatus) && isPlaying(transport.status))
-    {
+    auto rtm = (int)std::round(patch.routingNode.retriggerMode);
+    auto playing = isPlaying(transport.status);
+
+    // On transport start give a clean retrigger. For OnTransport mode this is the only
+    // retrigger and the LFOs free-run from here; the bar-synced modes are positioned
+    // explicitly from song position below, so this just seeds a sane initial state.
+    if (!isPlaying(lastStatus) && playing)
         restartLfos();
-        didResetInLargerBlock = true;
-    }
-
-    if (std::floor(lastTimeInBeats) != std::floor(transport.timeInBeats))
-    {
-        auto rtm = (int)std::round(patch.routingNode.retriggerMode);
-        auto mMul = 1 << rtm;
-
-        if (rtm != (int)RetrigModes::OnTransport)
-        {
-            auto isCand = (int)transport.timeInBeats % ((int)(mMul * beatsPerMeasure));
-            if (isCand == 0 && !didResetInLargerBlock)
-            {
-                restartLfos();
-                didResetInLargerBlock = true;
-            }
-        }
-    }
 
     lastStatus = transport.status;
-    lastTimeInBeats = transport.timeInBeats;
 
     auto btIncr = blockSize * transport.tempo / (60 * sampleRate);
     transport.timeInBeats += btIncr;
 
     updateLfoStorage();
 
+    // Lock each LFO to the song position so a relocate, loop or scrub lands at exactly the
+    // right step/phase (see steplfo_songpos.h). transport.timeInBeats is host-anchored while
+    // playing and free-runs off the engine clock while stopped, so this tracks both.
+    //   SongPos (rtm < 0): never reset; position is a pure function of the song beats.
+    //   EveryBar/2/4 (0/1/2): reset to step 0 every N bars (barsPerGroup = 1 << rtm).
+    //   OnTransport (3): free-run, retriggering only on transport start.
+    bool freeRun = rtm == (int)RetrigModes::OnTransport;
+    int barsPerGroup = (rtm < 0) ? 0 : (1 << rtm); // 0 == never reset
     for (int i = 0; i < numStepLFOs; ++i)
     {
-        lfos[i].process(patch.stepLfoNodes[i].rate, 0, true, false, blockSize);
+        if (freeRun)
+        {
+            lfos[i].process(patch.stepLfoNodes[i].rate, 0, true, false, blockSize);
+        }
+        else
+        {
+            auto sp = stepLFOSongPos(transport.timeInBeats, transport.lastBarStartInBeats,
+                                     beatsPerMeasure, barsPerGroup, patch.stepLfoNodes[i].rate,
+                                     lfoStorage[i].repeat);
+            lfos[i].setPhaseTo(sp.step, sp.phase);
+        }
     }
 
     for (int i = 0; i < numFilters; ++i)
