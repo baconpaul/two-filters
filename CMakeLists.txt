@@ -35,6 +35,11 @@ include(cmake/CmakeRC.cmake)
 file(GLOB_RECURSE PATCHES  "resources/factory_patches/*.twofl")
 cmrc_add_resource_library(${PROJECT_NAME}-patches NAMESPACE twofilters_patches ${PATCHES})
 
+# About-screen assets (icon + acknowledgements) embedded for the modal overlay.
+cmrc_add_resource_library(${PROJECT_NAME}-assets NAMESPACE twofilters_assets
+        resources/TwoFiltersIcon.png
+        doc/ack.md)
+
 set(JUCE_PATH "${CMAKE_SOURCE_DIR}/libs/JUCE")
 add_subdirectory(libs)
 
@@ -43,6 +48,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/clap/plugin-clap-entry-impl.cpp
 
         src/ui/plugin-editor.cpp
+        src/ui/about-screen.cpp
         src/ui/debug-panel.cpp
         src/ui/filter-panel.cpp
         src/ui/routing-panel.cpp
@@ -91,6 +97,7 @@ target_link_libraries(${PROJECT_NAME}-impl PRIVATE
         sst::clap_juce_shim sst::clap_juce_shim_headers
         juce::juce_dsp
         ${PROJECT_NAME}-patches
+        ${PROJECT_NAME}-assets
 )
 
 make_clapfirst_plugins(
@@ -118,7 +125,8 @@ make_clapfirst_plugins(
         STANDALONE_CONFIGURATIONS
             standalone "${PRODUCT_NAME}" "org.baconpaul.twofilters"
 
-        # STANDALONE_MACOS_ICON "${CMAKE_SOURCE_DIR}/resources/mac_installer/Icon.icns"
+        STANDALONE_MACOS_ICON "${CMAKE_SOURCE_DIR}/resources/installer_mac/TwoFiltersIcon.icns"
+        STANDALONE_WINDOWS_ICON "${CMAKE_SOURCE_DIR}/resources/icon/TwoFiltersIcon.ico"
 )
 
 add_subdirectory(tests)

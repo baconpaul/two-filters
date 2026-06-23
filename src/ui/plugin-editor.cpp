@@ -29,6 +29,7 @@
 #include "filter-panel.h"
 #include "routing-panel.h"
 #include "steplfo-panel.h"
+#include "about-screen.h"
 
 namespace baconpaul::twofilters::ui
 {
@@ -784,7 +785,21 @@ void PluginEditor::showPresetPopup()
               });
     p.addItem("Get the Source", []()
               { juce::URL("https://github.com/baconpaul/two-filters/").launchInDefaultBrowser(); });
+    p.addSeparator();
+    p.addItem("About Two Filters",
+              [w = juce::Component::SafePointer(this)]()
+              {
+                  if (w)
+                      w->showAboutScreen();
+              });
     p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(this));
+}
+
+void PluginEditor::showAboutScreen()
+{
+    if (searchForOverlay<AboutScreen>())
+        return;
+    displayModalOverlay(std::make_unique<AboutScreen>(*this));
 }
 
 void PluginEditor::doSavePatch()

@@ -106,7 +106,7 @@ function(add_clapfirst_installer)
                         /DID="a74e3385-ee81-404d-b2ce-93452c512018"
                         /DPublisher="BaconPaul"
                         /DCLAP /DVST3 /DVST3_IS_SINGLE_FILE /DSA
-                        /DIcon="${CMAKE_SOURCE_DIR}/resources/SideQuestIcon.ico"
+                        /DIcon="${CMAKE_SOURCE_DIR}/resources/TwoFiltersIcon.ico"
                         /DBanner="${CMAKE_SOURCE_DIR}/resources/SideQuestBanner.png"
                         /DArch="x64compatible"
                         /DLicense="${CMAKE_SOURCE_DIR}/resources/LICENSE_GPL3"

@@ -32,6 +32,7 @@
 #include <sst/jucegui/components/VUMeter.h>
 #include <sst/jucegui/accessibility/FocusDebugger.h>
 #include <sst/jucegui/data/Continuous.h>
+#include <sst/jucegui/screens/ScreenHolder.h>
 
 #include "sst/basic-blocks/dsp/RNG.h"
 
@@ -54,7 +55,7 @@ struct StepLFOPanel;
 
 struct PatchContinuous;
 
-struct PluginEditor : jcmp::WindowPanel
+struct PluginEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<PluginEditor>
 {
     Patch patchCopy;
 
@@ -88,6 +89,7 @@ struct PluginEditor : jcmp::WindowPanel
     std::unique_ptr<jcmp::JogUpDownButton> presetButton;
 
     void showPresetPopup();
+    void showAboutScreen();
     void doLoadPatch();
     void doSavePatch();
     void postPatchChange(const std::string &displayName);
