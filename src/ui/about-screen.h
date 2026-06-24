@@ -47,7 +47,7 @@ struct AboutScreen : sst::jucegui::screens::ModalBase, HasEditor
     void buildInfo();
 
     static constexpr int infoRowHeight{22};
-    static constexpr int titleFontHeight{46}, subtitleFontHeight{22};
+    static constexpr int titleFontHeight{46}, subtitleFontHeight{18};
     static constexpr int titleBoxHeight{50}, subtitleBoxHeight{28}, titleSubtitleGap{2};
 
     juce::Image iconImage;
