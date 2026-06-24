@@ -1,4 +1,4 @@
-TwoFilters is a project which exists primarily to test our new sst-filters api and also to let me use the Surge filters as downstream effects in logic with some basic modulation.
+Two Filters is a project which exists primarily to test our new sst-filters api and also to let me use the Surge filters as downstream effects in logic with some basic modulation.
 
 The plugin was mostly developed in early 2026 in conjunction with that library redesign. That redesign was an effort by the surge synth team, especially a collaboration with Andreaya/a.liv and EvilDragon.
 
