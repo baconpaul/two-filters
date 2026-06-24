@@ -126,7 +126,7 @@ make_clapfirst_plugins(
             standalone "${PRODUCT_NAME}" "org.baconpaul.twofilters"
 
         STANDALONE_MACOS_ICON "${CMAKE_SOURCE_DIR}/resources/installer_mac/TwoFiltersIcon.icns"
-        STANDALONE_WINDOWS_ICON "${CMAKE_SOURCE_DIR}/resources/icon/TwoFiltersIcon.ico"
+        STANDALONE_WINDOWS_ICON "${CMAKE_SOURCE_DIR}/resources/TwoFiltersIcon.ico"
 )
 
 add_subdirectory(tests)
