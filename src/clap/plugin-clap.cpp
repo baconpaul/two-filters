@@ -285,8 +285,8 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                                                        patchCopy->name, _host.host());
         if (_host.canUseParams())
         {
-            _host.paramsRescan(CLAP_PARAM_RESCAN_VALUES);
             _host.paramsRequestFlush();
+            _host.paramsRescan(CLAP_PARAM_RESCAN_VALUES);
         }
         return true;
     }
@@ -322,6 +322,7 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             nextEvent = in->get(in, i);
             handleEvent(nextEvent);
         }
+        engine->snapAllParams();
 
         engine->processUIQueue(out);
     }

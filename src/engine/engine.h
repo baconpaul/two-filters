@@ -383,16 +383,21 @@ struct Engine
         if (lagHandler.active)
             lagHandler.instantlySnap();
 
+        snapAllParams();
+
+        patch.dirty = false;
+        doFullRefresh = true;
+        readyForStream = true;
+    }
+
+    void snapAllParams()
+    {
         for (auto &p : paramLagSet)
         {
             p.lag.snapToTarget();
             p.value = p.lag.v;
         }
         paramLagSet.removeAll();
-
-        patch.dirty = false;
-        doFullRefresh = true;
-        readyForStream = true;
     }
 
     void pushFullUIRefresh();
