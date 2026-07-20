@@ -45,7 +45,7 @@ struct StepEditor : juce::Component
         auto lFt = panel.style()->getFont(bst::BaseLabel::styleClass, bst::BaseLabel::labelfont);
         hCol = hCol.withAlpha(0.5f);
 
-        auto &sn = panel.editor.patchCopy.stepLfoNodes[panel.instance];
+        auto &sn = panel.editor.patchMainRef.stepLfoNodes[panel.instance];
         auto fullArea = getLocalBounds().withWidth(sn.stepCount * bw);
         auto restArea = getLocalBounds().withTrimmedLeft(sn.stepCount * bw);
         g.setColour(gCol);
@@ -142,11 +142,11 @@ struct StepEditor : juce::Component
         transport.tempo = 120;
         auto rate = 7;
         auto sr = 48000;
-        auto steps = panel.editor.patchCopy.stepLfoNodes[panel.instance].stepCount;
+        auto steps = panel.editor.patchMainRef.stepLfoNodes[panel.instance].stepCount;
 
         rng.reseed(8675309);
         lfo.setSampleRate(sr, 1.0 / sr);
-        Engine::updateLfoStorageFromTo(panel.editor.patchCopy, panel.instance, lfoStorage);
+        Engine::updateLfoStorageFromTo(panel.editor.patchMainRef, panel.instance, lfoStorage);
         lfo.assign(&lfoStorage, rate, &transport, rng, true);
 
         auto stepTime = 1.0 / (1 << 7);
@@ -292,7 +292,7 @@ StepLFOPanel::StepLFOPanel(PluginEditor &editor, int instance)
     : editor(editor), instance(instance),
       sst::jucegui::components::NamedPanel("StepLFO " + std::to_string(instance + 1))
 {
-    auto &sn = editor.patchCopy.stepLfoNodes[instance];
+    auto &sn = editor.patchMainRef.stepLfoNodes[instance];
     for (int i = 0; i < maxSteps; i++)
     {
         stepDs[i] = std::make_unique<PatchContinuous>(editor, sn.steps[i].meta.id);
@@ -464,14 +464,14 @@ void StepLFOPanel::onModelChanged()
 {
     for (int i = 0; i < numFilters; ++i)
     {
-        auto &fn = editor.patchCopy.filterNodes[i];
+        auto &fn = editor.patchMainRef.filterNodes[i];
         auto xtra = sst::filtersplusplus::Filter::coefficientsExtraCount(fn.model, fn.config);
         routeK[i * 4 + 2]->setEnabled(xtra > 0);
         routeK[i * 4 + 2]->repaint();
     }
 
-    auto fbP = editor.patchCopy.routingNode.feedbackPower > 0.5;
-    auto nsP = editor.patchCopy.routingNode.noisePower > 0.5;
+    auto fbP = editor.patchMainRef.routingNode.feedbackPower > 0.5;
+    auto nsP = editor.patchMainRef.routingNode.noisePower > 0.5;
     routeK[12]->setEnabled(fbP);
     routeK[13]->setEnabled(nsP);
     routeK[12]->repaint();

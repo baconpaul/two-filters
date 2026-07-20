@@ -57,15 +57,23 @@ struct PatchContinuous;
 
 struct PluginEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<PluginEditor>
 {
-    Patch patchCopy;
+    // Bound to engine->patchMain; the editor no longer owns a patch copy.
+    Patch &patchMainRef;
 
-    Engine::audioToUIQueue_t &audioToUI;
+    Engine::audioToMainQueue_t &audioToMain;
     Engine::mainToAudioQueue_T &mainToAudio;
+    std::atomic<bool> &editorActive;
+    std::atomic<uint32_t> &uiForceRebuild;
+    uint32_t lastForceRebuild{0};
     const clap_host_t *clapHost{nullptr};
 
-    PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQueue_T &utoa,
-                 const clap_host_t *ch);
+    PluginEditor(Patch &patchMain, Engine::audioToMainQueue_t &atou,
+                 Engine::mainToAudioQueue_T &utoa, std::atomic<bool> &editorActive,
+                 std::atomic<uint32_t> &uiForceRebuild, const clap_host_t *ch);
     virtual ~PluginEditor();
+
+    // Rebuild every widget from patchMainRef (== patchMain) after an out-of-band load.
+    void rebuildFromPatchMain();
 
     std::unique_ptr<sst::jucegui::style::LookAndFeelManager> lnf;
     void onStyleChanged() override;
@@ -95,6 +103,9 @@ struct PluginEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<Plu
     void postPatchChange(const std::string &displayName);
     void resetToDefault();
     void setPatchNameDisplay();
+    // The editor owns dirty state now (patchMain is shared). Mark patchMain dirty on a user
+    // edit and light the indicator directly — no audio-thread round-trip.
+    void markPatchDirty();
     void setPatchNameTo(const std::string &);
     void pushFilterSetup(int instance);
     std::unique_ptr<juce::FileChooser> fileChooser;
@@ -161,9 +172,6 @@ struct PluginEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<Plu
 
     void requestParamsFlush();
     const clap_host_params_t *clapParamsExtension{nullptr};
-
-    // the name tells you about the intent. It just makes startup faster
-    void sneakyStartupGrabFrom(Patch &other);
 };
 
 struct HasEditor

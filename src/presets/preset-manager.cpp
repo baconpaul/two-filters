@@ -16,6 +16,7 @@
 #include "preset-manager.h"
 #include <sstream>
 #include <fstream>
+#include <cstring>
 #include "sst/plugininfra/paths.h"
 
 #include "sst/plugininfra/strnatcmp.h"
@@ -26,6 +27,19 @@ CMRC_DECLARE(twofilters_patches);
 
 namespace baconpaul::twofilters::presets
 {
+
+namespace
+{
+// Name + dirty are main-thread-only patch state: the audio patch never needs them, and the
+// editor reads them straight off patchMain. So set them on the patch (== patchMain) here
+// rather than round-tripping through the mainToAudio / audioToMain queues.
+void nameAndMarkClean(Patch &patch, const std::string &name)
+{
+    memset(patch.name, 0, sizeof(patch.name));
+    strncpy(patch.name, name.c_str(), 255);
+    patch.dirty = false;
+}
+} // namespace
 
 PresetManager::PresetManager(const clap_host_t *ch) : clapHost(ch)
 {
@@ -181,7 +195,8 @@ void PresetManager::loadUserPresetDirect(Patch &patch, Engine::mainToAudioQueue_
     patch.fromState(buffer.str());
 
     auto dn = p.filename().replace_extension("").u8string();
-    sendEntirePatchToAudio(patch, mainToAudio, dn);
+    nameAndMarkClean(patch, dn);
+    Engine::sendEntirePatchToAudio(patch, mainToAudio, clapHost);
     if (onPresetLoaded)
         onPresetLoaded(dn);
 }
@@ -215,7 +230,8 @@ void PresetManager::loadFactoryPreset(Patch &patch, Engine::mainToAudioQueue_T &
         {
             noExt = noExt.substr(0, ps);
         }
-        sendEntirePatchToAudio(patch, mainToAudio, noExt);
+        nameAndMarkClean(patch, noExt);
+        Engine::sendEntirePatchToAudio(patch, mainToAudio, clapHost);
 
         if (onPresetLoaded)
         {
@@ -231,72 +247,10 @@ void PresetManager::loadFactoryPreset(Patch &patch, Engine::mainToAudioQueue_T &
 void PresetManager::loadInit(Patch &patch, Engine::mainToAudioQueue_T &mainToAudio)
 {
     patch.resetToInit();
-    sendEntirePatchToAudio(patch, mainToAudio, "Init");
+    nameAndMarkClean(patch, "Init");
+    Engine::sendEntirePatchToAudio(patch, mainToAudio, clapHost);
     if (onPresetLoaded)
         onPresetLoaded("Init");
-}
-
-void PresetManager::sendEntirePatchToAudio(Patch &patch, Engine::mainToAudioQueue_T &mainToAudio,
-                                           const std::string &s)
-{
-    if (!clapHostParams)
-    {
-        clapHostParams = static_cast<const clap_host_params_t *>(
-            clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
-    }
-    sendEntirePatchToAudio(patch, mainToAudio, s, clapHost, clapHostParams);
-}
-
-void PresetManager::sendEntirePatchToAudio(Patch &patch, Engine::mainToAudioQueue_T &mainToAudio,
-                                           const std::string &name, const clap_host_t *h,
-                                           const clap_host_params_t *hostPar)
-{
-    if (!h)
-        return;
-
-    if (hostPar == nullptr)
-    {
-        hostPar = static_cast<const clap_host_params_t *>(h->get_extension(h, CLAP_EXT_PARAMS));
-    }
-    static char stringBuffer[128][256];
-    static int currentString{0};
-
-    char *tmpDat = stringBuffer[currentString];
-    currentString = (currentString + 1) % 128;
-
-    memset(tmpDat, 0, sizeof(stringBuffer[0]));
-    strncpy(tmpDat, name.c_str(), 255);
-    mainToAudio.push({Engine::MainToAudioMsg::SEND_PATCH_NAME, 0, 0.f, tmpDat});
-    mainToAudio.push({Engine::MainToAudioMsg::STOP_AUDIO});
-    for (const auto &p : patch.params)
-    {
-        mainToAudio.push(
-            {Engine::MainToAudioMsg::SET_PARAM_WITHOUT_NOTIFYING, p->meta.id, p->value});
-    }
-    mainToAudio.push({Engine::MainToAudioMsg::START_AUDIO});
-    mainToAudio.push({Engine::MainToAudioMsg::SEND_PATCH_IS_CLEAN, true});
-    mainToAudio.push({Engine::MainToAudioMsg::SEND_POST_LOAD, true});
-    mainToAudio.push({Engine::MainToAudioMsg::SEND_REQUEST_RESCAN, true});
-
-    for (int instance = 0; instance < numFilters; ++instance)
-    {
-        auto &fn = patch.filterNodes[instance];
-        Engine::MainToAudioMsg msg;
-        msg.action = Engine::MainToAudioMsg::SET_FILTER_MODEL;
-        msg.paramId = instance;
-        msg.uintValues[0] = (uint32_t)fn.model;
-        msg.uintValues[1] = (uint32_t)fn.config.pt;
-        msg.uintValues[2] = (uint32_t)fn.config.st;
-        msg.uintValues[3] = (uint32_t)fn.config.dt;
-        msg.uintValues[4] = (uint32_t)fn.config.mt;
-
-        mainToAudio.push(msg);
-    }
-
-    if (hostPar)
-    {
-        hostPar->request_flush(h);
-    }
 }
 
 } // namespace baconpaul::twofilters::presets

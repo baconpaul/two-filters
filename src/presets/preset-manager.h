@@ -58,12 +58,6 @@ struct PresetManager
     std::map<std::string, std::vector<std::string>> factoryPatchNames;
     std::vector<std::pair<std::string, std::string>> factoryPatchVector;
     std::vector<fs::path> userPatches;
-
-    const clap_host_params_t *clapHostParams{nullptr};
-    void sendEntirePatchToAudio(Patch &, Engine::mainToAudioQueue_T &, const std::string &name);
-    static void sendEntirePatchToAudio(Patch &, Engine::mainToAudioQueue_T &,
-                                       const std::string &name, const clap_host_t *,
-                                       const clap_host_params_t *p = nullptr);
 };
 } // namespace baconpaul::twofilters::presets
 #endif // PRESET_MANAGER_H

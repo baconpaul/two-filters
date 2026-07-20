@@ -50,7 +50,7 @@ void Engine::setSampleRate(double sr)
 
     vuPeak.setSampleRate(sampleRate);
 
-    audioToUi.push({AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
+    audioToMain.push({AudioToMainMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
 
     auto nq = sampleRate * 0.495;
     // so we are note from 69 which is 440
@@ -283,12 +283,12 @@ void Engine::processControl(const clap_output_events_t *outq)
 
     lagHandler.process();
 
-    if (isEditorAttached)
+    if (editorActive.load(std::memory_order_relaxed))
     {
         if (lastVuUpdate >= updateVuEvery)
         {
-            AudioToUIMsg msg{AudioToUIMsg::UPDATE_VU, 0, vuPeak.vu_peak[0], vuPeak.vu_peak[1]};
-            audioToUi.push(msg);
+            AudioToMainMsg msg{AudioToMainMsg::UPDATE_VU, 0, vuPeak.vu_peak[0], vuPeak.vu_peak[1]};
+            audioToMain.push(msg);
 
             sendUpdateLfo();
 
@@ -303,25 +303,16 @@ void Engine::processControl(const clap_output_events_t *outq)
 
 void Engine::processUIQueue(const clap_output_events_t *outq)
 {
-    bool didRefresh{false};
-    if (doFullRefresh)
-    {
-        pushFullUIRefresh();
-        doFullRefresh = false;
-        didRefresh = true;
-    }
     auto uiM = mainToAudio.pop();
     while (uiM.has_value())
     {
         switch (uiM->action)
         {
-        case MainToAudioMsg::REQUEST_REFRESH:
+        case MainToAudioMsg::REQUEST_NON_PATCH_STATE:
         {
-            if (!didRefresh)
-            {
-                // don't do it twice in one process obvs
-                pushFullUIRefresh();
-            }
+            // The editor reads all patch state straight from patchMain; it only needs the
+            // engine-owned bits echoed back. Today that is just the sample rate.
+            audioToMain.push({AudioToMainMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
         }
         break;
         case MainToAudioMsg::SET_PARAM_WITHOUT_NOTIFYING:
@@ -371,13 +362,8 @@ void Engine::processUIQueue(const clap_output_events_t *outq)
             }
 
             // Side Effects and Ad Hoc Features go here
-
-            auto d = patch.dirty;
-            if (!d)
-            {
-                patch.dirty = true;
-                audioToUi.push({AudioToUIMsg::SET_PATCH_DIRTY_STATE, patch.dirty});
-            }
+            // Patch dirty state is main-thread-only now: the UI marks patchMain dirty at the
+            // edit site, so the audio thread no longer tracks or echoes it.
         }
         break;
         case MainToAudioMsg::BEGIN_EDIT:
@@ -421,39 +407,9 @@ void Engine::processUIQueue(const clap_output_events_t *outq)
             audioRunning = true;
         }
         break;
-        case MainToAudioMsg::SEND_PATCH_NAME:
-        {
-            memset(patch.name, 0, sizeof(patch.name));
-            strncpy(patch.name, uiM->uiManagedPointer, 255);
-            audioToUi.push({AudioToUIMsg::SET_PATCH_NAME, 0, 0, 0, patch.name});
-        }
-        break;
-        case MainToAudioMsg::SEND_PATCH_IS_CLEAN:
-        {
-            patch.dirty = false;
-            audioToUi.push({AudioToUIMsg::SET_PATCH_DIRTY_STATE, patch.dirty});
-        }
-        break;
         case MainToAudioMsg::SEND_POST_LOAD:
         {
             postLoad();
-        }
-        break;
-        case MainToAudioMsg::SEND_PREP_FOR_STREAM:
-        {
-            prepForStream();
-        }
-        break;
-        case MainToAudioMsg::SEND_REQUEST_RESCAN:
-        {
-            onMainRescanParams = true;
-            audioToUi.push({AudioToUIMsg::DO_PARAM_RESCAN});
-            clapHost->request_callback(clapHost);
-        }
-        break;
-        case MainToAudioMsg::EDITOR_ATTACH_DETATCH:
-        {
-            isEditorAttached = uiM->paramId;
         }
         break;
         case MainToAudioMsg::SET_FILTER_MODEL:
@@ -484,46 +440,26 @@ void Engine::handleParamValue(Param *p, uint32_t pid, float value)
     p->lag.setTarget(value);
     paramLagSet.addToActive(p);
 
-    AudioToUIMsg au = {AudioToUIMsg::UPDATE_PARAM, pid, value};
-    audioToUi.push(au);
-}
+    AudioToMainMsg au = {AudioToMainMsg::UPDATE_PARAM, pid, value};
+    audioToMain.push(au);
 
-void Engine::pushFullUIRefresh()
-{
-    for (const auto *p : patch.params)
+    // If no editor is open to drain audioToMain, ask the main thread to drain it into
+    // patchMain. Coalesce so we schedule at most one callback per pending drain.
+    if (clapHost && !editorActive.load(std::memory_order_relaxed) &&
+        !mainThreadDrainRequested.exchange(true))
     {
-        AudioToUIMsg au = {AudioToUIMsg::UPDATE_PARAM, p->meta.id, p->value};
-        audioToUi.push(au);
+        clapHost->request_callback(clapHost);
     }
-
-    for (int i = 0; i < numFilters; ++i)
-    {
-        AudioToUIMsg fm;
-        fm.action = AudioToUIMsg::SEND_FILTER_CONFIG;
-        fm.paramId = i;
-        fm.uintValues[0] = (uint32_t)patch.filterNodes[i].model;
-        fm.uintValues[1] = (uint32_t)patch.filterNodes[i].config.pt;
-        fm.uintValues[2] = (uint32_t)patch.filterNodes[i].config.st;
-        fm.uintValues[3] = (uint32_t)patch.filterNodes[i].config.dt;
-        fm.uintValues[4] = (uint32_t)patch.filterNodes[i].config.mt;
-        audioToUi.push(fm);
-    }
-    audioToUi.push({AudioToUIMsg::SET_PATCH_NAME, 0, 0, 0, patch.name});
-    audioToUi.push({AudioToUIMsg::SET_PATCH_DIRTY_STATE, patch.dirty});
-    audioToUi.push({AudioToUIMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
 }
 
 void Engine::onMainThread()
 {
-    bool ex{true}, re{false};
-    if (onMainRescanParams.compare_exchange_strong(ex, re))
+    // When no editor is open, this callback owns draining audioToMain into patchMain so
+    // that host-driven param changes stay reflected in the main-thread source of truth.
+    if (!editorActive.load(std::memory_order_relaxed))
     {
-        auto pe = static_cast<const clap_host_params_t *>(
-            clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
-        if (pe)
-        {
-            pe->rescan(clapHost, CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
-        }
+        mainThreadDrainRequested.store(false);
+        drainAudioToMainInto(patchMain);
     }
 }
 
@@ -566,9 +502,188 @@ void Engine::restartLfos()
 
 void Engine::sendUpdateLfo()
 {
-    audioToUi.push({AudioToUIMsg::UPDATE_LFOSTEP, 0, (float)lfos[0].getCurrentStep(),
-                    (float)lfos[1].getCurrentStep()});
-    audioToUi.push({AudioToUIMsg::UPDATE_LFOSTEP, 1, (float)lfos[0].phase, (float)lfos[1].phase});
-    audioToUi.push({AudioToUIMsg::UPDATE_LFOSTEP, 2, (float)lfos[0].output, (float)lfos[1].output});
+    audioToMain.push({AudioToMainMsg::UPDATE_LFOSTEP, 0, (float)lfos[0].getCurrentStep(),
+                      (float)lfos[1].getCurrentStep()});
+    audioToMain.push(
+        {AudioToMainMsg::UPDATE_LFOSTEP, 1, (float)lfos[0].phase, (float)lfos[1].phase});
+    audioToMain.push(
+        {AudioToMainMsg::UPDATE_LFOSTEP, 2, (float)lfos[0].output, (float)lfos[1].output});
+}
+
+bool Engine::handleAudioToMainMessage(Patch &dest, const AudioToMainMsg &m)
+{
+    // Applies the patch-model message (a host-automation param value) to `dest`. Returns
+    // true if it handled one; false for UI-only telemetry (VU, LFO step, sample rate) which
+    // the editor idle loop deals with itself. Name / dirty / filter config are UI-owned and
+    // never travel audio -> main.
+    switch (m.action)
+    {
+    case AudioToMainMsg::UPDATE_PARAM:
+    {
+        auto it = dest.paramMap.find(m.paramId);
+        if (it != dest.paramMap.end())
+            it->second->value = m.value;
+    }
+        return true;
+    default:
+        return false;
+    }
+}
+
+void Engine::drainAudioToMainInto(Patch &dest)
+{
+    auto m = audioToMain.pop();
+    while (m.has_value())
+    {
+        handleAudioToMainMessage(dest, *m);
+        m = audioToMain.pop();
+    }
+}
+
+void Engine::paramsFlushMainThread(const clap_input_events_t *in, const clap_output_events_t *out)
+{
+    // host -> plugin: apply incoming param changes in place to patchMain
+    bool appliedIncoming{false};
+    auto sz = in->size(in);
+    for (uint32_t i = 0; i < sz; ++i)
+    {
+        auto ev = in->get(in, i);
+        if (ev->space_id == CLAP_CORE_EVENT_SPACE_ID && ev->type == CLAP_EVENT_PARAM_VALUE)
+        {
+            auto pevt = reinterpret_cast<const clap_event_param_value *>(ev);
+            auto it = patchMain.paramMap.find(pevt->param_id);
+            if (it != patchMain.paramMap.end())
+            {
+                it->second->value = pevt->value;
+                appliedIncoming = true;
+            }
+        }
+    }
+    // We are inactive, so no audio thread is pushing UPDATE_PARAM to refresh an open editor.
+    // Treat a host-driven value change as an out-of-band patchMain write and force the editor
+    // to rebuild from it (the same mechanism stateLoad uses).
+    if (appliedIncoming)
+        uiForceRebuild++;
+
+    // plugin -> host: drain queued UI edits into patchMain and echo automation out.
+    // patchMain is not running audio, so no lag; values are written directly.
+    auto uiM = mainToAudio.pop();
+    while (uiM.has_value())
+    {
+        switch (uiM->action)
+        {
+        case MainToAudioMsg::SET_PARAM:
+        case MainToAudioMsg::SET_PARAM_WITHOUT_NOTIFYING:
+        {
+            auto it = patchMain.paramMap.find(uiM->paramId);
+            if (it != patchMain.paramMap.end())
+            {
+                auto *dest = it->second;
+                dest->value = uiM->value;
+                bool notify = (uiM->action == MainToAudioMsg::SET_PARAM) &&
+                              (dest->meta.flags & CLAP_PARAM_IS_AUTOMATABLE);
+                if (notify)
+                {
+                    clap_event_param_value_t p;
+                    p.header.size = sizeof(clap_event_param_value_t);
+                    p.header.time = 0;
+                    p.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+                    p.header.type = CLAP_EVENT_PARAM_VALUE;
+                    p.header.flags = 0;
+                    p.param_id = uiM->paramId;
+                    p.cookie = dest;
+                    p.note_id = -1;
+                    p.port_index = -1;
+                    p.channel = -1;
+                    p.key = -1;
+                    p.value = uiM->value;
+                    out->try_push(out, &p.header);
+                }
+            }
+        }
+        break;
+        case MainToAudioMsg::BEGIN_EDIT:
+        case MainToAudioMsg::END_EDIT:
+        {
+            auto it = patchMain.paramMap.find(uiM->paramId);
+            if (it != patchMain.paramMap.end() &&
+                (it->second->meta.flags & CLAP_PARAM_IS_AUTOMATABLE))
+            {
+                clap_event_param_gesture_t p;
+                p.header.size = sizeof(clap_event_param_gesture_t);
+                p.header.time = 0;
+                p.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+                p.header.type = uiM->action == MainToAudioMsg::BEGIN_EDIT
+                                    ? CLAP_EVENT_PARAM_GESTURE_BEGIN
+                                    : CLAP_EVENT_PARAM_GESTURE_END;
+                p.header.flags = 0;
+                p.param_id = uiM->paramId;
+                out->try_push(out, &p.header);
+            }
+        }
+        break;
+        case MainToAudioMsg::SET_FILTER_MODEL:
+        {
+            namespace sfpp = sst::filtersplusplus;
+            auto &fn = patchMain.filterNodes[uiM->paramId];
+            fn.model = (sfpp::FilterModel)uiM->uintValues[0];
+            fn.config.pt = (sfpp::Passband)uiM->uintValues[1];
+            fn.config.st = (sfpp::Slope)uiM->uintValues[2];
+            fn.config.dt = (sfpp::DriveMode)uiM->uintValues[3];
+            fn.config.mt = (sfpp::FilterSubModel)uiM->uintValues[4];
+        }
+        break;
+        default:
+            // STOP_AUDIO/START_AUDIO/SEND_POST_LOAD/REQUEST_NON_PATCH_STATE:
+            // audio/refresh concerns. When inactive these are handled at activate() (which
+            // copies patchMain into patch and rebuilds filters/LFOs) or are irrelevant.
+            break;
+        }
+        uiM = mainToAudio.pop();
+    }
+}
+
+void Engine::sendEntirePatchToAudio(Patch &patch, mainToAudioQueue_T &mainToAudio,
+                                    const clap_host_t *h, const clap_host_params_t *hostPar)
+{
+    if (!h)
+        return;
+
+    if (hostPar == nullptr)
+    {
+        hostPar = static_cast<const clap_host_params_t *>(h->get_extension(h, CLAP_EXT_PARAMS));
+    }
+
+    mainToAudio.push({MainToAudioMsg::STOP_AUDIO});
+    for (const auto &p : patch.params)
+    {
+        mainToAudio.push({MainToAudioMsg::SET_PARAM_WITHOUT_NOTIFYING, p->meta.id, p->value});
+    }
+    mainToAudio.push({MainToAudioMsg::START_AUDIO});
+    mainToAudio.push({MainToAudioMsg::SEND_POST_LOAD, true});
+
+    for (int instance = 0; instance < numFilters; ++instance)
+    {
+        auto &fn = patch.filterNodes[instance];
+        MainToAudioMsg msg;
+        msg.action = MainToAudioMsg::SET_FILTER_MODEL;
+        msg.paramId = instance;
+        msg.uintValues[0] = (uint32_t)fn.model;
+        msg.uintValues[1] = (uint32_t)fn.config.pt;
+        msg.uintValues[2] = (uint32_t)fn.config.st;
+        msg.uintValues[3] = (uint32_t)fn.config.dt;
+        msg.uintValues[4] = (uint32_t)fn.config.mt;
+
+        mainToAudio.push(msg);
+    }
+
+    // A load is a bulk out-of-band value change. We are on the main thread and the host reads
+    // values/text from patchMain, which the caller already updated, so tell the host to
+    // re-read directly rather than round-tripping a rescan request through the audio thread.
+    if (hostPar)
+    {
+        hostPar->rescan(h, CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
+        hostPar->request_flush(h);
+    }
 }
 } // namespace baconpaul::twofilters

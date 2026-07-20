@@ -40,7 +40,7 @@ struct PatchContinuous : jdat::Continuous
 
     PatchContinuous(PluginEditor &e, uint32_t id) : editor(e), pid(id)
     {
-        if (e.patchCopy.paramMap.find(id) == e.patchCopy.paramMap.end())
+        if (e.patchMainRef.paramMap.find(id) == e.patchMainRef.paramMap.end())
         {
             SQLOG("You were unable to find param " << id
                                                    << " - its probably not in patch::params()");
@@ -48,7 +48,7 @@ struct PatchContinuous : jdat::Continuous
             std::terminate();
         }
 
-        p = e.patchCopy.paramMap.at(id);
+        p = e.patchMainRef.paramMap.at(id);
     }
     ~PatchContinuous() override = default;
 
@@ -120,6 +120,7 @@ struct PatchContinuous : jdat::Continuous
             p->value = f;
         }
         editor.mainToAudio.push({Engine::MainToAudioMsg::Action::SET_PARAM, pid, p->value});
+        editor.markPatchDirty();
         editor.requestParamsFlush();
         editor.updateTooltip(this);
 
@@ -146,14 +147,14 @@ struct PatchDiscrete : jdat::Discrete
 
     PatchDiscrete(PluginEditor &e, uint32_t id) : editor(e), pid(id)
     {
-        if (e.patchCopy.paramMap.find(id) == e.patchCopy.paramMap.end())
+        if (e.patchMainRef.paramMap.find(id) == e.patchMainRef.paramMap.end())
         {
             SQLOG("You were unable to find param " << id
                                                    << " - its probably not in patch::params()");
             assert(false);
             std::terminate();
         }
-        p = e.patchCopy.paramMap.at(id);
+        p = e.patchMainRef.paramMap.at(id);
     }
     ~PatchDiscrete() override = default;
 
@@ -175,6 +176,7 @@ struct PatchDiscrete : jdat::Discrete
         p->value = f;
         editor.mainToAudio.push(
             {Engine::MainToAudioMsg::Action::SET_PARAM, pid, static_cast<float>(f)});
+        editor.markPatchDirty();
         editor.requestParamsFlush();
 
         if (onGuiSetValue)

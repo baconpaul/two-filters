@@ -20,6 +20,7 @@
 #include <array>
 #include <unordered_map>
 #include <algorithm>
+#include <cstring>
 #include <clap/clap.h>
 #include "configuration.h"
 #include "sst/cpputils/constructors.h"
@@ -444,6 +445,21 @@ struct Patch : pats::PatchBase<Patch, Param>
     } stepLfoNodes[numStepLFOs]{0, 1};
 
     char name[256]{"Init"};
+
+    // Value-only copy between two Patch instances. NEVER use operator= : params/paramMap
+    // hold Param* into the owning Patch, so assignment would alias them across objects.
+    void copyValuesFrom(const Patch &o)
+    {
+        for (const auto *p : o.params)
+            paramMap.at(p->meta.id)->value = p->value;
+        for (int i = 0; i < numFilters; ++i)
+        {
+            filterNodes[i].model = o.filterNodes[i].model;
+            filterNodes[i].config = o.filterNodes[i].config;
+        }
+        memcpy(name, o.name, sizeof(name));
+        dirty = o.dirty;
+    }
 
     float migrateParamValueFromVersion(Param *p, float value, uint32_t version);
     void migratePatchFromVersion(uint32_t version);

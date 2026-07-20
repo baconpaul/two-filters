@@ -21,7 +21,7 @@ namespace baconpaul::twofilters::ui
 RoutingPanel::RoutingPanel(PluginEditor &ed)
     : sst::jucegui::components::NamedPanel("Main"), editor(ed)
 {
-    auto rn = editor.patchCopy.routingNode;
+    auto rn = editor.patchMainRef.routingNode;
     createComponent(editor, *this, rn.routingMode, routingModeS, routingModeD);
     addAndMakeVisible(*routingModeS);
     routingModeD->onGuiSetValue = [this]() { editor.resetEnablement(); };
@@ -128,20 +128,20 @@ void RoutingPanel::resized()
 
 void RoutingPanel::enableFB()
 {
-    feedbackK->setEnabled(editor.patchCopy.routingNode.feedbackPower.value > 0.5f);
+    feedbackK->setEnabled(editor.patchMainRef.routingNode.feedbackPower.value > 0.5f);
     feedbackK->repaint();
 
-    noiseLevelK->setEnabled(editor.patchCopy.routingNode.noisePower.value > 0.5f);
+    noiseLevelK->setEnabled(editor.patchMainRef.routingNode.noisePower.value > 0.5f);
     noiseLevelK->repaint();
 
-    auto m = (int)editor.patchCopy.routingNode.routingMode;
+    auto m = (int)editor.patchMainRef.routingNode.routingMode;
     filterBlendSerialK->setVisible(m == 0);
     filterBlendParallelK->setVisible(m != 0);
 }
 
 void RoutingPanel::randomize()
 {
-    auto &rn = editor.patchCopy.routingNode;
+    auto &rn = editor.patchMainRef.routingNode;
     auto wr = [&, this](auto &par, auto &cont, auto &wid, float clmp = 1.0)
     {
         auto range = par.meta.maxVal - par.meta.minVal;

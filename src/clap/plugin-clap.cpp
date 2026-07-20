@@ -70,6 +70,8 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     bool activate(double sampleRate, uint32_t minFrameCount,
                   uint32_t maxFrameCount) noexcept override
     {
+        // The audio thread is stopped here; seed it from the main-thread source of truth.
+        engine->patch.copyValuesFrom(engine->patchMain);
         engine->setSampleRate(sampleRate);
         return true;
     }
@@ -251,80 +253,77 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     bool implementsState() const noexcept override { return true; }
     bool stateSave(const clap_ostream *ostream) noexcept override
     {
-        engine->mainToAudio.push({Engine::MainToAudioMsg::SEND_PREP_FOR_STREAM});
-        if (_host.canUseParams())
-            _host.paramsRequestFlush();
+        // patchMain is authoritative. If no editor is open to keep it current, drain any
+        // pending audio-thread updates into it first (we are the only consumer then).
+        if (!engine->editorActive.load())
+            engine->drainAudioToMainInto(engine->patchMain);
 
-        // best efforts on that message for now
-        static constexpr int maxIts{5};
-        int i{0};
-        for (i = 0; i < maxIts && !engine->readyForStream; ++i)
-        {
-            using namespace std::chrono_literals;
-            std::this_thread::sleep_for(4ms);
-        }
-        if (i == maxIts && !engine->readyForStream)
-        {
-            // sigh. something is wonky
-            engine->prepForStream();
-        }
-
-        auto res = sst::plugininfra::patch_support::patchToOutStream(engine->patch, ostream);
-        engine->readyForStream = false;
-
-        return res;
+        return sst::plugininfra::patch_support::patchToOutStream(engine->patchMain, ostream);
     }
 
     bool stateLoad(const clap_istream *istream) noexcept override
     {
-        auto patchCopy = std::make_unique<Patch>();
-        if (!sst::plugininfra::patch_support::inStreamToPatch(istream, *patchCopy))
+        // Load into a temp first so a parse failure never leaves patchMain half-written.
+        auto tmp = std::make_unique<Patch>();
+        if (!sst::plugininfra::patch_support::inStreamToPatch(istream, *tmp))
             return false;
 
-        presets::PresetManager::sendEntirePatchToAudio(*patchCopy, engine->mainToAudio,
-                                                       patchCopy->name, _host.host());
-        if (_host.canUseParams())
+        engine->patchMain.copyValuesFrom(*tmp);
+        engine->uiForceRebuild++; // open editor rebuilds from patchMain
+
+        if (isActive())
         {
-            _host.paramsRequestFlush();
-            _host.paramsRescan(CLAP_PARAM_RESCAN_VALUES);
+            // Push the new patch to the audio-thread `patch`. This also rescans the host.
+            Engine::sendEntirePatchToAudio(engine->patchMain, engine->mainToAudio, _host.host());
+        }
+        else if (_host.canUseParams())
+        {
+            // Not running: the next activate() copies patchMain into patch. Just tell the
+            // host to re-read the loaded values (it reads them from patchMain).
+            _host.paramsRescan(CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
         }
         return true;
     }
 
     bool implementsParams() const noexcept override { return true; }
-    uint32_t paramsCount() const noexcept override { return engine->patch.params.size(); }
+    // All param reads come from patchMain (main-thread source of truth); never engine->patch.
+    uint32_t paramsCount() const noexcept override { return engine->patchMain.params.size(); }
     bool paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept override
     {
-        return sst::plugininfra::patch_support::patchParamsInfo(paramIndex, info, engine->patch);
+        return sst::plugininfra::patch_support::patchParamsInfo(paramIndex, info,
+                                                                engine->patchMain);
     }
     bool paramsValue(clap_id paramId, double *value) noexcept override
     {
-        return sst::plugininfra::patch_support::patchParamsValue(paramId, value, engine->patch);
+        return sst::plugininfra::patch_support::patchParamsValue(paramId, value, engine->patchMain);
     }
     bool paramsValueToText(clap_id paramId, double value, char *display,
                            uint32_t size) noexcept override
     {
         return sst::plugininfra::patch_support::patchParamsValueToText(paramId, value, display,
-                                                                       size, engine->patch);
+                                                                       size, engine->patchMain);
     }
     bool paramsTextToValue(clap_id paramId, const char *display, double *value) noexcept override
     {
         return sst::plugininfra::patch_support::patchParamsTextToValue(paramId, display, value,
-                                                                       engine->patch);
+                                                                       engine->patchMain);
     }
     void paramsFlush(const clap_input_events *in, const clap_output_events *out) noexcept override
     {
-        auto sz = in->size(in);
-
-        for (int i = 0; i < sz; ++i)
+        if (isActive())
         {
-            const clap_event_header_t *nextEvent{nullptr};
-            nextEvent = in->get(in, i);
-            handleEvent(nextEvent);
+            // Audio thread: route param changes through the queue into `patch`.
+            auto sz = in->size(in);
+            for (uint32_t i = 0; i < sz; ++i)
+                handleEvent(in->get(in, i));
+            engine->snapAllParams();
+            engine->processUIQueue(out);
         }
-        engine->snapAllParams();
-
-        engine->processUIQueue(out);
+        else
+        {
+            // Main thread: patchMain is the truth; update it in place and echo out.
+            engine->paramsFlushMainThread(in, out);
+        }
     }
 
   public:
@@ -335,7 +334,8 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     std::unique_ptr<juce::Component> createEditor() override
     {
         auto res = std::make_unique<baconpaul::twofilters::ui::PluginEditor>(
-            engine->audioToUi, engine->mainToAudio, _host.host());
+            engine->patchMain, engine->audioToMain, engine->mainToAudio, engine->editorActive,
+            engine->uiForceRebuild, _host.host());
 
         res->onZoomChanged = [this](auto f)
         {
@@ -355,7 +355,6 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             e->setZoomFactor(e->zoomFactor);
             return true;
         };
-        // res->sneakyStartupGrabFrom(engine->patch);
         res->repaint();
 
         return res;

@@ -18,6 +18,8 @@
 
 #include <memory>
 #include <array>
+#include <atomic>
+#include <string>
 
 #include "sst/basic-blocks/dsp/LanczosResampler.h"
 
@@ -46,7 +48,8 @@ namespace baconpaul::twofilters
 {
 struct Engine
 {
-    Patch patch;
+    Patch patch;     // audio-thread working copy
+    Patch patchMain; // main-thread source of truth
 
     enum struct RoutingModes
     {
@@ -155,7 +158,7 @@ struct Engine
             mixLipol.process();
         }
 
-        if (isEditorAttached)
+        if (editorActive.load(std::memory_order_relaxed))
         {
             vuPeak.process(outL, outR);
         }
@@ -327,29 +330,23 @@ struct Engine
     void handleParamValue(Param *p, uint32_t pid, float value);
 
     // UI Communication
-    struct AudioToUIMsg
+    struct AudioToMainMsg
     {
         enum Action : uint32_t
         {
             UPDATE_PARAM,
             UPDATE_VU,
             UPDATE_LFOSTEP,
-            SET_PATCH_NAME,
-            SET_PATCH_DIRTY_STATE,
-            DO_PARAM_RESCAN,
             SEND_SAMPLE_RATE,
-            SEND_FILTER_CONFIG,
         } action;
         uint32_t paramId{0};
         float value{0}, value2{0};
-        const char *patchNamePointer{0};
-        uint32_t uintValues[5]{0, 0, 0, 0, 0};
     };
     struct MainToAudioMsg
     {
         enum Action : uint32_t
         {
-            REQUEST_REFRESH,
+            REQUEST_NON_PATCH_STATE,
             SET_PARAM,
             SET_PARAM_WITHOUT_NOTIFYING,
             BEGIN_EDIT,
@@ -357,38 +354,46 @@ struct Engine
             SET_FILTER_MODEL,
             STOP_AUDIO,
             START_AUDIO,
-            SEND_PATCH_NAME,
-            SEND_PATCH_IS_CLEAN,
             SEND_POST_LOAD,
-            SEND_REQUEST_RESCAN,
-            EDITOR_ATTACH_DETATCH, // paramid is true for attach and false for detach
-            SEND_PREP_FOR_STREAM,
         } action;
         uint32_t paramId{0};
         float value{0};
-        const char *uiManagedPointer{nullptr};
         uint32_t uintValues[5]{0, 0, 0, 0, 0};
     };
-    using audioToUIQueue_t = sst::cpputils::SimpleRingBuffer<AudioToUIMsg, 1024 * 16>;
+    using audioToMainQueue_t = sst::cpputils::SimpleRingBuffer<AudioToMainMsg, 1024 * 16>;
     using mainToAudioQueue_T = sst::cpputils::SimpleRingBuffer<MainToAudioMsg, 1024 * 64>;
-    audioToUIQueue_t audioToUi;
+    audioToMainQueue_t audioToMain;
     mainToAudioQueue_T mainToAudio;
-    std::atomic<bool> doFullRefresh{false};
-    bool isEditorAttached{false};
     sst::basic_blocks::dsp::UIComponentLagHandler lagHandler;
 
-    std::atomic<bool> readyForStream{false};
-    void prepForStream()
-    {
-        if (lagHandler.active)
-            lagHandler.instantlySnap();
+    // Threading / ownership coordination (see .claude/patch-to-main-plan.md)
+    std::atomic<bool> editorActive{false}; // set by the editor; unified editor-open flag
+    std::atomic<bool> mainThreadDrainRequested{false}; // coalesces request_callback
+    std::atomic<uint32_t> uiForceRebuild{0}; // bump => open editor rebuilds from patchMain
 
-        snapAllParams();
+    // Applies a patch-model audioToMain message (a host-automation param value) to `dest`.
+    // Returns true if handled, false for UI-only telemetry (VU/LFO/sample-rate) which the
+    // editor idle handles itself. Name/dirty/filter config are UI-owned and never travel
+    // audio -> main. Static: it only touches `dest`, so the editor (which has no Engine
+    // handle) can call it too. Shared with the drain below.
+    static bool handleAudioToMainMessage(Patch &dest, const AudioToMainMsg &m);
 
-        patch.dirty = false;
-        doFullRefresh = true;
-        readyForStream = true;
-    }
+    // Main-thread drain of audioToMain into a target patch (patchMain), discarding the
+    // UI-only messages. Used when no editor is open.
+    void drainAudioToMainInto(Patch &dest);
+
+    // Main-thread paramsFlush: apply incoming host events in place to patchMain and
+    // echo queued UI edits to the host. Never touches `patch`.
+    void paramsFlushMainThread(const clap_input_events_t *in, const clap_output_events_t *out);
+
+    // Push an entire patch's params + filter config (a loaded preset / state) into the
+    // audio-thread `patch` via the mainToAudio queue, then tell the host to re-read. Main
+    // thread only. Patch name/dirty are main-thread-only state; the caller sets them on
+    // patchMain directly, they do not travel to the audio patch. Static because callers
+    // (preset manager, clap adapter) hold the queue + host but not an Engine handle.
+    static void sendEntirePatchToAudio(Patch &src, mainToAudioQueue_T &mainToAudio,
+                                       const clap_host_t *host,
+                                       const clap_host_params_t *hostPar = nullptr);
 
     void snapAllParams()
     {
@@ -400,11 +405,8 @@ struct Engine
         paramLagSet.removeAll();
     }
 
-    void pushFullUIRefresh();
     void postLoad()
     {
-        doFullRefresh = true;
-
         for (auto &[i, p] : patch.paramMap)
         {
             p->lag.snapTo(p->value);
@@ -416,7 +418,6 @@ struct Engine
     bool activeFilter[2]{true, true};
     void setupFilter(int instance);
 
-    std::atomic<bool> onMainRescanParams{false};
     void onMainThread();
 
     sst::cpputils::active_set_overlay<Param> paramLagSet;

@@ -44,10 +44,13 @@ namespace jstl = sst::jucegui::style;
 using sheet_t = jstl::StyleSheet;
 static constexpr sheet_t::Class PatchMenu("twofilters.patch-menu");
 
-PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQueue_T &utoa,
-                           const clap_host_t *h)
-    : jcmp::WindowPanel(true), audioToUI(atou), mainToAudio(utoa), clapHost(h)
+PluginEditor::PluginEditor(Patch &patchMain, Engine::audioToMainQueue_t &atou,
+                           Engine::mainToAudioQueue_T &utoa, std::atomic<bool> &editorActiveIn,
+                           std::atomic<uint32_t> &uiForceRebuildIn, const clap_host_t *h)
+    : jcmp::WindowPanel(true), patchMainRef(patchMain), audioToMain(atou), mainToAudio(utoa),
+      editorActive(editorActiveIn), uiForceRebuild(uiForceRebuildIn), clapHost(h)
 {
+    lastForceRebuild = uiForceRebuild.load();
     setTitle("Two Filters");
     setAccessible(true);
     sst::jucegui::style::StyleSheet::initializeStyleSheets([]() {});
@@ -84,12 +87,11 @@ PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQu
     routingPanel = std::make_unique<RoutingPanel>(*this);
     addAndMakeVisible(*routingPanel);
 
-    auto startMsg = Engine::MainToAudioMsg{Engine::MainToAudioMsg::REQUEST_REFRESH};
-    mainToAudio.push(startMsg);
-    requestParamsFlush();
-
     idleTimer = std::make_unique<IdleTimer>(*this);
     idleTimer->startTimer(1000. / 60.);
+    // Idle now owns draining audioToMain; mark the editor active so the audio thread stops
+    // requesting main-thread drains and gates VU/LFO traffic on us being here.
+    editorActive = true;
 
     toolTip = std::make_unique<jcmp::ToolTip>();
     addChildComponent(*toolTip);
@@ -101,8 +103,9 @@ PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQu
         repaint();
     };
 
-    presetDataBinding = std::make_unique<PresetDataBinding>(*presetManager, patchCopy, mainToAudio);
-    presetDataBinding->setStateForDisplayName(patchCopy.name);
+    presetDataBinding =
+        std::make_unique<PresetDataBinding>(*presetManager, patchMainRef, mainToAudio);
+    presetDataBinding->setStateForDisplayName(patchMainRef.name);
 
     presetButton = std::make_unique<jcmp::JogUpDownButton>();
     presetButton->setCustomClass(PatchMenu);
@@ -124,8 +127,7 @@ PluginEditor::PluginEditor(Engine::audioToUIQueue_t &atou, Engine::mainToAudioQu
     vuMeter = std::make_unique<jcmp::VUMeter>(jcmp::VUMeter::HORIZONTAL);
     addAndMakeVisible(*vuMeter);
 
-    mainToAudio.push({Engine::MainToAudioMsg::EDITOR_ATTACH_DETATCH, true});
-    mainToAudio.push({Engine::MainToAudioMsg::REQUEST_REFRESH, true});
+    mainToAudio.push({Engine::MainToAudioMsg::REQUEST_NON_PATCH_STATE, true});
     requestParamsFlush();
 
     cpuGraphicsMode = (PluginEditor::GraphicsMode)defaultsProvider->getUserDefaultValue(
@@ -150,67 +152,50 @@ PluginEditor::~PluginEditor()
 {
     juce::PopupMenu::dismissAllActiveMenus();
 
-    mainToAudio.push({Engine::MainToAudioMsg::EDITOR_ATTACH_DETATCH, false});
+    // Hand draining of audioToMain back to onMainThread, then stop idling.
+    editorActive = false;
+    if (clapHost)
+        clapHost->request_callback(clapHost);
     idleTimer->stopTimer();
     setLookAndFeel(nullptr);
 }
 
 void PluginEditor::idle()
 {
-    auto aum = audioToUI.pop();
+    // An out-of-band load (host stateLoad) wrote patchMain directly and bumped the counter.
+    // patchMainRef already holds the new values; refresh every widget from it.
+    auto fr = uiForceRebuild.load();
+    if (fr != lastForceRebuild)
+    {
+        lastForceRebuild = fr;
+        rebuildFromPatchMain();
+    }
+
+    auto aum = audioToMain.pop();
     while (aum.has_value())
     {
-        if (aum->action == Engine::AudioToUIMsg::UPDATE_PARAM)
+        // The engine's shared handler applies UPDATE_PARAM (host automation) straight into
+        // patchMainRef (== patchMain); we only need the widget-side refresh here. Name, dirty
+        // and filter config are UI-owned and never arrive on audioToMain anymore.
+        if (Engine::handleAudioToMainMessage(patchMainRef, *aum))
         {
-            setAndSendParamValue(aum->paramId, aum->value, false);
+            auto rit = componentRefreshByID.find(aum->paramId);
+            if (rit != componentRefreshByID.end())
+                rit->second();
+            auto pit = componentByID.find(aum->paramId);
+            if (pit != componentByID.end() && pit->second)
+                pit->second->repaint();
         }
-        else if (aum->action == Engine::AudioToUIMsg::UPDATE_VU)
+        else if (aum->action == Engine::AudioToMainMsg::UPDATE_VU)
         {
             vuMeter->setLevels(aum->value, aum->value2);
         }
-        else if (aum->action == Engine::AudioToUIMsg::SET_PATCH_NAME)
-        {
-            memset(patchCopy.name, 0, sizeof(patchCopy.name));
-            strncpy(patchCopy.name, aum->patchNamePointer, 255);
-            setPatchNameDisplay();
-        }
-        else if (aum->action == Engine::AudioToUIMsg::SET_PATCH_DIRTY_STATE)
-        {
-            patchCopy.dirty = (bool)aum->paramId;
-            presetDataBinding->setDirtyState(patchCopy.dirty);
-            presetButton->repaint();
-        }
-        else if (aum->action == Engine::AudioToUIMsg::DO_PARAM_RESCAN)
-        {
-            if (!clapParamsExtension)
-                clapParamsExtension = static_cast<const clap_host_params_t *>(
-                    clapHost->get_extension(clapHost, CLAP_EXT_PARAMS));
-            if (clapParamsExtension)
-            {
-                clapParamsExtension->rescan(clapHost,
-                                            CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
-                clapParamsExtension->request_flush(clapHost);
-            }
-        }
-        else if (aum->action == Engine::AudioToUIMsg::SEND_SAMPLE_RATE)
+        else if (aum->action == Engine::AudioToMainMsg::SEND_SAMPLE_RATE)
         {
             sampleRate = aum->value;
             repaint();
         }
-        else if (aum->action == Engine::AudioToUIMsg::SEND_FILTER_CONFIG)
-        {
-            namespace sfpp = sst::filtersplusplus;
-            auto fid = aum->paramId;
-            patchCopy.filterNodes[fid].model = (sfpp::FilterModel)aum->uintValues[0];
-            patchCopy.filterNodes[fid].config.pt = (sfpp::Passband)aum->uintValues[1];
-            patchCopy.filterNodes[fid].config.st = (sfpp::Slope)aum->uintValues[2];
-            patchCopy.filterNodes[fid].config.dt = (sfpp::DriveMode)aum->uintValues[3];
-            patchCopy.filterNodes[fid].config.mt = (sfpp::FilterSubModel)aum->uintValues[4];
-            filterPanel[fid]->onModelChanged();
-            for (auto &s : stepLFOPanel)
-                s->onModelChanged();
-        }
-        else if (aum->action == Engine::AudioToUIMsg::UPDATE_LFOSTEP)
+        else if (aum->action == Engine::AudioToMainMsg::UPDATE_LFOSTEP)
         {
             if (aum->paramId == 0)
             {
@@ -232,7 +217,7 @@ void PluginEditor::idle()
         {
             SQLOG("Ignored patch message " << aum->action);
         }
-        aum = audioToUI.pop();
+        aum = audioToMain.pop();
     }
 
     for (auto &f : filterPanel)
@@ -573,7 +558,7 @@ void PluginEditor::showPresetPopup()
             }
             em.addItem(
                 noExt, [cat = c, pat = e, this]()
-                { this->presetManager->loadFactoryPreset(patchCopy, mainToAudio, cat, pat); });
+                { this->presetManager->loadFactoryPreset(patchMainRef, mainToAudio, cat, pat); });
         }
         f.addSubMenu(c, em);
     }
@@ -590,7 +575,7 @@ void PluginEditor::showPresetPopup()
             u.addItem(dn,
                       [this, pth = up, dn]()
                       {
-                          presetManager->loadUserPresetDirect(patchCopy, mainToAudio,
+                          presetManager->loadUserPresetDirect(patchMainRef, mainToAudio,
                                                               presetManager->userPatchesPath / pth);
                       });
         }
@@ -612,7 +597,7 @@ void PluginEditor::showPresetPopup()
             s.addItem(dn,
                       [this, pth = up, dn]()
                       {
-                          presetManager->loadUserPresetDirect(patchCopy, mainToAudio,
+                          presetManager->loadUserPresetDirect(patchMainRef, mainToAudio,
                                                               presetManager->userPatchesPath / pth);
                       });
         }
@@ -805,9 +790,9 @@ void PluginEditor::showAboutScreen()
 void PluginEditor::doSavePatch()
 {
     auto svP = presetManager->userPatchesPath;
-    if (strcmp(patchCopy.name, "Init") != 0)
+    if (strcmp(patchMainRef.name, "Init") != 0)
     {
-        svP = (svP / patchCopy.name).replace_extension(PATCH_EXTENSION);
+        svP = (svP / patchMainRef.name).replace_extension(PATCH_EXTENSION);
     }
     fileChooser = std::make_unique<juce::FileChooser>("Save Patch", juce::File(svP.u8string()),
                                                       juce::String("*") + PATCH_EXTENSION);
@@ -828,11 +813,13 @@ void PluginEditor::doSavePatch()
 
 #if USE_WCHAR_PRESET
                                  w->presetManager->saveUserPresetDirect(
-                                     w->patchCopy, result[0].getFullPathName().toUTF16());
+                                     w->patchMainRef, result[0].getFullPathName().toUTF16());
 #else
-                                 w->presetManager->saveUserPresetDirect(w->patchCopy, pn);
+                                 w->presetManager->saveUserPresetDirect(w->patchMainRef, pn);
 #endif
 
+                                 // Saving makes the patch clean; update the model, view follows.
+                                 w->patchMainRef.dirty = false;
                                  w->presetDataBinding->setDirtyState(false);
                                  w->repaint();
                              });
@@ -840,9 +827,9 @@ void PluginEditor::doSavePatch()
 
 void PluginEditor::setPatchNameTo(const std::string &s)
 {
-    memset(patchCopy.name, 0, sizeof(patchCopy.name));
-    strncpy(patchCopy.name, s.c_str(), 255);
-    mainToAudio.push({Engine::MainToAudioMsg::SEND_PATCH_NAME, 0, 0, patchCopy.name});
+    memset(patchMainRef.name, 0, sizeof(patchMainRef.name));
+    strncpy(patchMainRef.name, s.c_str(), 255);
+    // Name is main-thread-only patch state; the audio patch never needs it.
     setPatchNameDisplay();
 }
 
@@ -863,16 +850,16 @@ void PluginEditor::doLoadPatch()
                 return;
             }
             auto loadPath = fs::path{result[0].getFullPathName().toStdString()};
-            w->presetManager->loadUserPresetDirect(w->patchCopy, w->mainToAudio, loadPath);
+            w->presetManager->loadUserPresetDirect(w->patchMainRef, w->mainToAudio, loadPath);
         });
 }
 
-void PluginEditor::resetToDefault() { presetManager->loadInit(patchCopy, mainToAudio); }
+void PluginEditor::resetToDefault() { presetManager->loadInit(patchMainRef, mainToAudio); }
 
 void PluginEditor::setAndSendParamValue(uint32_t paramId, float value, bool notifyAudio,
                                         bool sendBeginEnd)
 {
-    patchCopy.paramMap[paramId]->value = value;
+    patchMainRef.paramMap[paramId]->value = value;
 
     auto rit = componentRefreshByID.find(paramId);
     if (rit != componentRefreshByID.end())
@@ -886,6 +873,7 @@ void PluginEditor::setAndSendParamValue(uint32_t paramId, float value, bool noti
 
     if (notifyAudio)
     {
+        markPatchDirty();
         if (sendBeginEnd)
             mainToAudio.push({Engine::MainToAudioMsg::Action::BEGIN_EDIT, paramId});
         mainToAudio.push({Engine::MainToAudioMsg::Action::SET_PARAM, paramId, value});
@@ -899,8 +887,18 @@ void PluginEditor::setPatchNameDisplay()
 {
     if (!presetButton)
         return;
-    presetDataBinding->setStateForDisplayName(patchCopy.name);
+    presetDataBinding->setStateForDisplayName(patchMainRef.name);
     presetButton->repaint();
+}
+
+void PluginEditor::markPatchDirty()
+{
+    if (patchMainRef.dirty)
+        return;
+    patchMainRef.dirty = true;
+    presetDataBinding->setDirtyState(true);
+    if (presetButton)
+        presetButton->repaint();
 }
 
 void PluginEditor::resetEnablement()
@@ -916,6 +914,8 @@ void PluginEditor::postPatchChange(const std::string &s)
 {
     resetEnablement();
     presetDataBinding->setStateForDisplayName(s);
+    // Mirror the dirty indicator from patchMain (the model owns dirty; the view follows).
+    presetDataBinding->setDirtyState(patchMainRef.dirty);
     for (auto [id, f] : componentRefreshByID)
         f();
 
@@ -1004,14 +1004,12 @@ void PluginEditor::requestParamsFlush()
     }
 }
 
-void PluginEditor::sneakyStartupGrabFrom(Patch &other)
+void PluginEditor::rebuildFromPatchMain()
 {
-    for (auto &p : other.params)
-    {
-        patchCopy.paramMap.at(p->meta.id)->value = p->value;
-    }
-    strncpy(patchCopy.name, other.name, 255);
-    postPatchChange(other.name);
+    // patchMainRef is engine->patchMain; it already carries the new values, name, dirty
+    // state and filter model/config. postPatchChange pushes all of that (including the dirty
+    // indicator) into the widgets.
+    postPatchChange(patchMainRef.name);
 }
 
 bool PluginEditor::toggleDebug()
@@ -1038,7 +1036,7 @@ void PluginEditor::onStyleChanged()
 
 void PluginEditor::pushFilterSetup(int instance)
 {
-    auto &fn = patchCopy.filterNodes[instance];
+    auto &fn = patchMainRef.filterNodes[instance];
 
     Engine::MainToAudioMsg msg;
     msg.action = Engine::MainToAudioMsg::SET_FILTER_MODEL;
@@ -1053,8 +1051,9 @@ void PluginEditor::pushFilterSetup(int instance)
 
 void PluginEditor::swapFilters(bool alsoSwapMod)
 {
-    auto &fn1 = patchCopy.filterNodes[0];
-    auto &fn2 = patchCopy.filterNodes[1];
+    markPatchDirty();
+    auto &fn1 = patchMainRef.filterNodes[0];
+    auto &fn2 = patchMainRef.filterNodes[1];
 
     auto snd = [this](auto &par)
     {
@@ -1093,7 +1092,7 @@ void PluginEditor::swapFilters(bool alsoSwapMod)
     {
         for (int lf = 0; lf < numStepLFOs; ++lf)
         {
-            auto &lm = patchCopy.stepLfoNodes[lf];
+            auto &lm = patchMainRef.stepLfoNodes[lf];
             swp(lm.toCO[0], lm.toCO[1]);
             swp(lm.toRes[0], lm.toRes[1]);
             swp(lm.toMorph[0], lm.toMorph[1]);

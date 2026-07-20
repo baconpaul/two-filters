@@ -23,15 +23,15 @@ namespace baconpaul::twofilters::ui
 DebugPanel::DebugPanel(PluginEditor &e)
     : sst::jucegui::components::NamedPanel("Debug Leftovers Panel"), editor(e)
 {
-    knobs.resize(e.patchCopy.params.size());
-    knobAs.resize(e.patchCopy.params.size());
-    for (int i = 0; i < e.patchCopy.params.size(); i++)
+    knobs.resize(e.patchMainRef.params.size());
+    knobAs.resize(e.patchMainRef.params.size());
+    for (int i = 0; i < e.patchMainRef.params.size(); i++)
     {
-        auto &p = editor.patchCopy.params[i];
+        auto &p = editor.patchMainRef.params[i];
         if (p->meta.groupName == "Routing" || p->meta.groupName == "Filter 1" ||
             p->meta.groupName == "Filter 2" || p->meta.name.find("Step ") != std::string::npos)
             continue;
-        createComponent(editor, *this, *editor.patchCopy.params[i], knobs[i], knobAs[i]);
+        createComponent(editor, *this, *editor.patchMainRef.params[i], knobs[i], knobAs[i]);
         addAndMakeVisible(*knobs[i]);
     }
 }
@@ -45,7 +45,7 @@ void DebugPanel::resized()
     auto spw = 50;
     auto sph = 70;
 
-    for (int i = 0; i < editor.patchCopy.params.size(); i++)
+    for (int i = 0; i < editor.patchMainRef.params.size(); i++)
     {
         if (!knobs[i])
             continue;

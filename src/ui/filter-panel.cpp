@@ -389,7 +389,7 @@ struct FilterCurve : juce::Component
 
     void drawCrosshairs(juce::Graphics &gReal)
     {
-        auto &fn = panel.editor.patchCopy.filterNodes[panel.instance];
+        auto &fn = panel.editor.patchMainRef.filterNodes[panel.instance];
         co = fn.cutoff;
         res = fn.resonance;
 
@@ -436,7 +436,7 @@ struct FilterCurve : juce::Component
     {
         std::unique_lock<std::mutex> l(sendM);
         updateRequest++;
-        auto &fn = panel.editor.patchCopy.filterNodes[panel.instance];
+        auto &fn = panel.editor.patchMainRef.filterNodes[panel.instance];
         co = fn.cutoff;
         res = fn.resonance;
         morph = fn.morph;
@@ -460,7 +460,7 @@ FilterPanel::FilterPanel(PluginEditor &ed, int ins)
     : instance(ins), sst::jucegui::components::NamedPanel("Filter " + std::to_string(ins + 1)),
       editor(ed)
 {
-    auto &fn = editor.patchCopy.filterNodes[instance];
+    auto &fn = editor.patchMainRef.filterNodes[instance];
 
     setTogglable(true);
 
@@ -607,7 +607,7 @@ void FilterPanel::onModelChanged()
 
     namespace sfpp = sst::filtersplusplus;
 
-    auto &fn = editor.patchCopy.filterNodes[instance];
+    auto &fn = editor.patchMainRef.filterNodes[instance];
     auto mn = sfpp::toString(fn.model);
     auto cn = fn.config.toString();
 
@@ -664,7 +664,7 @@ void FilterPanel::updateFourHideMenuVisibility()
         return;
 
     namespace sfpp = sst::filtersplusplus;
-    auto &fn = editor.patchCopy.filterNodes[instance];
+    auto &fn = editor.patchMainRef.filterNodes[instance];
 
     pbMenu->setVisible(sfpp::supportsChoice<sfpp::Passband>(fn.model));
     slpMenu->setVisible(sfpp::supportsChoice<sfpp::Slope>(fn.model) &&
@@ -691,11 +691,11 @@ void FilterPanel::showModelMenu()
                   [this, m]()
                   {
                       auto configs = sfpp::Filter::availableModelConfigurations(m, true);
-                      editor.patchCopy.filterNodes[instance].model = m;
+                      editor.patchMainRef.filterNodes[instance].model = m;
                       if (configs.empty())
-                          editor.patchCopy.filterNodes[instance].config = {};
+                          editor.patchMainRef.filterNodes[instance].config = {};
                       else
-                          editor.patchCopy.filterNodes[instance].config = configs.front();
+                          editor.patchMainRef.filterNodes[instance].config = configs.front();
                       editor.pushFilterSetup(instance);
                       onModelChanged();
                       for (auto &s : editor.stepLFOPanel)
@@ -718,7 +718,7 @@ void FilterPanel::showConfigMenu()
     namespace sfpp = sst::filtersplusplus;
 
     auto cfgs = sfpp::Filter::availableModelConfigurations(
-        editor.patchCopy.filterNodes[instance].model, true);
+        editor.patchMainRef.filterNodes[instance].model, true);
 
     if (cfgs.empty() || (cfgs.size() == 1 && cfgs[0] == sst::filtersplusplus::ModelConfig()))
     {
@@ -744,7 +744,7 @@ void FilterPanel::showConfigMenu()
         p.addItem(c.toString(),
                   [this, c]()
                   {
-                      editor.patchCopy.filterNodes[instance].config = c;
+                      editor.patchMainRef.filterNodes[instance].config = c;
                       editor.pushFilterSetup(instance);
                       onModelChanged();
                       for (auto &s : editor.stepLFOPanel)
@@ -758,11 +758,11 @@ void FilterPanel::showConfigMenu()
 void FilterPanel::jogConfig(int dir)
 {
     namespace sfpp = sst::filtersplusplus;
-    auto &fn = editor.patchCopy.filterNodes[instance];
+    auto &fn = editor.patchMainRef.filterNodes[instance];
 
     auto am = sfpp::Filter::availableModelConfigurations(fn.model, true);
     int cm{-1};
-    auto currConf = editor.patchCopy.filterNodes[instance].config;
+    auto currConf = editor.patchMainRef.filterNodes[instance].config;
     for (int i = 0; i < am.size(); ++i)
     {
         if (am[i] == currConf)
@@ -778,7 +778,7 @@ void FilterPanel::jogConfig(int dir)
     if (cm >= am.size())
         cm = 0;
     auto newConf = am[cm];
-    editor.patchCopy.filterNodes[instance].config = newConf;
+    editor.patchMainRef.filterNodes[instance].config = newConf;
     editor.pushFilterSetup(instance);
     onModelChanged();
 }
@@ -788,7 +788,7 @@ void FilterPanel::jogModel(int dir)
     namespace sfpp = sst::filtersplusplus;
     auto am = sfpp::Filter::availableModels();
     int cm{-1};
-    auto currMod = editor.patchCopy.filterNodes[instance].model;
+    auto currMod = editor.patchMainRef.filterNodes[instance].model;
     for (int i = 0; i < am.size(); ++i)
     {
         if (am[i] == currMod)
@@ -804,13 +804,13 @@ void FilterPanel::jogModel(int dir)
     if (cm >= am.size())
         cm = 0;
     auto newMod = am[cm];
-    editor.patchCopy.filterNodes[instance].model = newMod;
+    editor.patchMainRef.filterNodes[instance].model = newMod;
 
     auto configs = sfpp::Filter::availableModelConfigurations(newMod, true);
     if (configs.empty())
-        editor.patchCopy.filterNodes[instance].config = {};
+        editor.patchMainRef.filterNodes[instance].config = {};
     else
-        editor.patchCopy.filterNodes[instance].config = configs.front();
+        editor.patchMainRef.filterNodes[instance].config = configs.front();
     editor.pushFilterSetup(instance);
     onModelChanged();
 }
@@ -821,7 +821,7 @@ void FilterPanel::endEdit(int id) { curve->rebuild(); }
 
 void FilterPanel::randomize()
 {
-    auto &fn = editor.patchCopy.filterNodes[instance];
+    auto &fn = editor.patchMainRef.filterNodes[instance];
     auto wr = [&, this](auto &par, auto &cont, auto &wid)
     {
         auto range = par.meta.maxVal - par.meta.minVal;
@@ -856,7 +856,7 @@ void FilterPanel::randomize()
 void FilterPanel::resetFilter()
 {
     namespace sfpp = sst::filtersplusplus;
-    auto &fn = editor.patchCopy.filterNodes[instance];
+    auto &fn = editor.patchMainRef.filterNodes[instance];
 
     fn.model = sfpp::FilterModel::None;
     fn.config = {};
@@ -881,7 +881,7 @@ void FilterPanel::resetFilter()
 void FilterPanel::showConfigStructuredMenu(int component)
 {
     namespace sfpp = sst::filtersplusplus;
-    auto &fn = editor.patchCopy.filterNodes[instance];
+    auto &fn = editor.patchMainRef.filterNodes[instance];
 
     auto p = juce::PopupMenu();
 
@@ -910,13 +910,13 @@ template <sst::filtersplusplus::is_modelconfig_enum E>
 void FilterPanel::addConfigStructuredMenu(juce::PopupMenu &p, const std::string &sh)
 {
     namespace sfpp = sst::filtersplusplus;
-    auto &fn = editor.patchCopy.filterNodes[instance];
+    auto &fn = editor.patchMainRef.filterNodes[instance];
 
     auto applyCf = [fn, this](const auto &cfc)
     {
         auto nc = sfpp::closestValidModelTo(fn.model, cfc);
 
-        editor.patchCopy.filterNodes[instance].config = nc;
+        editor.patchMainRef.filterNodes[instance].config = nc;
         editor.pushFilterSetup(instance);
         onModelChanged();
         for (auto &s : editor.stepLFOPanel)
