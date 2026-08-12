@@ -9,6 +9,14 @@ add_subdirectory(fmt EXCLUDE_FROM_ALL)
 add_subdirectory(sst/sst-clap-helpers)
 add_clap_juce_shim(JUCE_PATH "${JUCE_PATH}")
 
+# neui (C ui framework) + neuiplusplus (C++20 layer over it) - the MIT ui
+# stack the neui editor and sst-neuigui are built on. neui's examples/tests
+# default off when consumed by add_subdirectory but make it explicit.
+set(NEUI_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(NEUI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+add_subdirectory(neui/neui)
+add_subdirectory(neui/neuiplusplus)
+
 add_library(simde INTERFACE)
 target_include_directories(simde INTERFACE simde)
 add_subdirectory(sst/sst-cpputils)
