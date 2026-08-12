@@ -7,7 +7,9 @@ add_subdirectory(clap-libs/clap-helpers EXCLUDE_FROM_ALL)
 add_subdirectory(fmt EXCLUDE_FROM_ALL)
 
 add_subdirectory(sst/sst-clap-helpers)
-add_clap_juce_shim(JUCE_PATH "${JUCE_PATH}")
+# The juce shim (and with it all of JUCE) is out of the build; the neui
+# editor drives the clap gui extension directly.
+# add_clap_juce_shim(JUCE_PATH "${JUCE_PATH}")
 
 # neui (C ui framework) + neuiplusplus (C++20 layer over it) - the MIT ui
 # stack the neui editor and sst-neuigui are built on. neui's examples/tests
@@ -22,7 +24,8 @@ add_library(simde INTERFACE)
 target_include_directories(simde INTERFACE simde)
 add_subdirectory(sst/sst-cpputils)
 add_subdirectory(sst/sst-basic-blocks)
-add_subdirectory(sst/sst-jucegui)
+# sst-jucegui needs juce; sst-neuigui above is its neui replacement
+# add_subdirectory(sst/sst-jucegui)
 add_subdirectory(sst/sst-filters)
 add_subdirectory(sst/sst-waveshapers)
 

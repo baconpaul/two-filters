@@ -40,19 +40,24 @@ cmrc_add_resource_library(${PROJECT_NAME}-assets NAMESPACE twofilters_assets
         resources/TwoFiltersIcon.png
         doc/ack.md)
 
-set(JUCE_PATH "${CMAKE_SOURCE_DIR}/libs/JUCE")
+# JUCE is out of the build while the neui editor lands; see libs/CMakeLists.txt
+# set(JUCE_PATH "${CMAKE_SOURCE_DIR}/libs/JUCE")
 add_subdirectory(libs)
 
 add_library(${PROJECT_NAME}-impl STATIC
         src/clap/plugin-clap.cpp
         src/clap/plugin-clap-entry-impl.cpp
 
-        src/ui/plugin-editor.cpp
-        src/ui/about-screen.cpp
-        src/ui/debug-panel.cpp
-        src/ui/filter-panel.cpp
-        src/ui/routing-panel.cpp
-        src/ui/steplfo-panel.cpp
+        src/neui-ui/neui-editor.cpp
+
+        # The juce editor, retired in favor of src/neui-ui. Kept while the
+        # neui port reproduces it panel by panel.
+        # src/ui/plugin-editor.cpp
+        # src/ui/about-screen.cpp
+        # src/ui/debug-panel.cpp
+        # src/ui/filter-panel.cpp
+        # src/ui/routing-panel.cpp
+        # src/ui/steplfo-panel.cpp
 
         src/presets/preset-manager.cpp
 
@@ -87,15 +92,19 @@ target_link_libraries(${PROJECT_NAME}-impl PRIVATE
         clap-helpers clap-wrapper-extensions
         mts-esp-client
         fmt-header-only
-        sst-basic-blocks sst-jucegui sst-cpputils sst-filters sst-filters-extras sst-waveshapers
+        sst-basic-blocks sst-cpputils sst-filters sst-filters-extras sst-waveshapers
         sst-plugininfra
         sst-plugininfra::filesystem
         sst-plugininfra::tinyxml
         sst-plugininfra::strnatcmp
         sst-plugininfra::patchbase
         sst-plugininfra::version_information
-        sst::clap_juce_shim sst::clap_juce_shim_headers
-        juce::juce_dsp
+        sst::neuigui neuiplusplus
+        # The juce stack, replaced by neui above; kept commented while the
+        # port lands in case a fallback build is wanted.
+        # sst-jucegui
+        # sst::clap_juce_shim sst::clap_juce_shim_headers
+        # juce::juce_dsp
         ${PROJECT_NAME}-patches
         ${PROJECT_NAME}-assets
 )

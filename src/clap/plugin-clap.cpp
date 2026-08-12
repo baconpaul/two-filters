@@ -28,11 +28,9 @@
 #include "sst/plugininfra/patch-support/patch_base_clap_adapter.h"
 #include "sst/plugininfra/cpufeatures.h"
 
-#include "sst/clap_juce_shim/clap_juce_shim.h"
-
 #include "sst/basic-blocks/modulators/TransportClapAdapter.h"
 
-#include "ui/plugin-editor.h"
+#include "neui-ui/neui-editor.h"
 
 #include <clapwrapper/vst3.h>
 
@@ -50,16 +48,13 @@ static constexpr clap::helpers::CheckingLevel checkLevel = clap::helpers::Checki
 
 using plugHelper_t = clap::helpers::Plugin<misLevel, checkLevel>;
 
-struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
+struct TwoFilters : public plugHelper_t
 {
     TwoFilters(const clap_host *h) : plugHelper_t(getDescriptor(), h)
     {
         engine = std::make_unique<Engine>();
 
         engine->clapHost = h;
-
-        clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
-        clapJuceShim->setResizable(true);
     }
     virtual ~TwoFilters() {}
 
@@ -327,68 +322,139 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     }
 
   public:
-    bool implementsGui() const noexcept override { return clapJuceShim != nullptr; }
-    std::unique_ptr<sst::clap_juce_shim::ClapJuceShim> clapJuceShim;
-    ADD_SHIM_IMPLEMENTATION(clapJuceShim)
-    ADD_SHIM_LINUX_TIMER(clapJuceShim)
-    std::unique_ptr<juce::Component> createEditor() override
+    /*
+     * The gui extension, straight onto the neui editor - no shim. The neui
+     * embed contract wants set_parent before show, which is exactly the
+     * clap gui call order.
+     */
+    std::unique_ptr<ui::NeuiEditor> editor;
+
+    bool implementsGui() const noexcept override { return true; }
+    bool guiIsApiSupported(const char *api, bool isFloating) noexcept override
     {
-        auto res = std::make_unique<baconpaul::twofilters::ui::PluginEditor>(
-            engine->patchMain, engine->audioToMain, engine->mainToAudio, engine->editorActive,
-            engine->uiForceRebuild, _host.host());
-
-        res->onZoomChanged = [this](auto f)
-        {
-            if (_host.canUseGui() && clapJuceShim->isEditorAttached())
-            {
-                // SQLOG("onZoomChanged " << f);
-                auto s = f * clapJuceShim->getGuiScale();
-                guiSetSize(baconpaul::twofilters::edWidth * s, baconpaul::twofilters::edHeight * s);
-                _host.guiRequestResize(baconpaul::twofilters::edWidth * s,
-                                       baconpaul::twofilters::edHeight * s);
-            }
-        };
-
-        onShow = [e = res.get()]()
-        {
-            // SQLOG("onShow with zoom factor " << e->zoomFactor);
-            e->setZoomFactor(e->zoomFactor);
-            return true;
-        };
-        res->repaint();
-
-        return res;
-    }
-
-    bool registerOrUnregisterTimer(clap_id &id, int ms, bool reg) override
-    {
-        if (!_host.canUseTimerSupport())
+        if (isFloating)
             return false;
-        if (reg)
+#if defined(__APPLE__)
+        return strcmp(api, CLAP_WINDOW_API_COCOA) == 0;
+#elif defined(_WIN32)
+        return strcmp(api, CLAP_WINDOW_API_WIN32) == 0;
+#else
+        return strcmp(api, CLAP_WINDOW_API_X11) == 0;
+#endif
+    }
+    bool guiGetPreferredApi(const char **api, bool *isFloating) noexcept override
+    {
+#if defined(__APPLE__)
+        *api = CLAP_WINDOW_API_COCOA;
+#elif defined(_WIN32)
+        *api = CLAP_WINDOW_API_WIN32;
+#else
+        *api = CLAP_WINDOW_API_X11;
+#endif
+        *isFloating = false;
+        return true;
+    }
+    bool guiCreate(const char *api, bool isFloating) noexcept override
+    {
+        editor = std::make_unique<ui::NeuiEditor>();
+        if (!editor->valid())
         {
-            _host.timerSupportRegister(ms, &id);
-        }
-        else
-        {
-            _host.timerSupportUnregister(id);
+            editor.reset();
+            return false;
         }
         return true;
     }
-
-    bool registerOrUnregisterPosixFd(int fd, clap_posix_fd_flags_t flags, bool reg) override
+    void guiDestroy() noexcept override
     {
-        if (!_host.canUsePosixFdSupport())
-            return false;
-        if (reg)
+#if defined(__linux__)
+        if (editor && guiTimerId != CLAP_INVALID_ID && _host.canUseTimerSupport())
         {
-            _host.posixFdSupportRegister(fd, flags);
+            _host.timerSupportUnregister(guiTimerId);
+            guiTimerId = CLAP_INVALID_ID;
         }
-        else
+        if (editor && guiPosixFd >= 0 && _host.canUsePosixFdSupport())
         {
-            _host.posixFdSupportUnregister(fd);
+            _host.posixFdSupportUnregister(guiPosixFd);
+            guiPosixFd = -1;
         }
+#endif
+        editor.reset();
+    }
+    bool guiSetScale(double scale) noexcept override
+    {
+        guiScale = scale;
         return true;
     }
+    bool guiGetSize(uint32_t *width, uint32_t *height) noexcept override
+    {
+        if (!editor)
+            return false;
+        *width = editor->width();
+        *height = editor->height();
+        return true;
+    }
+    bool guiCanResize() const noexcept override { return false; }
+    bool guiSetParent(const clap_window *window) noexcept override
+    {
+        if (!editor)
+            return false;
+#if defined(__APPLE__)
+        auto res = editor->setParent(window->cocoa);
+#elif defined(_WIN32)
+        auto res = editor->setParent(window->win32);
+#else
+        auto res = editor->setParent(reinterpret_cast<void *>(uintptr_t(window->x11)));
+#endif
+        if (!res)
+            return false;
+
+#if defined(__linux__)
+        // neui owns no loop embedded; drive it off the host timer and the
+        // frame's X connection fd.
+        if (_host.canUseTimerSupport())
+            _host.timerSupportRegister(16, &guiTimerId);
+        auto fd = editor->eventFd();
+        if (fd >= 0 && _host.canUsePosixFdSupport())
+        {
+            _host.posixFdSupportRegister(fd, CLAP_POSIX_FD_READ);
+            guiPosixFd = fd;
+        }
+#endif
+        return true;
+    }
+    bool guiShow() noexcept override
+    {
+        if (!editor)
+            return false;
+        editor->show();
+        return true;
+    }
+    bool guiHide() noexcept override
+    {
+        if (!editor)
+            return false;
+        editor->hide();
+        return true;
+    }
+
+    double guiScale{1.0};
+#if defined(__linux__)
+    clap_id guiTimerId{CLAP_INVALID_ID};
+    int guiPosixFd{-1};
+
+    bool implementsTimerSupport() const noexcept override { return true; }
+    void onTimer(clap_id timerId) noexcept override
+    {
+        if (editor && timerId == guiTimerId)
+            editor->pumpAndTick();
+    }
+    bool implementsPosixFdSupport() const noexcept override { return true; }
+    void onPosixFd(int fd, clap_posix_fd_flags_t flags) noexcept override
+    {
+        if (editor && fd == guiPosixFd)
+            editor->pumpAndTick();
+    }
+#endif
 
     static uint32_t vst3_getNumMIDIChannels(const clap_plugin *plugin, uint32_t note_port)
     {
