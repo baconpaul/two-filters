@@ -18,35 +18,24 @@
 #include <neuiplusplus/neuiplusplus.h>
 
 #include "configuration.h"
+#include "engine/engine.h"
+#include "neui-plugin-editor.h"
 
 namespace baconpaul::twofilters::ui
 {
 namespace npp = neuiplusplus;
 
-namespace
-{
-struct HelloPanel : npp::Component<HelloPanel, npp::Paints>
-{
-    HelloPanel(npp::Parent p) : Component(p) {}
-
-    void paint(npp::Canvas &g) override
-    {
-        auto b = g.bounds();
-        g.fillAll(npp::Color::rgb(0x25, 0x25, 0x28));
-        g.drawText("hello neui", b, npp::Font(28.0f), npp::Color::rgb(0xFF, 0x90, 0x00),
-                   npp::HAlign::centre, npp::VAlign::middle);
-    }
-};
-} // namespace
-
 struct NeuiEditor::Impl
 {
     neui_api_t *host{nullptr};
     neui_embed_api_t *embed{nullptr};
+    neui_timer_api_t *timers{nullptr};
+    uint32_t idleTimerId{0};
     std::unique_ptr<npp::Session> session;
     std::unique_ptr<npp::Frame> frame;
+    NeuiPluginEditor *editor{nullptr};
 
-    Impl()
+    Impl(Engine &engine, const clap_host_t *clapHost)
     {
         static bool neuiInitialized{false};
         if (!neuiInitialized)
@@ -64,24 +53,54 @@ struct NeuiEditor::Impl
 
         embed =
             static_cast<neui_embed_api_t *>(host->get_interface(session->raw(), NEUI_API_EMBED));
+        timers =
+            static_cast<neui_timer_api_t *>(host->get_interface(session->raw(), NEUI_API_TIMER));
 
         frame = std::make_unique<npp::Frame>(*session, NEUI_W_PLUGWINDOW,
                                              npp::Rect{0, 0, float(edWidth), float(edHeight)},
                                              PRODUCT_NAME);
-        auto &hello = frame->add<HelloPanel>();
-        hello.setBounds(npp::Rect{0, 0, float(edWidth), float(edHeight)});
-        frame->onResize = [&hello](npp::Rect client) { hello.setBounds(client.atOrigin()); };
+        editor =
+            &frame->add<NeuiPluginEditor>(engine.patchMain, engine.audioToMain, engine.mainToAudio,
+                                          engine.editorActive, engine.uiForceRebuild, clapHost);
+        editor->setBounds(npp::Rect{0, 0, float(edWidth), float(edHeight)});
+        frame->onResize = [this](npp::Rect client)
+        {
+            if (editor)
+                editor->setBounds(client.atOrigin());
+        };
+
+        // The ~60Hz idle: drain the audio->ui queue, animate, poll rebuilds.
+        if (timers)
+            idleTimerId = timers->add_timer(session->raw(), 16);
+        session->onRawEvent = [this](neui_event_t *ev)
+        {
+            if (ev->type == NEUI_EVENT_TIMER && ev->data.timer.timer_id == idleTimerId)
+            {
+                if (editor)
+                    editor->idle();
+                return true;
+            }
+            return false;
+        };
     }
 
     ~Impl()
     {
+        if (session)
+            session->onRawEvent = nullptr;
+        if (timers && idleTimerId)
+            timers->remove_timer(session->raw(), idleTimerId);
         // Components before the session; Frame holds the tree.
+        editor = nullptr;
         frame.reset();
         session.reset();
     }
 };
 
-NeuiEditor::NeuiEditor() : impl(std::make_unique<Impl>()) {}
+NeuiEditor::NeuiEditor(Engine &engine, const clap_host_t *clapHost)
+    : impl(std::make_unique<Impl>(engine, clapHost))
+{
+}
 NeuiEditor::~NeuiEditor() = default;
 
 bool NeuiEditor::valid() const { return impl->session && impl->frame && impl->embed; }

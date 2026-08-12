@@ -19,19 +19,27 @@
 #include <cstdint>
 #include <memory>
 
+#include <clap/clap.h>
+
 /*
  * The neui editor. The clap gui extension in plugin-clap.cpp drives this
  * directly - no shim layer. Lifecycle follows the neui embed contract:
  * construct (session + unshown PLUGWINDOW), setParent with the host native
  * handle BEFORE show, then show. neui owns no run loop in embedded mode; on
  * mac/win the host pump services the frame, on linux the clap posix-fd and
- * timer extensions drive eventFd/pumpAndTick.
+ * timer extensions drive eventFd/pumpAndTick. The editor content itself is
+ * NeuiPluginEditor, the frame's root child.
  */
+namespace baconpaul::twofilters
+{
+struct Engine;
+}
+
 namespace baconpaul::twofilters::ui
 {
 struct NeuiEditor
 {
-    NeuiEditor();
+    NeuiEditor(Engine &engine, const clap_host_t *clapHost);
     ~NeuiEditor();
 
     // False if the neui session could not be created; the editor is unusable.

@@ -356,7 +356,7 @@ struct TwoFilters : public plugHelper_t
     }
     bool guiCreate(const char *api, bool isFloating) noexcept override
     {
-        editor = std::make_unique<ui::NeuiEditor>();
+        editor = std::make_unique<ui::NeuiEditor>(*engine, _host.host());
         if (!editor->valid())
         {
             editor.reset();

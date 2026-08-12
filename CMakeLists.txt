@@ -49,6 +49,7 @@ add_library(${PROJECT_NAME}-impl STATIC
         src/clap/plugin-clap-entry-impl.cpp
 
         src/neui-ui/neui-editor.cpp
+        src/neui-ui/neui-plugin-editor.cpp
 
         # The juce editor, retired in favor of src/neui-ui. Kept while the
         # neui port reproduces it panel by panel.
