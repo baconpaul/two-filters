@@ -16,6 +16,7 @@ set(NEUI_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(NEUI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(neui/neui)
 add_subdirectory(neui/neuiplusplus)
+add_subdirectory(sst-neuigui)
 
 add_library(simde INTERFACE)
 target_include_directories(simde INTERFACE simde)

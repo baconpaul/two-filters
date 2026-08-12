@@ -55,3 +55,6 @@
 [submodule "libs/neui/neuiplusplus"]
 	path = libs/neui/neuiplusplus
 	url = https://github.com/baconpaul/neuiplusplus
+[submodule "libs/sst-neuigui"]
+	path = libs/sst-neuigui
+	url = https://github.com/surge-synthesizer/sst-neuigui
