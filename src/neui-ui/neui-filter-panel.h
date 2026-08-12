@@ -18,15 +18,13 @@
 
 #include <sst/neuigui/components/NamedPanel.h>
 #include <sst/neuigui/components/Knob.h>
+#include <sst/neuigui/components/MenuButton.h>
 #include "neui-plugin-editor.h"
 
 namespace baconpaul::twofilters::ui
 {
-/*
- * The first slice of src/ui/filter-panel.cpp: the four knobs, bound to
- * patchMain. The curve display, model/config menus and power toggle follow
- * as their widgets land.
- */
+struct NFilterCurve;
+
 struct NFilterPanel : sngc::NamedPanelBase<NFilterPanel>
 {
     NFilterPanel(npp::Parent p, NeuiPluginEditor &editor, int instance);
@@ -36,12 +34,38 @@ struct NFilterPanel : sngc::NamedPanelBase<NFilterPanel>
 
     NeuiPluginEditor &editor;
 
+    void onModelChanged();
+
     void beginEdit() {}
-    void endEdit(int) {}
+    void endEdit(int id);
+
+    void jogModel(int dir);
+    void jogConfig(int dir);
+
+    void onIdle();
+
+    void randomize();
+    void resetFilter();
+
+    NFilterCurve *curve{nullptr};
 
     std::unique_ptr<PatchContinuous> cutoffD, resonanceD, morphD, panD;
     std::unique_ptr<PatchDiscrete> activeD;
+
     sngc::Knob *cutoffK{nullptr}, *resonanceK{nullptr}, *morphK{nullptr}, *panK{nullptr};
+
+    sngc::MenuButton *modelMenu{nullptr}, *configMenu{nullptr};
+    sngc::MenuButton *pbMenu{nullptr}, *slpMenu{nullptr}, *drvMenu{nullptr}, *fsmMenu{nullptr};
+
+    void showModelMenu();
+    void showConfigMenu();
+    void showConfigStructuredMenu(int component);
+
+    template <typename E>
+    void addConfigStructuredMenu(std::vector<npp::MenuItem> &, const std::string &);
+
+    NeuiPluginEditor::ConfigDisplayMode displayMode{NeuiPluginEditor::SINGLE_LIST};
+    void updateFourHideMenuVisibility();
 
     int instance;
 };

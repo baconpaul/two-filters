@@ -50,6 +50,9 @@ add_library(${PROJECT_NAME}-impl STATIC
 
         src/neui-ui/neui-editor.cpp
         src/neui-ui/neui-plugin-editor.cpp
+        src/neui-ui/neui-filter-panel.cpp
+        src/neui-ui/neui-routing-panel.cpp
+        src/neui-ui/neui-steplfo-panel.cpp
 
         # The juce editor, retired in favor of src/neui-ui. Kept while the
         # neui port reproduces it panel by panel.

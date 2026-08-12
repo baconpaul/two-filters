@@ -1,0 +1,157 @@
+/*
+ * Two Filters
+ *
+ * Two Filters, and some controls thereof
+ *
+ * Copyright 2024-2026, Paul Walker and Various authors, as described in the github
+ * transaction log.
+ *
+ * This source repo is released under the MIT license, but has
+ * GPL3 dependencies, as such the combined work will be
+ * released under GPL3.
+ *
+ * The source code and license are at https://github.com/baconpaul/two-filters
+ */
+
+#include "neui-routing-panel.h"
+#include "neui-patch-bindings.h"
+
+#include <sst/neuigui/components/GlyphPainter.h>
+
+namespace baconpaul::twofilters::ui
+{
+
+NRoutingPanel::NRoutingPanel(npp::Parent p, NeuiPluginEditor &ed)
+    : sngc::NamedPanelBase<NRoutingPanel>(p, "Main"), editor(ed)
+{
+    auto &rn = editor.patchMainRef.routingNode;
+    createComponent(editor, *this, rn.routingMode, routingModeS, routingModeD);
+    routingModeD->onGuiSetValue = [this]() { editor.resetEnablement(); };
+    editor.componentRefreshByID[rn.routingMode.meta.id] = [this]() { editor.resetEnablement(); };
+
+    retriggerModeL = &add<sngc::Label>("Retrigger");
+
+    createComponent(editor, *this, rn.retriggerMode, retriggerModeS, retriggerModeD);
+
+    createComponent(editor, *this, rn.feedback, feedbackK, feedbackD);
+
+    createComponent(editor, *this, rn.inputGain, igK, igD);
+
+    createComponent(editor, *this, rn.outputGain, ogK, ogD);
+
+    createComponent(editor, *this, rn.mix, mixK, mixD);
+
+    createComponent(editor, *this, rn.noiseLevel, noiseLevelK, noiseLevelD);
+    noiseLevelD->labelOverride = "Noise";
+
+    createComponent(editor, *this, rn.filterBlendSerial, filterBlendSerialK, filterBlendSerialD);
+    filterBlendSerialD->labelOverride = "Blend";
+
+    createComponent(editor, *this, rn.filterBlendParallel, filterBlendParallelK,
+                    filterBlendParallelD);
+    filterBlendParallelK->setVisible(false);
+    filterBlendParallelD->labelOverride = "Blend";
+
+    createComponent(editor, *this, rn.feedbackPower, fbPowerT, fbPowerD);
+    fbPowerT->setDrawMode(sngc::ToggleButton::DrawMode::GLYPH);
+    fbPowerT->setGlyph(sngc::GlyphPainter::POWER);
+    fbPowerD->onGuiSetValue = [this]() { editor.resetEnablement(); };
+    editor.componentRefreshByID[rn.feedbackPower.meta.id] = [this]() { editor.resetEnablement(); };
+
+    createComponent(editor, *this, rn.noisePower, noisePowerT, noisePowerD);
+    noisePowerT->setDrawMode(sngc::ToggleButton::DrawMode::GLYPH);
+    noisePowerT->setGlyph(sngc::GlyphPainter::POWER);
+    noisePowerD->onGuiSetValue = [this]() { editor.resetEnablement(); };
+    editor.componentRefreshByID[rn.noisePower.meta.id] = [this]() { editor.resetEnablement(); };
+
+    createComponent(editor, *this, rn.oversample, oversampleT, oversampleD);
+    oversampleT->setDrawMode(sngc::ToggleButton::DrawMode::LABELED);
+    oversampleT->setLabel("Oversample");
+
+    enableFB();
+}
+
+void NRoutingPanel::resized()
+{
+    layoutHeaderControls();
+
+    auto ca = getContentArea().reduced(2, 0);
+
+    routingModeS->setBounds(ca.withHeight(70));
+    ca = ca.withTrimmedTop(73);
+
+    oversampleT->setBounds(ca.withHeight(20));
+
+    retriggerModeL->setBounds(ca.withHeight(18).translated(0, 22));
+    retriggerModeS->setBounds(ca.withHeight(20).translated(0, 42));
+
+    ca = ca.withTrimmedTop(76);
+    auto kr = ca.withHeight(75).reduced(15, 0);
+
+    auto kH = 77.0f;
+    igK->setBounds(kr.translated(0, 0 * kH));
+    ogK->setBounds(kr.translated(0, 1 * kH));
+    filterBlendSerialK->setBounds(kr.translated(0, 2 * kH));
+    filterBlendParallelK->setBounds(kr.translated(0, 2 * kH));
+    mixK->setBounds(kr.translated(0, 3 * kH));
+    feedbackK->setBounds(kr.translated(0, 4 * kH));
+    noiseLevelK->setBounds(kr.translated(0, 5 * kH));
+
+    auto tr = feedbackK->bounds().withWidth(15).withHeight(15).translated(-10, -4);
+    fbPowerT->setBounds(tr);
+    auto nr = noiseLevelK->bounds().withWidth(15).withHeight(15).translated(-10, -4);
+    noisePowerT->setBounds(nr);
+}
+
+void NRoutingPanel::enableFB()
+{
+    feedbackK->setEnabled(editor.patchMainRef.routingNode.feedbackPower.value > 0.5f);
+    feedbackK->repaint();
+
+    noiseLevelK->setEnabled(editor.patchMainRef.routingNode.noisePower.value > 0.5f);
+    noiseLevelK->repaint();
+
+    auto m = (int)editor.patchMainRef.routingNode.routingMode;
+    filterBlendSerialK->setVisible(m == 0);
+    filterBlendParallelK->setVisible(m != 0);
+}
+
+void NRoutingPanel::randomize()
+{
+    auto &rn = editor.patchMainRef.routingNode;
+    auto wr = [&, this](auto &par, auto &cont, auto &wid, float clmp = 1.0)
+    {
+        auto range = par.meta.maxVal - par.meta.minVal;
+        auto nv = editor.rng.unif01() * range * clmp + par.meta.minVal;
+        wid->onBeginEdit();
+        cont->setValueFromGUI(nv);
+        wid->onEndEdit();
+    };
+    auto wri = [&, this](auto &par, auto &cont, auto &wid)
+    {
+        auto range = par.meta.maxVal - par.meta.minVal;
+        auto nv = editor.rng.unif01() * range + par.meta.minVal;
+        wid->onBeginEdit();
+        cont->setValueFromGUI(std::round(nv));
+        wid->onEndEdit();
+    };
+
+    wr(rn.inputGain, igD, igK);
+    wr(rn.outputGain, ogD, ogK);
+    wr(rn.filterBlendSerial, filterBlendSerialD, filterBlendSerialK);
+    wr(rn.filterBlendParallel, filterBlendParallelD, filterBlendParallelK);
+    wr(rn.mix, mixD, mixK);
+    // editorial - don't randomize feedback high!
+    wr(rn.feedback, feedbackD, feedbackK, 0.8);
+    wr(rn.noiseLevel, noiseLevelD, noiseLevelK);
+    wri(rn.routingMode, routingModeD, routingModeS);
+    wri(rn.retriggerMode, retriggerModeD, retriggerModeS);
+    wri(rn.feedbackPower, fbPowerD, fbPowerT);
+    wri(rn.noisePower, noisePowerD, noisePowerT);
+
+    // purposefully skip oversample
+
+    enableFB();
+    repaint();
+}
+} // namespace baconpaul::twofilters::ui

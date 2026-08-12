@@ -21,6 +21,7 @@
 #include "sst/neuigui/data/Discrete.h"
 
 #include "neui-plugin-editor.h"
+#include "neui-menus.h"
 
 /*
  * The sst-neuigui port of patch-data-bindings.h. PatchContinuous and
@@ -147,7 +148,11 @@ void createComponent(NeuiPluginEditor &e, P &panel, const Param &parm, T *&cm,
 
     if constexpr (std::is_same_v<Q, PatchContinuous>)
     {
-        cm->onPopupMenu = [&e, ptr = cm](auto &mods) { e.popupMenuForContinuous(ptr); };
+        cm->onPopupMenu = [&e, cm, &pc](auto &mods)
+        {
+            auto o = editorLocalOrigin(cm, &e);
+            e.popupMenuForContinuous(pc.get(), {o.x, o.y + cm->bounds().getHeight()});
+        };
     }
     cm->onBeginEdit = [&e, cm, &pc, args..., id, &panel]()
     {

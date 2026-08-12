@@ -22,21 +22,27 @@
 #include <unordered_map>
 
 #include <neuiplusplus/neuiplusplus.h>
+#include <neuiplusplus/components/PopupMenu.h>
 
 #include <sst/neuigui/components/WindowPanel.h>
 #include <sst/neuigui/components/NamedPanel.h>
 #include <sst/neuigui/components/Knob.h>
 #include <sst/neuigui/components/Label.h>
 #include <sst/neuigui/components/VUMeter.h>
+#include <sst/neuigui/components/JogUpDownButton.h>
+
+#include <sst/basic-blocks/dsp/RNG.h>
 
 #include "engine/engine.h"
 #include "engine/patch.h"
+#include "presets/preset-manager.h"
+#include "ui/ui-defaults.h"
 
 /*
  * The neui rebuild of src/ui/plugin-editor.h, growing panel by panel as the
  * widget set lands in sst-neuigui. The editor is the root child of the
- * embedded PLUGWINDOW; NeuiEditor (neui-editor.h) owns the session, frame
- * and idle timer and calls idle() here.
+ * embedded PLUGWINDOW; NeuiEditor (neui-editor.h) owns the session, frame,
+ * idle timer and the popup menu controller and calls idle() here.
  */
 namespace baconpaul::twofilters::ui
 {
@@ -45,7 +51,10 @@ namespace npp = neuiplusplus;
 
 struct PatchContinuous;
 struct PatchDiscrete;
+struct PresetDataBinding;
 struct NFilterPanel;
+struct NRoutingPanel;
+struct NStepLFOPanel;
 
 struct NeuiPluginEditor : sngc::WindowPanelBase<NeuiPluginEditor>
 {
@@ -70,20 +79,65 @@ struct NeuiPluginEditor : sngc::WindowPanelBase<NeuiPluginEditor>
     void idle();
 
     std::array<NFilterPanel *, numFilters> filterPanel{};
+    std::array<NStepLFOPanel *, numStepLFOs> stepLFOPanel{};
+    NRoutingPanel *routingPanel{nullptr};
     sngc::VUMeter *vuMeter{nullptr};
+    sngc::JogUpDownButton *presetButton{nullptr};
 
+    std::unique_ptr<presets::PresetManager> presetManager;
+    std::unique_ptr<PresetDataBinding> presetDataBinding;
+    std::unique_ptr<defaultsProvider_t> defaultsProvider;
+
+    sst::basic_blocks::dsp::RNG rng;
+
+    enum ConfigDisplayMode
+    {
+        SINGLE_LIST = 0,
+        FOUR_ALL = 1,
+        FOUR_HIDE = 2
+    };
+
+    enum GraphicsMode
+    {
+        FULL = 0,
+        REDUCES = 1,
+        MINIMAL = 2
+    } cpuGraphicsMode{FULL};
+
+    void setSkinFromDefaults();
+    void doLoadPatch();
+    void doSavePatch();
+    void setPatchNameDisplay();
+
+    /*
+     * Menus. The PopupMenu controller lives on the frame (NeuiEditor::Impl
+     * owns it); at is in editor coordinates, which are frame client
+     * coordinates since the editor fills the frame at origin.
+     */
+    npp::PopupMenu *menu{nullptr};
+    void showMenu(std::vector<npp::MenuItem> items, npp::Point at);
+    std::vector<npp::MenuItem> configDisplayMenuItems();
+    void popupMenuForContinuous(PatchContinuous *c, npp::Point at);
+
+    void showPresetPopup();
+    void postPatchChange(const std::string &displayName);
+    void resetToDefault();
     void markPatchDirty();
-    void requestParamsFlush();
+    void setPatchNameTo(const std::string &);
+    void pushFilterSetup(int instance);
+    void swapFilters(bool alsoSwapMod);
+    void resetEnablement();
 
-    // Param context menus arrive with the popup-menu port; a stub keeps the
-    // binding layer identical to the juce one.
-    void popupMenuForContinuous(void *) {}
+    void requestParamsFlush();
 
     // Rebuild every widget from patchMainRef after an out-of-band load.
     void rebuildFromPatchMain();
 
+    ConfigDisplayMode cpuConfigMode() const;
+
     std::unordered_map<uint32_t, npp::ComponentCore *> componentByID;
     std::unordered_map<uint32_t, std::function<void()>> componentRepaintByID;
+    std::unordered_map<uint32_t, std::function<void()>> componentRefreshByID;
 
     float sampleRate{0};
 

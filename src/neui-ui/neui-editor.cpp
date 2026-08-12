@@ -20,6 +20,7 @@
 #include "configuration.h"
 #include "engine/engine.h"
 #include "neui-plugin-editor.h"
+#include "neui-menus.h"
 
 namespace baconpaul::twofilters::ui
 {
@@ -34,6 +35,8 @@ struct NeuiEditor::Impl
     std::unique_ptr<npp::Session> session;
     std::unique_ptr<npp::Frame> frame;
     NeuiPluginEditor *editor{nullptr};
+    npp::MenuStyle menuStyle;
+    std::unique_ptr<npp::PopupMenu> menu;
 
     Impl(Engine &engine, const clap_host_t *clapHost)
     {
@@ -69,6 +72,12 @@ struct NeuiEditor::Impl
                 editor->setBounds(client.atOrigin());
         };
 
+        // The popup menu controller hangs its scrim and panels off the frame,
+        // created after the editor so they paint above it.
+        menuStyle = makeMenuStyle();
+        menu = std::make_unique<npp::PopupMenu>(*frame, menuStyle, npp::MenuPlacement::inFrame);
+        editor->menu = menu.get();
+
         // The ~60Hz idle: drain the audio->ui queue, animate, poll rebuilds.
         if (timers)
             idleTimerId = timers->add_timer(session->raw(), 16);
@@ -90,7 +99,9 @@ struct NeuiEditor::Impl
             session->onRawEvent = nullptr;
         if (timers && idleTimerId)
             timers->remove_timer(session->raw(), idleTimerId);
-        // Components before the session; Frame holds the tree.
+        // The menu references frame children, so it goes first; then the
+        // frame (which owns the tree), then the session.
+        menu.reset();
         editor = nullptr;
         frame.reset();
         session.reset();
