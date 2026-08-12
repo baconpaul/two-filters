@@ -44,6 +44,8 @@ NeuiPluginEditor::NeuiPluginEditor(npp::Parent p, Patch &patchMain,
         filterPanel[i] = &add<NFilterPanel>(*this, i);
     }
 
+    vuMeter = &add<sngc::VUMeter>(sngc::VUMeter::HORIZONTAL);
+
     // Idle owns draining audioToMain while the editor is open.
     editorActive = true;
 
@@ -69,6 +71,8 @@ void NeuiPluginEditor::resized()
     auto half = row.getWidth() / 2;
     filterPanel[0]->setBounds(row.removeFromLeft(half));
     filterPanel[1]->setBounds(row);
+
+    vuMeter->setBounds(npp::Rect{b.getWidth() - 140, 8, 132, 24});
 }
 
 void NeuiPluginEditor::paint(npp::Canvas &g)
@@ -104,7 +108,7 @@ void NeuiPluginEditor::idle()
         }
         else if (aum->action == Engine::AudioToMainMsg::UPDATE_VU)
         {
-            // VUMeter arrives with a later widget round
+            vuMeter->setLevels(aum->value, aum->value2);
         }
         else if (aum->action == Engine::AudioToMainMsg::SEND_SAMPLE_RATE)
         {
@@ -224,7 +228,18 @@ NFilterPanel::NFilterPanel(npp::Parent p, NeuiPluginEditor &e, int inst)
 {
     auto &fn = editor.patchMainRef.filterNodes[instance];
 
+    setTogglable(true);
+
+    activeD = std::make_unique<PatchDiscrete>(editor, fn.active.meta.id);
+    setToggleDataSource(activeD.get());
+    toggleButton->onBeginEdit = [this, &fn]()
+    { editor.mainToAudio.push({Engine::MainToAudioMsg::Action::BEGIN_EDIT, fn.active.meta.id}); };
+
+    toggleButton->onEndEdit = [this, &fn]()
+    { editor.mainToAudio.push({Engine::MainToAudioMsg::Action::END_EDIT, fn.active.meta.id}); };
+
     createComponent(editor, *this, fn.cutoff, cutoffK, cutoffD);
+    cutoffD->labelOverride = "Cutoff";
     createComponent(editor, *this, fn.resonance, resonanceK, resonanceD);
     createComponent(editor, *this, fn.morph, morphK, morphD);
     createComponent(editor, *this, fn.pan, panK, panD);
@@ -234,6 +249,8 @@ NFilterPanel::~NFilterPanel() = default;
 
 void NFilterPanel::resized()
 {
+    layoutHeaderControls();
+
     auto b = getContentArea();
 
     auto kRow = b.withTrimmedTop(b.getHeight() - 78);

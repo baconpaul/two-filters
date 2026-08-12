@@ -27,6 +27,7 @@
 #include <sst/neuigui/components/NamedPanel.h>
 #include <sst/neuigui/components/Knob.h>
 #include <sst/neuigui/components/Label.h>
+#include <sst/neuigui/components/VUMeter.h>
 
 #include "engine/engine.h"
 #include "engine/patch.h"
@@ -69,6 +70,7 @@ struct NeuiPluginEditor : sngc::WindowPanelBase<NeuiPluginEditor>
     void idle();
 
     std::array<NFilterPanel *, numFilters> filterPanel{};
+    sngc::VUMeter *vuMeter{nullptr};
 
     void markPatchDirty();
     void requestParamsFlush();

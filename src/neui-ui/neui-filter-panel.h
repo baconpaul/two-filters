@@ -40,6 +40,7 @@ struct NFilterPanel : sngc::NamedPanelBase<NFilterPanel>
     void endEdit(int) {}
 
     std::unique_ptr<PatchContinuous> cutoffD, resonanceD, morphD, panD;
+    std::unique_ptr<PatchDiscrete> activeD;
     sngc::Knob *cutoffK{nullptr}, *resonanceK{nullptr}, *morphK{nullptr}, *panK{nullptr};
 
     int instance;
