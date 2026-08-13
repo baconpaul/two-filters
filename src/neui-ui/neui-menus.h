@@ -19,6 +19,8 @@
 #include <neuiplusplus/neuiplusplus.h>
 #include <neuiplusplus/components/PopupMenu.h>
 
+#include <sst/neuigui/style/StyleSheet.h>
+
 /*
  * Menus come from neuiplusplus' client-drawn PopupMenu (bold headers plus a
  * real type-in row, which the native tree popup can't do). The controller
@@ -39,6 +41,8 @@ inline npp::MenuStyle makeMenuStyle()
     s.headerText = npp::Color::rgb(0xFF, 0x90, 0x00);
     s.highlight = npp::Color::rgb(0x35, 0x30, 0x25);
     s.separator = npp::Color::rgb(0x50, 0x50, 0x50);
+    s.font = npp::Font("", sst::neuigui::style::fromJuceHeight(14.0f));
+    s.headerFont = npp::Font("", sst::neuigui::style::fromJuceHeight(13.0f), npp::FontWeight::bold);
     return s;
 }
 

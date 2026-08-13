@@ -87,7 +87,7 @@ struct NStepEditor : npp::Component<NStepEditor, npp::Paints, npp::MouseEvents>
         {
             float val = panel.stepDs[paintStep]->getValue();
             auto vf = fmt::format("{:.2f}", val);
-            auto sf = lFt.withSize(8);
+            auto sf = lFt.withSize(sst::neuigui::style::fromJuceHeight(8));
             if (val > 0)
             {
                 g.drawText(vf, {paintStep * bw, H / 2 + 2, bw, 14}, sf, lCol, npp::HAlign::centre,

@@ -64,7 +64,7 @@ NeuiPluginEditor::NeuiPluginEditor(npp::Parent p, Patch &patchMain,
                      style()
                          ->getFont(sngc::JogUpDownButton::Styles::styleClass,
                                    sngc::JogUpDownButton::Styles::labelfont)
-                         .withSize(18));
+                         .withSize(nstl::fromJuceHeight(18)));
 
     routingPanel = &add<NRoutingPanel>(*this);
 
@@ -172,7 +172,7 @@ void NeuiPluginEditor::paint(npp::Canvas &g)
 
     auto dimText = npp::Color::rgb(0xFF, 0xFF, 0xFF).withAlpha(0.5f);
     auto footer = b.reduced(3, 3);
-    g.drawText(PRODUCT_NAME, footer, ft.withSize(12), dimText, npp::HAlign::left,
+    g.drawText(PRODUCT_NAME, footer, ft.withSize(nstl::fromJuceHeight(12)), dimText, npp::HAlign::left,
                npp::VAlign::bottom);
 
     std::string os = "";
@@ -186,20 +186,20 @@ void NeuiPluginEditor::paint(npp::Canvas &g)
 
     auto bi = os + " " + std::string(sst::plugininfra::VersionInformation::git_commit_hash) +
               fmt::format(" @ {:.1f}k", sampleRate / 1000.0);
-    g.drawText(bi, footer, ft.withSize(12), dimText, npp::HAlign::right, npp::VAlign::bottom);
+    g.drawText(bi, footer, ft.withSize(nstl::fromJuceHeight(12)), dimText, npp::HAlign::right, npp::VAlign::bottom);
 
     g.drawText(sst::plugininfra::VersionInformation::git_implied_display_version, footer,
-               ft.withSize(12), dimText, npp::HAlign::centre, npp::VAlign::bottom);
+               ft.withSize(nstl::fromJuceHeight(12)), dimText, npp::HAlign::centre, npp::VAlign::bottom);
 
     auto dr = npp::Rect{0, 0, np, ht};
-    g.drawText(PRODUCT_NAME, dr.reduced(2, 2), ft.withSize(25), npp::Color::rgb(0xFF, 0xFF, 0xFF),
+    g.drawText(PRODUCT_NAME, dr.reduced(2, 2), ft.withSize(nstl::fromJuceHeight(25)), npp::Color::rgb(0xFF, 0xFF, 0xFF),
                npp::HAlign::left, npp::VAlign::middle);
 
 #if !defined(NDEBUG) || !NDEBUG
-    g.drawText("DEBUG", dr.translated(1, 1), ft.withSize(30),
+    g.drawText("DEBUG", dr.translated(1, 1), ft.withSize(nstl::fromJuceHeight(30)),
                npp::Color::rgb(0xFF, 0xFF, 0xFF).withAlpha(0.6f), npp::HAlign::centre,
                npp::VAlign::middle);
-    g.drawText("DEBUG", dr, ft.withSize(30), npp::Color::rgb(0xFF, 0, 0).withAlpha(0.6f),
+    g.drawText("DEBUG", dr, ft.withSize(nstl::fromJuceHeight(30)), npp::Color::rgb(0xFF, 0, 0).withAlpha(0.6f),
                npp::HAlign::centre, npp::VAlign::middle);
 #endif
 }
@@ -665,7 +665,7 @@ void NeuiPluginEditor::setSkinFromDefaults()
                      style()
                          ->getFont(sngc::JogUpDownButton::Styles::styleClass,
                                    sngc::JogUpDownButton::Styles::labelfont)
-                         .withSize(18));
+                         .withSize(nstl::fromJuceHeight(18)));
 
     resetEnablement();
     repaint();

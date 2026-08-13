@@ -234,7 +234,7 @@ struct NFilterCurve : npp::Component<NFilterCurve, npp::Paints, npp::MouseEvents
 
         g.fillAll(panel.style()->getColour(bst::ValueGutter::styleClass, bst::ValueGutter::gutter));
         auto olc = panel.style()->getColour(bst::Outlined::styleClass, bst::Outlined::outline);
-        auto gridFont = npp::Font(10.0f);
+        auto gridFont = npp::Font(sst::neuigui::style::fromJuceHeight(10.0f));
         for (int i = 1; i < 5; ++i)
         {
             g.drawLine({tx(i), 0}, {tx(i), H}, 1, olc);
