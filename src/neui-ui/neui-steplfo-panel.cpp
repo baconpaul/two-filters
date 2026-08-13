@@ -224,7 +224,8 @@ struct NStepEditor : npp::Component<NStepEditor, npp::Paints, npp::MouseEvents>
     void mouseDrag(const npp::MouseEvent &e) override { adjustValue(e.position, false); }
     void mouseUp(const npp::MouseEvent &e) override { adjustValue(e.position, true); }
 
-    void mouseRightButtonDown(const npp::MouseEvent &e) override
+    // On the up so the menu outlives its opening click's release
+    void mouseRightButtonUp(const npp::MouseEvent &e) override
     {
         auto W = localBounds().getWidth();
         auto x = std::clamp(e.position.x, 0.f, W);

@@ -194,7 +194,8 @@ struct NFilterCurve : npp::Component<NFilterCurve, npp::Paints, npp::MouseEvents
         panel.cutoffK->onEndEdit();
     }
 
-    void mouseRightButtonDown(const npp::MouseEvent &e) override { showContextMenu(e.position); }
+    // On the up so the menu outlives its opening click's release
+    void mouseRightButtonUp(const npp::MouseEvent &e) override { showContextMenu(e.position); }
 
     void showContextMenu(npp::Point at)
     {
