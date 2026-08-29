@@ -290,8 +290,12 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     uint32_t paramsCount() const noexcept override { return engine->patchMain.params.size(); }
     bool paramsInfo(uint32_t paramIndex, clap_param_info *info) const noexcept override
     {
-        return sst::plugininfra::patch_support::patchParamsInfo(paramIndex, info,
-                                                                engine->patchMain);
+        if (!sst::plugininfra::patch_support::patchParamsInfo(paramIndex, info, engine->patchMain))
+            return false;
+        // patchParamsInfo cookies the patch it read, but the host hands the cookie back on
+        // param events we resolve on the audio thread, so it must point into `patch`
+        info->cookie = engine->clapCookieFor(info->id);
+        return true;
     }
     bool paramsValue(clap_id paramId, double *value) noexcept override
     {

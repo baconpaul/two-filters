@@ -591,7 +591,7 @@ void Engine::paramsFlushMainThread(const clap_input_events_t *in, const clap_out
                     p.header.type = CLAP_EVENT_PARAM_VALUE;
                     p.header.flags = 0;
                     p.param_id = uiM->paramId;
-                    p.cookie = dest;
+                    p.cookie = clapCookieFor(uiM->paramId);
                     p.note_id = -1;
                     p.port_index = -1;
                     p.channel = -1;
