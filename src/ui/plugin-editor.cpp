@@ -683,7 +683,7 @@ void PluginEditor::showPresetPopup()
     auto uim = juce::PopupMenu();
     auto isLight = defaultsProvider->getUserDefaultValue(Defaults::useLightSkin, 0);
 
-    for (auto scale : {75, 90, 100, 110, 125, 150})
+    for (auto scale : {75, 90, 100, 110, 125, 150, 175, 200})
     {
         uim.addItem("Zoom " + std::to_string(scale) + "%", true,
                     std::fabs(zoomFactor * 100 - scale) < 2,
