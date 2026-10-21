@@ -19,6 +19,8 @@
 #include "sst/clap_juce_shim/menu_helper.h"
 #include "sst/plugininfra/misc_platform.h"
 
+#include "clapwrapper/standalone_features.h"
+
 #include "sst/jucegui/components/Label.h"
 
 #include "presets/preset-manager.h"
@@ -679,6 +681,16 @@ void PluginEditor::showPresetPopup()
                       w->doSavePatch();
               });
     p.addSeparator();
+
+    auto sf = clapHost ? static_cast<const clap_wrapper_standalone_features_t *>(
+                             clapHost->get_extension(clapHost, CLAP_WRAPPER_STANDALONE_FEATURES))
+                       : nullptr;
+    if (sf && sf->supports_audio_midi_configuration_screen(clapHost))
+    {
+        p.addItem("Audio/MIDI Settings...",
+                  [sf, h = clapHost]() { sf->show_audio_midi_configuration_screen(h); });
+        p.addSeparator();
+    }
 
     auto uim = juce::PopupMenu();
     auto isLight = defaultsProvider->getUserDefaultValue(Defaults::useLightSkin, 0);
