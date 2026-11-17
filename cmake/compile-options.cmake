@@ -4,6 +4,14 @@ if (APPLE)
     enable_language(OBJCXX)
     set(CMAKE_OBJC_VISIBILITY_PRESET hidden)
     set(CMAKE_OBJCXX_VISIBILITY_PRESET hidden)
+
+    # AppleClang 21's libc++ #warns in every file below macOS 11
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang"
+            AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 21)
+        message(STATUS "Silencing #warning on AppleClang ${CMAKE_CXX_COMPILER_VERSION}")
+        string(APPEND CMAKE_CXX_FLAGS " -Wno-#warnings")
+        string(APPEND CMAKE_OBJCXX_FLAGS " -Wno-#warnings")
+    endif ()
 endif()
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Never want shared if not specified")
