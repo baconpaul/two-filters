@@ -132,10 +132,13 @@ make_clapfirst_plugins(
 add_subdirectory(tests)
 
 include(cmake/basic_installer_clapfirst.cmake)
+set(TWOFILTERS_EXTRA_ZIP_NAME "" CACHE STRING "Appended to the installer zip name, e.g. -aarch64")
+
 add_clapfirst_installer(
         INSTALLER_TARGET ${PROJECT_NAME}-installer
         ASSET_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${PROJECT_NAME}_assets
         INSTALLER_PREFIX "two-filters"
+        EXTRA_ZIP_NAME "${TWOFILTERS_EXTRA_ZIP_NAME}"
         PRODUCT_NAME "${PRODUCT_NAME}"
         TARGETS
            ${PROJECT_NAME}_clap
