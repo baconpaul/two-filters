@@ -5,15 +5,7 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "Build for 10.14")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# TODO Remove This before we ship non beta version. Remember
-# the AU rescans only when versions change even if binaries are
-# different.
-string(TIMESTAMP DAY_OF_YEAR "%j")
-string(TIMESTAMP YEAR "%Y")
-math(EXPR PART0 "${YEAR}-2025 + 5")
-math(EXPR PART1 "${DAY_OF_YEAR} + 1")
-
-project(two-filters VERSION 0.${PART0}.${PART1} LANGUAGES C CXX)
+project(two-filters VERSION 1.1.0 LANGUAGES C CXX)
 set(PRODUCT_NAME "Two Filters")
 
 
