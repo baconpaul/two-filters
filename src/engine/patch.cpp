@@ -62,10 +62,25 @@ void Patch::additionalToStateImpl(TiXmlElement &root)
         fn.InsertEndChild(tf);
     }
     root.InsertEndChild(fn);
+
+    auto sm = TiXmlElement("smoothing");
+    sm.SetDoubleAttribute("automationMs", automationSmoothingMs);
+    root.InsertEndChild(sm);
 }
 
 void Patch::additionalFromStateImpl(TiXmlElement *root, uint32_t version)
 {
+    if (version <= 3)
+    {
+        automationSmoothingMs = legacyAutomationSmoothingMs;
+    }
+    else if (auto sm = root->FirstChildElement("smoothing"))
+    {
+        double v{0};
+        if (sm->QueryDoubleAttribute("automationMs", &v) == TIXML_SUCCESS)
+            automationSmoothingMs = std::max(0.f, (float)v);
+    }
+
     auto el = root->FirstChildElement("filter_models");
     if (el)
     {

@@ -66,8 +66,12 @@ struct Param : pats::ParamBase, sst::cpputils::active_set_overlay<Param>::partic
 
 struct Patch : pats::PatchBase<Patch, Param>
 {
-    static constexpr uint32_t patchVersion{3};
+    static constexpr uint32_t patchVersion{4};
     static constexpr const char *id{"org.baconpaul.two-filters"};
+
+    static constexpr float defaultAutomationSmoothingMs{5.f};
+    // 64 samples at 48k, the fixed lag before version 4
+    static constexpr float legacyAutomationSmoothingMs{1000.f * 64.f / 48000.f};
 
     static constexpr uint32_t floatFlags{CLAP_PARAM_IS_AUTOMATABLE};
     static constexpr uint32_t boolFlags{CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_STEPPED};
@@ -91,6 +95,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                 fn.model = sst::filtersplusplus::FilterModel::None;
                 fn.config = {};
             }
+            patch.automationSmoothingMs = defaultAutomationSmoothingMs;
         };
         auto pushParams = [this](auto &from) { this->pushMultipleParams(from.params()); };
 
@@ -446,6 +451,9 @@ struct Patch : pats::PatchBase<Patch, Param>
 
     char name[256]{"Init"};
 
+    // host automation lag time; 0 snaps
+    float automationSmoothingMs{defaultAutomationSmoothingMs};
+
     // Value-only copy between two Patch instances. NEVER use operator= : params/paramMap
     // hold Param* into the owning Patch, so assignment would alias them across objects.
     void copyValuesFrom(const Patch &o)
@@ -458,6 +466,7 @@ struct Patch : pats::PatchBase<Patch, Param>
             filterNodes[i].config = o.filterNodes[i].config;
         }
         memcpy(name, o.name, sizeof(name));
+        automationSmoothingMs = o.automationSmoothingMs;
         dirty = o.dirty;
     }
 

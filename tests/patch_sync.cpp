@@ -286,3 +286,97 @@ TEST_CASE("Host automation carrying a clap cookie reaches the audio patch", "[pa
     engine.drainAudioToMainInto(engine.patchMain);
     REQUIRE(approxEq(engine.patchMain.paramMap.at(pid)->value, target));
 }
+
+TEST_CASE("Automation smoothing defaults, streams and migrates", "[patch-sync]")
+{
+    SECTION("new and reset patches use the default")
+    {
+        Patch a;
+        REQUIRE(a.automationSmoothingMs == Patch::defaultAutomationSmoothingMs);
+        a.automationSmoothingMs = 42.f;
+        a.resetToInit();
+        REQUIRE(a.automationSmoothingMs == Patch::defaultAutomationSmoothingMs);
+    }
+
+    SECTION("round trips and copies")
+    {
+        Patch a;
+        a.automationSmoothingMs = 20.f;
+        Patch b;
+        REQUIRE(b.fromState(a.toState()));
+        REQUIRE(b.automationSmoothingMs == 20.f);
+
+        Patch c;
+        c.copyValuesFrom(a);
+        REQUIRE(c.automationSmoothingMs == 20.f);
+    }
+
+    SECTION("pre version 4 patches get the legacy lag")
+    {
+        Patch a;
+        a.automationSmoothingMs = 20.f;
+        auto st = a.toState();
+        auto vs = std::string("version=\"") + std::to_string(Patch::patchVersion) + "\"";
+        auto pos = st.find(vs);
+        REQUIRE(pos != std::string::npos);
+        st.replace(pos, vs.size(), "version=\"3\"");
+
+        Patch b;
+        REQUIRE(b.fromState(st));
+        REQUIRE(b.automationSmoothingMs == Patch::legacyAutomationSmoothingMs);
+    }
+}
+
+TEST_CASE("Host automation lag follows the smoothing time", "[patch-sync]")
+{
+    Engine engine;
+    auto out = makeOut();
+    engine.setSampleRate(48000);
+
+    const uint32_t pid = 502; // Filter 1 morph
+    auto *p = engine.patch.paramMap.at(pid);
+
+    auto blocksToSettle = [&](float target)
+    {
+        engine.handleParamValue(nullptr, pid, target);
+        int n{0};
+        while (p->lag.isActive() && n < 100000)
+        {
+            p->lag.process();
+            n++;
+        }
+        return n;
+    };
+
+    SECTION("default is 5ms")
+    {
+        auto n = blocksToSettle(0.7f);
+        REQUIRE(n == Approx(5.0 * 48000.0 / 1000.0 / blockSize).margin(1));
+    }
+
+    SECTION("message changes the rate")
+    {
+        engine.mainToAudio.push({Engine::MainToAudioMsg::SET_AUTOMATION_SMOOTHING, 0, 50.f});
+        engine.processUIQueue(&out);
+        REQUIRE(engine.patch.automationSmoothingMs == 50.f);
+        auto n = blocksToSettle(0.7f);
+        REQUIRE(n == Approx(50.0 * 48000.0 / 1000.0 / blockSize).margin(1));
+    }
+
+    SECTION("off snaps")
+    {
+        engine.mainToAudio.push({Engine::MainToAudioMsg::SET_AUTOMATION_SMOOTHING, 0, 0.f});
+        engine.processUIQueue(&out);
+        engine.handleParamValue(nullptr, pid, 0.7f);
+        REQUIRE(approxEq(p->value, 0.7f));
+        REQUIRE_FALSE(p->lag.isActive());
+    }
+
+    SECTION("stepped params snap")
+    {
+        auto *sc = &engine.patch.stepLfoNodes[0].stepCount;
+        engine.handleParamValue(sc, sc->meta.id, 7.f);
+        REQUIRE(sc->value == 7.f);
+        REQUIRE_FALSE(sc->lag.isActive());
+    }
+}
