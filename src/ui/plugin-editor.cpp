@@ -773,6 +773,28 @@ void PluginEditor::showPresetPopup()
 
     p.addSubMenu("User Interface", uim);
     p.addSubMenu("Filter Configuration", configDisplayMenu());
+
+    auto smm = juce::PopupMenu();
+    auto curSmooth = patchMainRef.automationSmoothingMs;
+    for (auto [ms, nm] : {std::make_pair(0.f, std::string("Off")),
+                          {Patch::legacyAutomationSmoothingMs, "1.3 ms (Legacy)"},
+                          {Patch::defaultAutomationSmoothingMs, "5 ms (Default)"},
+                          {10.f, "10 ms"},
+                          {20.f, "20 ms"},
+                          {50.f, "50 ms"}})
+    {
+        smm.addItem(nm, true, std::fabs(curSmooth - ms) < 0.01f,
+                    [w = juce::Component::SafePointer(this), v = ms]()
+                    {
+                        if (!w)
+                            return;
+                        w->patchMainRef.automationSmoothingMs = v;
+                        w->markPatchDirty();
+                        w->mainToAudio.push(
+                            {Engine::MainToAudioMsg::SET_AUTOMATION_SMOOTHING, 0, v});
+                    });
+    }
+    p.addSubMenu("Automation Smoothing", smm);
     p.addSeparator();
     p.addItem("Read the Manual",
               []()

@@ -41,11 +41,9 @@ void Engine::setSampleRate(double sr)
 {
     sampleRate = sr;
     sampleRateInv = 1.0 / sr;
+    applyAutomationSmoothing();
     for (auto &[i, p] : patch.paramMap)
-    {
-        p->lag.setRateInMilliseconds(1000.0 * 64.0 / 48000.0, sampleRate, 1.0 / blockSize);
         p->lag.snapTo(p->value);
-    }
     paramLagSet.removeAll();
 
     vuPeak.setSampleRate(sampleRate);
@@ -412,6 +410,12 @@ void Engine::processUIQueue(const clap_output_events_t *outq)
             postLoad();
         }
         break;
+        case MainToAudioMsg::SET_AUTOMATION_SMOOTHING:
+        {
+            patch.automationSmoothingMs = std::max(0.f, uiM->value);
+            applyAutomationSmoothing();
+        }
+        break;
         case MainToAudioMsg::SET_FILTER_MODEL:
         {
             auto &fn = patch.filterNodes[uiM->paramId];
@@ -436,9 +440,18 @@ void Engine::handleParamValue(Param *p, uint32_t pid, float value)
         p = patch.paramMap.at(pid);
     }
 
-    // p->value = value;
-    p->lag.setTarget(value);
-    paramLagSet.addToActive(p);
+    auto snap = patch.automationSmoothingMs <= 0 || p->meta.type != md_t::FLOAT ||
+                (p->adhocFeatures & Param::AdHocFeatureValues::DONT_SMOOTH);
+    if (snap)
+    {
+        p->lag.snapTo(value);
+        p->value = value;
+    }
+    else
+    {
+        p->lag.setTarget(value);
+        paramLagSet.addToActive(p);
+    }
 
     AudioToMainMsg au = {AudioToMainMsg::UPDATE_PARAM, pid, value};
     audioToMain.push(au);
@@ -450,6 +463,16 @@ void Engine::handleParamValue(Param *p, uint32_t pid, float value)
     {
         clapHost->request_callback(clapHost);
     }
+}
+
+void Engine::applyAutomationSmoothing()
+{
+    if (sampleRate <= 0)
+        return;
+    // zero snaps in handleParamValue; keep the lag rate finite regardless
+    auto ms = std::max(patch.automationSmoothingMs, 0.01f);
+    for (auto &[i, p] : patch.paramMap)
+        p->lag.setRateInMilliseconds(ms, sampleRate, 1.0 / blockSize);
 }
 
 void Engine::onMainThread()
@@ -633,6 +656,9 @@ void Engine::paramsFlushMainThread(const clap_input_events_t *in, const clap_out
             fn.config.mt = (sfpp::FilterSubModel)uiM->uintValues[4];
         }
         break;
+        case MainToAudioMsg::SET_AUTOMATION_SMOOTHING:
+            patchMain.automationSmoothingMs = std::max(0.f, uiM->value);
+            break;
         default:
             // STOP_AUDIO/START_AUDIO/SEND_POST_LOAD/REQUEST_NON_PATCH_STATE:
             // audio/refresh concerns. When inactive these are handled at activate() (which
@@ -659,6 +685,7 @@ void Engine::sendEntirePatchToAudio(Patch &patch, mainToAudioQueue_T &mainToAudi
     {
         mainToAudio.push({MainToAudioMsg::SET_PARAM_WITHOUT_NOTIFYING, p->meta.id, p->value});
     }
+    mainToAudio.push({MainToAudioMsg::SET_AUTOMATION_SMOOTHING, 0, patch.automationSmoothingMs});
     mainToAudio.push({MainToAudioMsg::START_AUDIO});
     mainToAudio.push({MainToAudioMsg::SEND_POST_LOAD, true});
 

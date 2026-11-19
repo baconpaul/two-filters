@@ -328,6 +328,7 @@ struct Engine
     void processUIQueue(const clap_output_events_t *);
 
     void handleParamValue(Param *p, uint32_t pid, float value);
+    void applyAutomationSmoothing();
 
     // Every clap cookie we hand the host points into the audio-thread `patch`: the host
     // hands it back on param events, which we only ever resolve on the audio thread.
@@ -363,6 +364,7 @@ struct Engine
             STOP_AUDIO,
             START_AUDIO,
             SEND_POST_LOAD,
+            SET_AUTOMATION_SMOOTHING,
         } action;
         uint32_t paramId{0};
         float value{0};
