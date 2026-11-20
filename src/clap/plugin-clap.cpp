@@ -24,6 +24,7 @@
 #include <clap/helpers/plugin.hxx>
 #include <clap/helpers/host-proxy.hxx>
 
+#include <array>
 #include <memory>
 #include <fstream>
 #include <sstream>
@@ -59,6 +60,7 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         engine = std::make_unique<Engine>();
 
         engine->clapHost = h;
+        buildRemotePages();
 
         clapJuceShim = std::make_unique<sst::clap_juce_shim::ClapJuceShim>(this);
         clapJuceShim->setResizable(true);
@@ -474,12 +476,85 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                clap_supported_note_expressions::AS_VST3_NOTE_EXPRESSION_PAN;
     }
 
+    struct RemotePage
+    {
+        std::string section, name;
+        std::array<const Param *, CLAP_REMOTE_CONTROLS_COUNT> params{};
+    };
+    std::vector<RemotePage> remotePages;
+
+    void buildRemotePages()
+    {
+        auto &pm = engine->patchMain;
+        auto &f0 = pm.filterNodes[0];
+        auto &f1 = pm.filterNodes[1];
+        auto &rn = pm.routingNode;
+
+        remotePages.push_back({"Filters",
+                               "Filters",
+                               {&f0.cutoff, &f0.resonance, &f0.morph, &f0.pan, &f1.cutoff,
+                                &f1.resonance, &f1.morph, &f1.pan}});
+        remotePages.push_back(
+            {"Routing",
+             "Routing",
+             {&rn.mix, &rn.inputGain, &rn.outputGain, &rn.feedback, &rn.noiseLevel,
+              &rn.filterBlendSerial, &rn.filterBlendParallel, nullptr}});
+
+        // lfo pages mirror the two above, slot for slot
+        for (int i = 0; i < numStepLFOs; ++i)
+        {
+            auto &l = pm.stepLfoNodes[i];
+            auto sec = "Step LFO " + std::to_string(i + 1);
+            auto pfx = "LFO " + std::to_string(i + 1) + " ";
+            remotePages.push_back({sec,
+                                   pfx + "Filters",
+                                   {&l.toCO[0], &l.toRes[0], &l.toMorph[0], &l.toPan[0], &l.toCO[1],
+                                    &l.toRes[1], &l.toMorph[1], &l.toPan[1]}});
+            remotePages.push_back({sec,
+                                   pfx + "Routing",
+                                   {&l.toMix, &l.toPreG, &l.toPostG, &l.toFB, &l.toNoise,
+                                    &l.toFiltBlend, &l.rate, &l.smooth}});
+        }
+    }
+
+    static uint32_t CLAP_ABI remoteControlsCount(const clap_plugin_t *plugin) noexcept
+    {
+        auto *self = static_cast<TwoFilters *>(plugin->plugin_data);
+        return self->remotePages.size();
+    }
+
+    static bool CLAP_ABI remoteControlsGet(const clap_plugin_t *plugin, uint32_t pageIndex,
+                                           clap_remote_controls_page_t *page) noexcept
+    {
+        auto *self = static_cast<TwoFilters *>(plugin->plugin_data);
+        if (pageIndex >= self->remotePages.size())
+            return false;
+
+        auto &rp = self->remotePages[pageIndex];
+        strncpy(page->section_name, rp.section.c_str(), CLAP_NAME_SIZE - 1);
+        page->section_name[CLAP_NAME_SIZE - 1] = 0;
+        strncpy(page->page_name, rp.name.c_str(), CLAP_NAME_SIZE - 1);
+        page->page_name[CLAP_NAME_SIZE - 1] = 0;
+        page->page_id = pageIndex + 1;
+        for (int i = 0; i < CLAP_REMOTE_CONTROLS_COUNT; ++i)
+            page->param_ids[i] = rp.params[i] ? rp.params[i]->meta.id : CLAP_INVALID_ID;
+        page->is_for_preset = false;
+        return true;
+    }
+
     const void *extension(const char *id) noexcept override
     {
         if (strcmp(id, CLAP_PLUGIN_AS_VST3) == 0)
         {
             static clap_plugin_as_vst3 v3p{vst3_getNumMIDIChannels, vst3_supportedNoteExpressions};
             return &v3p;
+        }
+
+        if (strcmp(id, CLAP_EXT_REMOTE_CONTROLS) == 0 ||
+            strcmp(id, CLAP_EXT_REMOTE_CONTROLS_COMPAT) == 0)
+        {
+            static clap_plugin_remote_controls rc{remoteControlsCount, remoteControlsGet};
+            return &rc;
         }
 
         return nullptr;
