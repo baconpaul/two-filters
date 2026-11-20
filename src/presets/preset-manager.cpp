@@ -14,6 +14,7 @@
  */
 
 #include "preset-manager.h"
+#include <algorithm>
 #include <sstream>
 #include <fstream>
 #include <cstring>
@@ -201,47 +202,67 @@ void PresetManager::loadUserPresetDirect(Patch &patch, Engine::mainToAudioQueue_
         onPresetLoaded(dn);
 }
 
-void PresetManager::loadFactoryPreset(Patch &patch, Engine::mainToAudioQueue_T &mainToAudio,
-                                      const std::string &cat, const std::string &pat)
+std::string PresetManager::factoryPresetContents(const std::string &cat,
+                                                 const std::string &pat) const
 {
+    auto known = std::find(factoryPatchVector.begin(), factoryPatchVector.end(),
+                           std::make_pair(cat, pat)) != factoryPatchVector.end();
+    if (!known)
+        return {};
+
     try
     {
         auto fs = cmrc::twofilters_patches::get_filesystem();
         auto f = fs.open(std::string() + factoryPath + "/" + cat + "/" + pat);
-        auto pb = std::string(f.begin(), f.end());
-        patch.fromState(pb);
-
-        // can we find this factory preset
-        int idx{0};
-        for (idx = 0; idx < factoryPatchVector.size(); idx++)
-        {
-            if (factoryPatchVector[idx].first == cat && factoryPatchVector[idx].second == pat)
-                break;
-        }
-
-        if (idx == factoryPatchVector.size())
-        {
-            return;
-        }
-
-        auto noExt = pat;
-        auto ps = noExt.find(PATCH_EXTENSION);
-        if (ps != std::string::npos)
-        {
-            noExt = noExt.substr(0, ps);
-        }
-        nameAndMarkClean(patch, noExt);
-        Engine::sendEntirePatchToAudio(patch, mainToAudio, clapHost);
-
-        if (onPresetLoaded)
-        {
-            onPresetLoaded(noExt);
-        }
+        return std::string(f.begin(), f.end());
     }
     catch (const std::exception &e)
     {
         SQLOG(e.what());
     }
+    return {};
+}
+
+std::string PresetManager::factoryLoadKey(const std::string &cat, const std::string &pat)
+{
+    return cat + "/" + pat;
+}
+
+bool PresetManager::fromFactoryLoadKey(const std::string &key, std::string &cat,
+                                       std::string &pat) const
+{
+    auto sp = key.find('/');
+    if (sp == std::string::npos)
+        return false;
+    cat = key.substr(0, sp);
+    pat = key.substr(sp + 1);
+    return std::find(factoryPatchVector.begin(), factoryPatchVector.end(),
+                     std::make_pair(cat, pat)) != factoryPatchVector.end();
+}
+
+std::string PresetManager::stripExtension(const std::string &pat)
+{
+    auto ps = pat.find(PATCH_EXTENSION);
+    if (ps != std::string::npos)
+        return pat.substr(0, ps);
+    return pat;
+}
+
+void PresetManager::loadFactoryPreset(Patch &patch, Engine::mainToAudioQueue_T &mainToAudio,
+                                      const std::string &cat, const std::string &pat)
+{
+    auto pb = factoryPresetContents(cat, pat);
+    if (pb.empty())
+        return;
+
+    patch.fromState(pb);
+
+    auto noExt = stripExtension(pat);
+    nameAndMarkClean(patch, noExt);
+    Engine::sendEntirePatchToAudio(patch, mainToAudio, clapHost);
+
+    if (onPresetLoaded)
+        onPresetLoaded(noExt);
 }
 
 void PresetManager::loadInit(Patch &patch, Engine::mainToAudioQueue_T &mainToAudio)

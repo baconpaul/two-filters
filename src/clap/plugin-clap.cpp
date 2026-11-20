@@ -25,6 +25,8 @@
 #include <clap/helpers/host-proxy.hxx>
 
 #include <memory>
+#include <fstream>
+#include <sstream>
 #include "sst/plugininfra/patch-support/patch_base_clap_adapter.h"
 #include "sst/plugininfra/cpufeatures.h"
 
@@ -282,6 +284,74 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
             // host to re-read the loaded values (it reads them from patchMain).
             _host.paramsRescan(CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
         }
+        return true;
+    }
+
+    bool implementsPresetLoad() const noexcept override { return true; }
+    bool presetLoadFromLocation(uint32_t location_kind, const char *location,
+                                const char *load_key) noexcept override
+    {
+        try
+        {
+            if (location_kind == CLAP_PRESET_DISCOVERY_LOCATION_FILE)
+            {
+                auto p = fs::path(fs::u8path(location));
+                if (p.extension() != PATCH_EXTENSION)
+                {
+                    SQLOG("Preset extension is not " PATCH_EXTENSION ": '" << location << "'");
+                    return false;
+                }
+
+                std::ifstream t(p);
+                if (!t.is_open())
+                    return false;
+                std::stringstream buffer;
+                buffer << t.rdbuf();
+
+                return loadPresetIntoPatchMain(buffer.str(),
+                                               p.filename().replace_extension("").u8string());
+            }
+
+            if (location_kind == CLAP_PRESET_DISCOVERY_LOCATION_PLUGIN && load_key)
+            {
+                auto pm = presets::PresetManager(nullptr);
+                std::string cat, pat;
+                if (!pm.fromFactoryLoadKey(load_key, cat, pat))
+                {
+                    SQLOG("Unknown factory preset '" << load_key << "'");
+                    return false;
+                }
+                return loadPresetIntoPatchMain(pm.factoryPresetContents(cat, pat),
+                                               presets::PresetManager::stripExtension(pat));
+            }
+        }
+        catch (const fs::filesystem_error &e)
+        {
+            SQLOG("File System Error " << e.what() << " with " << location);
+        }
+        return false;
+    }
+
+    // same path as stateLoad, but a preset takes its name from the file and loads clean
+    bool loadPresetIntoPatchMain(const std::string &xml, const std::string &name)
+    {
+        if (xml.empty())
+            return false;
+
+        auto tmp = std::make_unique<Patch>();
+        if (!tmp->fromState(xml))
+            return false;
+
+        engine->patchMain.copyValuesFrom(*tmp);
+        memset(engine->patchMain.name, 0, sizeof(engine->patchMain.name));
+        strncpy(engine->patchMain.name, name.c_str(), sizeof(engine->patchMain.name) - 1);
+        engine->patchMain.dirty = false;
+        engine->uiForceRebuild++;
+
+        if (isActive())
+            Engine::sendEntirePatchToAudio(engine->patchMain, engine->mainToAudio, _host.host());
+        else if (_host.canUseParams())
+            _host.paramsRescan(CLAP_PARAM_RESCAN_VALUES | CLAP_PARAM_RESCAN_TEXT);
         return true;
     }
 

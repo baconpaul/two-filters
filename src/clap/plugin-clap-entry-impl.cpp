@@ -17,6 +17,7 @@
 #include "sst/plugininfra/misc_platform.h"
 #include "sst/plugininfra/version_information.h"
 #include "clap/plugin-clap-entry-impl.h"
+#include "clap/preset-discovery-impl.h"
 #include "clap/plugin.h"
 #include "clapwrapper/vst3.h"
 #include "clapwrapper/auv2.h"
@@ -130,6 +131,11 @@ const void *get_factory(const char *factory_id)
             "BaconPaul", "https://baconpaul.org", "", clap_get_vst3_info};
 
         return &twofilters_vst3_factory;
+    }
+    if (strcmp(factory_id, CLAP_PRESET_DISCOVERY_FACTORY_ID) == 0 ||
+        strcmp(factory_id, CLAP_PRESET_DISCOVERY_FACTORY_ID_COMPAT) == 0)
+    {
+        return twoFiltersPresetDiscoveryFactory();
     }
 
     return nullptr;

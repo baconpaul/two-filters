@@ -52,6 +52,14 @@ struct PresetManager
     void saveUserPresetDirect(Patch &, const fs::path &p);
 #endif
 
+    // patch xml for a factory preset, or empty if it isn't there
+    std::string factoryPresetContents(const std::string &cat, const std::string &pat) const;
+
+    // stable across factory additions, unlike an index
+    static std::string factoryLoadKey(const std::string &cat, const std::string &pat);
+    bool fromFactoryLoadKey(const std::string &key, std::string &cat, std::string &pat) const;
+    static std::string stripExtension(const std::string &pat);
+
     std::function<void(const std::string &)> onPresetLoaded{nullptr};
 
     static constexpr const char *factoryPath{"resources/factory_patches"};

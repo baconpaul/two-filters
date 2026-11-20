@@ -38,6 +38,7 @@ add_subdirectory(libs)
 add_library(${PROJECT_NAME}-impl STATIC
         src/clap/plugin-clap.cpp
         src/clap/plugin-clap-entry-impl.cpp
+        src/clap/preset-discovery-impl.cpp
 
         src/ui/plugin-editor.cpp
         src/ui/about-screen.cpp
