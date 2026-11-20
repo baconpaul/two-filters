@@ -46,6 +46,9 @@ void Engine::setSampleRate(double sr)
         p->lag.snapTo(p->value);
     paramLagSet.removeAll();
 
+    // ui edits arrive at about 60hz, so ramp across one frame
+    lagHandler.setRate(60, blockSize, sampleRate);
+
     vuPeak.setSampleRate(sampleRate);
 
     audioToMain.push({AudioToMainMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
