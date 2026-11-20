@@ -52,6 +52,7 @@ struct DebugPanel;
 struct FilterPanel;
 struct RoutingPanel;
 struct StepLFOPanel;
+struct EnvFollowerPanel;
 
 struct PatchContinuous;
 
@@ -91,6 +92,7 @@ struct PluginEditor : jcmp::WindowPanel, sst::jucegui::screens::ScreenHolder<Plu
     std::array<std::unique_ptr<FilterPanel>, numFilters> filterPanel;
     std::array<std::unique_ptr<StepLFOPanel>, numStepLFOs> stepLFOPanel;
     std::unique_ptr<RoutingPanel> routingPanel;
+    std::unique_ptr<EnvFollowerPanel> envFollowerPanel;
 
     std::unique_ptr<presets::PresetManager> presetManager;
     std::unique_ptr<PresetDataBinding> presetDataBinding;

@@ -31,6 +31,7 @@
 #include "filter-panel.h"
 #include "routing-panel.h"
 #include "steplfo-panel.h"
+#include "envfollower-panel.h"
 #include "about-screen.h"
 
 namespace baconpaul::twofilters::ui
@@ -88,6 +89,9 @@ PluginEditor::PluginEditor(Patch &patchMain, Engine::audioToMainQueue_t &atou,
 
     routingPanel = std::make_unique<RoutingPanel>(*this);
     addAndMakeVisible(*routingPanel);
+
+    envFollowerPanel = std::make_unique<EnvFollowerPanel>(*this);
+    addAndMakeVisible(*envFollowerPanel);
 
     idleTimer = std::make_unique<IdleTimer>(*this);
     idleTimer->startTimer(1000. / 60.);
@@ -297,6 +301,9 @@ void PluginEditor::resized()
 
     auto panelMargin{2};
     auto uicMargin{4};
+
+    envFollowerPanel->setBounds(
+        panelArea.removeFromBottom(envFollowerHeight).withTrimmedRight(3).reduced(panelMargin));
     // Preset button
     auto but = presetArea.reduced(191, 0).withTrimmedTop(uicMargin);
     presetButton->setBounds(but);
