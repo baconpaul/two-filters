@@ -112,6 +112,8 @@ struct Patch : pats::PatchBase<Patch, Param>
         pushParams(stepLfoNodes[0]);
         pushParams(stepLfoNodes[1]);
 
+        pushParams(envFollowerNode);
+
         std::sort(params.begin(), params.end(),
                   [](const Param *a, const Param *b)
                   {
@@ -448,6 +450,78 @@ struct Patch : pats::PatchBase<Patch, Param>
             return res;
         }
     } stepLfoNodes[numStepLFOs]{0, 1};
+
+    struct EnvFollowerNode
+    {
+        static constexpr uint32_t idBase{7000};
+
+        enum Source
+        {
+            MAIN = 0,
+            SIDECHAIN = 1
+        };
+
+        enum Channel
+        {
+            LEFT = 0,
+            RIGHT = 1,
+            MID = 2,
+            SIDE = 3
+        };
+
+        // time minimums whose 0.1ms display rounds up, so the text round trips in range
+        EnvFollowerNode()
+            : attack(floatMd()
+                         .asLog2SecondsRange(-11, 0, std::log2(0.005f))
+                         .withGroupName(gn)
+                         .withName("Attack")
+                         .withID(id(0))),
+              release(floatMd()
+                          .asLog2SecondsRange(-9, 2, std::log2(0.1f))
+                          .withGroupName(gn)
+                          .withName("Release")
+                          .withID(id(1))),
+              source(intMd()
+                         .withRange(0, 1)
+                         .withDefault(MAIN)
+                         .withGroupName(gn)
+                         .withName("Source")
+                         .withID(id(2))
+                         .withUnorderedMapFormatting({{MAIN, "Main"}, {SIDECHAIN, "SideChain"}})),
+              channel(intMd()
+                          .withRange(0, 3)
+                          .withDefault(MID)
+                          .withGroupName(gn)
+                          .withName("Channel")
+                          .withID(id(3))
+                          .withUnorderedMapFormatting(
+                              {{LEFT, "L"}, {RIGHT, "R"}, {MID, "Mid"}, {SIDE, "Side"}})),
+              toCO{route().asSemitoneRange(-36, 36).withName("To F1 CO").withID(id(10)),
+                   route().asSemitoneRange(-36, 36).withName("To F2 CO").withID(id(12))},
+              toRes{route().asPercentBipolar().withName("To F1 Res").withID(id(11)),
+                    route().asPercentBipolar().withName("To F2 Res").withID(id(13))},
+              toPreG(route().asPercentBipolar().withName("To PreGain").withID(id(14))),
+              toFiltBlend(route().asPercentBipolar().withName("To Filter Blend").withID(id(15))),
+              toMix(route().asPercentBipolar().withName("To Mix").withID(id(16))),
+              toFB(route().asPercentBipolar().withName("To FB").withID(id(17))),
+              toNoise(route().asPercentBipolar().withName("To Noise").withID(id(18)))
+        {
+        }
+
+        static constexpr const char *gn{"Env Follower"};
+        static md_t route() { return floatMd().withGroupName(gn); }
+        uint32_t id(int f) const { return idBase + f; }
+
+        Param attack, release, source, channel;
+        Param toCO[numFilters], toRes[numFilters];
+        Param toPreG, toFiltBlend, toMix, toFB, toNoise;
+
+        std::vector<Param *> params()
+        {
+            return {&attack,   &release, &source,      &channel, &toCO[0], &toRes[0], &toCO[1],
+                    &toRes[1], &toPreG,  &toFiltBlend, &toMix,   &toFB,    &toNoise};
+        }
+    } envFollowerNode;
 
     char name[256]{"Init"};
 

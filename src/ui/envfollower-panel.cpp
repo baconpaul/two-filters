@@ -83,26 +83,17 @@ struct EnvTrace : juce::Component
 EnvFollowerPanel::EnvFollowerPanel(PluginEditor &e)
     : sst::jucegui::components::NamedPanel("Envelope Follower"), editor(e)
 {
-    auto mkKnob = [this](auto &k, auto &d, const std::string &lab, float v, float mn, float mx)
-    {
-        d = std::make_unique<MockContinuous>(lab, v, mn, mx);
-        k = std::make_unique<sst::jucegui::components::Knob>();
-        k->setSource(d.get());
-        addAndMakeVisible(*k);
-    };
+    auto &en = editor.patchMainRef.envFollowerNode;
 
-    mkKnob(attack, attackD, "Attack", 0.2f, 0.f, 1.f);
-    mkKnob(release, releaseD, "Release", 0.5f, 0.f, 1.f);
+    createComponent(editor, *this, en.attack, attack, attackD);
+    addAndMakeVisible(*attack);
+    createComponent(editor, *this, en.release, release, releaseD);
+    addAndMakeVisible(*release);
 
-    auto mkMenu = [this](auto &m, const std::string &init, std::vector<std::string> choices)
-    {
-        m = std::make_unique<sst::jucegui::components::MenuButton>();
-        m->setLabel(init);
-        m->setOnCallback([this, b = m.get(), choices]() { showChoiceMenu(b, choices); });
-        addAndMakeVisible(*m);
-    };
-    mkMenu(source, "Main", {"Main", "SideChain"});
-    mkMenu(mode, "Mid", {"L", "R", "Mid", "Side"});
+    createComponent(editor, *this, en.source, source, sourceD);
+    addAndMakeVisible(*source);
+    createComponent(editor, *this, en.channel, channel, channelD);
+    addAndMakeVisible(*channel);
 
     level = std::make_unique<sst::jucegui::components::VUMeter>(
         sst::jucegui::components::VUMeter::HORIZONTAL);
@@ -112,10 +103,21 @@ EnvFollowerPanel::EnvFollowerPanel(PluginEditor &e)
     trace = std::make_unique<EnvTrace>(*this);
     addAndMakeVisible(*trace);
 
-    const char *names[numRoutes] = {"Cutoff", "Res", "Cutoff", "Res",  "Pre",
-                                    "Blend",  "Mix", "F/Back", "Noise"};
-    for (int i = 0; i < numRoutes; ++i)
-        mkKnob(routeK[i], routeD[i], names[i], 0.f, -1.f, 1.f);
+    auto mkRoute = [this](int idx, const Param &p, const std::string &lab)
+    {
+        createComponent(editor, *this, p, routeK[idx], routeD[idx]);
+        routeD[idx]->labelOverride = lab;
+        addAndMakeVisible(*routeK[idx]);
+    };
+    mkRoute(0, en.toCO[0], "Cutoff");
+    mkRoute(1, en.toRes[0], "Res");
+    mkRoute(2, en.toCO[1], "Cutoff");
+    mkRoute(3, en.toRes[1], "Res");
+    mkRoute(4, en.toPreG, "Pre");
+    mkRoute(5, en.toFiltBlend, "Blend");
+    mkRoute(6, en.toMix, "Mix");
+    mkRoute(7, en.toFB, "F/Back");
+    mkRoute(8, en.toNoise, "Noise");
 
     auto mkLab = [this](auto &l, const std::string &t)
     {
@@ -126,23 +128,18 @@ EnvFollowerPanel::EnvFollowerPanel(PluginEditor &e)
     mkLab(toF1, "To Filter 1");
     mkLab(toF2, "To Filter 2");
     mkLab(toRt, "To Main");
+
+    namespace jcad = sst::jucegui::component_adapters;
+    auto bi = 15000;
+    jcad::setTraversalId(attack.get(), bi++);
+    jcad::setTraversalId(release.get(), bi++);
+    jcad::setTraversalId(source.get(), bi++);
+    jcad::setTraversalId(channel.get(), bi++);
+    for (auto &k : routeK)
+        jcad::setTraversalId(k.get(), bi++);
 }
 
 EnvFollowerPanel::~EnvFollowerPanel() = default;
-
-void EnvFollowerPanel::showChoiceMenu(sst::jucegui::components::MenuButton *b,
-                                      const std::vector<std::string> &choices)
-{
-    juce::PopupMenu p;
-    for (const auto &c : choices)
-        p.addItem(c, true, b->getLabel() == c,
-                  [w = juce::Component::SafePointer(b), c]()
-                  {
-                      if (w)
-                          w->setLabel(c);
-                  });
-    p.showMenuAsync(juce::PopupMenu::Options().withParentComponent(&editor));
-}
 
 // the route group labels share the header row, so stop the title rule short of them
 void EnvFollowerPanel::paintHeader(juce::Graphics &g)
@@ -185,7 +182,7 @@ void EnvFollowerPanel::resized()
 
     auto cA = knobs.withX(x0 + group(2) + 4).withWidth(chanW - 8);
     source->setBounds(cA.withHeight(22));
-    mode->setBounds(cA.withHeight(22).translated(0, 25));
+    channel->setBounds(cA.withHeight(22).translated(0, 25));
     level->setBounds(cA.withHeight(6).translated(0, 51));
 
     auto rx = ca.getRight() - routeW;
