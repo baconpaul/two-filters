@@ -83,17 +83,27 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
     void onMainThread() noexcept override { engine->onMainThread(); }
 
     bool implementsAudioPorts() const noexcept override { return true; }
-    uint32_t audioPortsCount(bool isInput) const noexcept override { return 1; }
+    static constexpr uint32_t sidechainInputIndex{1};
+
+    uint32_t audioPortsCount(bool isInput) const noexcept override { return isInput ? 2 : 1; }
     bool audioPortsInfo(uint32_t index, bool isInput,
                         clap_audio_port_info *info) const noexcept override
     {
+        if (index >= audioPortsCount(isInput))
+            return false;
+
         info->id = 75241 + index + (isInput ? 73 : 951);
         info->in_place_pair = CLAP_INVALID_ID;
-        if (isInput)
+        info->flags = CLAP_AUDIO_PORT_IS_MAIN;
+        if (isInput && index == sidechainInputIndex)
+        {
+            strncpy(info->name, "Sidechain Input", sizeof(info->name));
+            info->flags = 0;
+        }
+        else if (isInput)
             strncpy(info->name, "Main Input", sizeof(info->name));
         else
             strncpy(info->name, "Main Out", sizeof(info->name));
-        info->flags = CLAP_AUDIO_PORT_IS_MAIN;
         info->channel_count = 2;
         info->port_type = CLAP_PORT_STEREO;
         return true;
