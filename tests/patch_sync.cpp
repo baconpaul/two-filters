@@ -155,6 +155,33 @@ TEST_CASE("UI edit reaches the audio patch through processUIQueue", "[patch-sync
     REQUIRE(approxEq(engine.patch.paramMap.at(pid)->value, target));
 }
 
+TEST_CASE("UI edit lag spans one 60hz ui frame at any sample rate", "[patch-sync]")
+{
+    for (auto sr : {44100.0, 48000.0, 96000.0})
+    {
+        INFO("sample rate " << sr);
+        Engine engine;
+        auto out = makeOut();
+        engine.setSampleRate(sr);
+
+        const uint32_t pid = 502; // Filter 1 morph
+        engine.mainToAudio.push({Engine::MainToAudioMsg::BEGIN_EDIT, pid});
+        engine.mainToAudio.push({Engine::MainToAudioMsg::SET_PARAM, pid, 0.9f});
+        engine.processUIQueue(&out);
+
+        int n{0};
+        while (engine.lagHandler.active && n < 100000)
+        {
+            engine.lagHandler.process();
+            n++;
+        }
+
+        auto ms = 1000.0 * n * blockSize / sr;
+        REQUIRE(ms == Approx(1000.0 / 60.0).margin(1000.0 * blockSize / sr));
+        REQUIRE(approxEq(engine.patch.paramMap.at(pid)->value, 0.9f));
+    }
+}
+
 TEST_CASE("Audio-thread param change drains back into patchMain", "[patch-sync]")
 {
     Engine engine;
