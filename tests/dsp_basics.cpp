@@ -497,3 +497,54 @@ TEST_CASE("Host values are clamped to the param range", "[robustness]")
     e.handleParamValue(&rm, rm.meta.id, 99.f);
     REQUIRE(rm.value == rm.meta.maxVal);
 }
+
+TEST_CASE("Preparing for activation drops stale audio-thread state", "[recovery]")
+{
+    auto ep = std::make_unique<Engine>();
+    auto &e = *ep;
+    e.setSampleRate(48000);
+
+    Engine::MainToAudioMsg m{};
+    m.action = Engine::MainToAudioMsg::STOP_AUDIO;
+    e.mainToAudio.push(m);
+    e.audioRunning = false;
+    e.lagHandler.active = true;
+    e.beginEndParamGestureCount = 3;
+
+    e.prepareForActivation();
+    REQUIRE(!e.mainToAudio.pop().has_value());
+    REQUIRE(e.audioRunning);
+    REQUIRE(!e.lagHandler.active);
+    REQUIRE(e.beginEndParamGestureCount == 0);
+}
+
+TEST_CASE("Reinitializing clears the filter tails", "[recovery]")
+{
+    auto ep = std::make_unique<Engine>();
+    auto &e = *ep;
+    e.patch.filterNodes[0].resonance = 0.95;
+    e.patch.routingNode.feedbackPower = 1;
+    e.patch.routingNode.feedback = 0.5;
+    e.setSampleRate(48000);
+    clap_output_events_t out{nullptr, envOutTryPush};
+
+    auto run = [&](float x)
+    {
+        float L{0}, R{0};
+        for (int b = 0; b < 100; ++b)
+        {
+            e.processControl(&out);
+            for (int s = 0; s < blockSize; ++s)
+                e.processAudio<Engine::RoutingModes::Serial, true, false, false>(
+                    (b == 0 && s == 0) ? x : 0.f, 0.f, L, R);
+        }
+        return std::fabs(L) + std::fabs(R);
+    };
+
+    run(1.f);
+    REQUIRE(run(0.f) > 0.f);
+
+    run(1.f);
+    e.reinitializeDSP();
+    REQUIRE(run(0.f) == 0.f);
+}
