@@ -72,6 +72,13 @@ inline std::string fileTrunc(const std::string &f)
         }                                                                                          \
         x842132 = true;                                                                            \
     }
+// for the audio thread, where console io can stall a release build
+#ifdef NDEBUG
+#define SQLOG_AUDIO_DEBUG(...)
+#else
+#define SQLOG_AUDIO_DEBUG(...) SQLOG(__VA_ARGS__)
+#endif
+
 #define SQD(x) " " << #x << "=" << x
 
 #endif // CONFIGURATION_H

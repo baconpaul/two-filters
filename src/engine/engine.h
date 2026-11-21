@@ -105,6 +105,9 @@ struct Engine
     void reinitializeDSP();
     void reinitializeFollower();
 
+    // call before choosing the processing variant, so a buffer never runs half switched
+    void updateOversampling();
+
     // float exponent plus a quadratic on the mantissa, within 0.05db of log2
     static float fastLog2(float x)
     {
@@ -153,6 +156,7 @@ struct Engine
     // peaks since the last ui send, so short hits between sends still show
     float envInPeak{0}, envOutPeak{0};
     static constexpr float followerInputCap{2.5f};
+    static constexpr float maxModulatedResonance{2.f};
     // release is linear in db, so scale the time constant to make the knob the time to zero
     static constexpr float releaseToWindow{
         8.685889638f / -Patch::EnvFollowerNode::floorDb}; // 20 log10(e) db per time constant
@@ -437,8 +441,9 @@ struct Engine
         float value{0};
         uint32_t uintValues[5]{0, 0, 0, 0, 0};
     };
-    using audioToMainQueue_t = sst::cpputils::SimpleRingBuffer<AudioToMainMsg, 1024 * 16>;
-    using mainToAudioQueue_T = sst::cpputils::SimpleRingBuffer<MainToAudioMsg, 1024 * 64>;
+    // these overwrite silently when full, so leave plenty of room for a stalled reader
+    using audioToMainQueue_t = sst::cpputils::SimpleRingBuffer<AudioToMainMsg, 1024 * 32>;
+    using mainToAudioQueue_T = sst::cpputils::SimpleRingBuffer<MainToAudioMsg, 1024 * 128>;
     audioToMainQueue_t audioToMain;
     mainToAudioQueue_T mainToAudio;
     sst::basic_blocks::dsp::UIComponentLagHandler lagHandler;
@@ -500,7 +505,8 @@ struct Engine
     sst::cpputils::active_set_overlay<Param> paramLagSet;
 
     sst::basic_blocks::dsp::VUPeak vuPeak;
-    int32_t updateVuEvery{(int32_t)(48000 * 2.5 / 60 / blockSize)}; // approx
+    static constexpr double vuSecondsPerUpdate{2.5 / 60};
+    int32_t updateVuEvery{(int32_t)(48000 * vuSecondsPerUpdate / blockSize)};
     int32_t lastVuUpdate{updateVuEvery};
 
     float combDelays[2][4][sst::filters::utilities::MAX_FB_COMB +

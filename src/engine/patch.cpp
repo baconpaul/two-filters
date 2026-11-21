@@ -14,8 +14,40 @@
  */
 
 #include "patch.h"
+
+#include <algorithm>
+#include <cmath>
+
 namespace baconpaul::twofilters
 {
+
+void Patch::sanitizeAfterLoad()
+{
+    for (auto &[id, p] : paramMap)
+    {
+        if (!std::isfinite(p->value))
+            p->value = p->meta.defaultVal;
+        p->value = std::clamp(p->value, p->meta.minVal, p->meta.maxVal);
+    }
+
+    namespace sfpp = sst::filtersplusplus;
+    for (auto &fn : filterNodes)
+    {
+        if (fn.model == sfpp::FilterModel::None)
+            continue;
+        auto cfgs = sfpp::Filter::availableModelConfigurations(fn.model);
+        auto same = [&fn](const auto &c)
+        {
+            return c.pt == fn.config.pt && c.st == fn.config.st && c.dt == fn.config.dt &&
+                   c.mt == fn.config.mt;
+        };
+        if (std::find_if(cfgs.begin(), cfgs.end(), same) == cfgs.end())
+        {
+            fn.model = sfpp::FilterModel::None;
+            fn.config = {};
+        }
+    }
+}
 
 float Patch::migrateParamValueFromVersion(Param *p, float value, uint32_t version) { return value; }
 
@@ -44,6 +76,8 @@ void Patch::migratePatchFromVersion(uint32_t version)
             break;
         }
     }
+
+    sanitizeAfterLoad();
 }
 
 void Patch::additionalToStateImpl(TiXmlElement &root)
@@ -151,6 +185,10 @@ void Patch::additionalFromStateImpl(TiXmlElement *root, uint32_t version)
             k = k->NextSiblingElement("filter");
         }
     }
+
+    // older and newer versions are migrated first, then sanitized there
+    if (version == patchVersion)
+        sanitizeAfterLoad();
 }
 
 } // namespace baconpaul::twofilters
