@@ -88,6 +88,17 @@ jobs:
           cmake -S . -B ./build ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Release -DCOPY_AFTER_BUILD=FALSE  -DGITHUB_ACTIONS_BUILD=TRUE
           cmake --build ./build --config Release --target ${TARGET_NAME}-installer --parallel 3
 
+      - name: Run unit tests
+        run: |
+          config=${{ github.event_name == 'pull_request' && 'Debug' || 'Release' }}
+          cmake --build ./build --config $config --target ${TARGET_NAME}-tests --parallel 3
+          # visual studio builds put each config in its own folder
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            ./build/tests/$config/${TARGET_NAME}-tests.exe
+          else
+            ./build/tests/${TARGET_NAME}-tests
+          fi
+
       - name: Show Installer Directory
         run: |
           ls -l build/installer

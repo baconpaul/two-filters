@@ -23,6 +23,8 @@
 
 #include "catch2/catch2.hpp"
 
+#include <memory>
+
 #include <cmath>
 #include <string>
 #include <vector>
@@ -136,7 +138,8 @@ TEST_CASE("toState / fromState round-trips values and filter config", "[patch-sy
 
 TEST_CASE("UI edit reaches the audio patch through processUIQueue", "[patch-sync]")
 {
-    Engine engine;
+    auto enginePtr = std::make_unique<Engine>();
+    auto &engine = *enginePtr;
     auto out = makeOut();
 
     const uint32_t pid = 500; // Filter 1 cutoff
@@ -160,7 +163,8 @@ TEST_CASE("UI edit lag spans one 60hz ui frame at any sample rate", "[patch-sync
     for (auto sr : {44100.0, 48000.0, 96000.0})
     {
         INFO("sample rate " << sr);
-        Engine engine;
+        auto enginePtr = std::make_unique<Engine>();
+        auto &engine = *enginePtr;
         auto out = makeOut();
         engine.setSampleRate(sr);
 
@@ -184,7 +188,8 @@ TEST_CASE("UI edit lag spans one 60hz ui frame at any sample rate", "[patch-sync
 
 TEST_CASE("Audio-thread param change drains back into patchMain", "[patch-sync]")
 {
-    Engine engine;
+    auto enginePtr = std::make_unique<Engine>();
+    auto &engine = *enginePtr;
 
     const uint32_t pid = 501; // Filter 1 resonance
     const float target = 0.42f;
@@ -202,7 +207,8 @@ TEST_CASE("Audio-thread param change drains back into patchMain", "[patch-sync]"
 TEST_CASE("paramsFlushMainThread applies host values to patchMain and forces a UI rebuild",
           "[patch-sync]")
 {
-    Engine engine;
+    auto enginePtr = std::make_unique<Engine>();
+    auto &engine = *enginePtr;
     auto out = makeOut();
 
     const uint32_t pid = 500; // Filter 1 cutoff
@@ -227,7 +233,8 @@ TEST_CASE("paramsFlushMainThread applies host values to patchMain and forces a U
 TEST_CASE("paramsFlushMainThread with no incoming param values does not bump uiForceRebuild",
           "[patch-sync]")
 {
-    Engine engine;
+    auto enginePtr = std::make_unique<Engine>();
+    auto &engine = *enginePtr;
     auto out = makeOut();
     const auto rebuildBefore = engine.uiForceRebuild.load();
 
@@ -240,7 +247,8 @@ TEST_CASE("paramsFlushMainThread with no incoming param values does not bump uiF
 
 TEST_CASE("drainAudioToMainInto applies only patch-affecting messages", "[patch-sync]")
 {
-    Engine engine;
+    auto enginePtr = std::make_unique<Engine>();
+    auto &engine = *enginePtr;
 
     const uint32_t pid = 502; // Filter 1 morph
     const float before = engine.patchMain.paramMap.at(pid)->value;
@@ -261,7 +269,8 @@ TEST_CASE("drainAudioToMainInto applies only patch-affecting messages", "[patch-
 
 TEST_CASE("Host automation carrying a clap cookie reaches the audio patch", "[patch-sync]")
 {
-    Engine engine;
+    auto enginePtr = std::make_unique<Engine>();
+    auto &engine = *enginePtr;
 
     const uint32_t pid = 501; // Filter 1 resonance
     const float target = 0.42f;
@@ -356,7 +365,8 @@ TEST_CASE("Automation smoothing defaults, streams and migrates", "[patch-sync]")
 
 TEST_CASE("Host automation lag follows the smoothing time", "[patch-sync]")
 {
-    Engine engine;
+    auto enginePtr = std::make_unique<Engine>();
+    auto &engine = *enginePtr;
     auto out = makeOut();
     engine.setSampleRate(48000);
 

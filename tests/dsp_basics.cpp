@@ -15,6 +15,8 @@
 
 #include "catch2/catch2.hpp"
 
+#include <memory>
+
 #include <cmath>
 #include <algorithm>
 
@@ -174,7 +176,8 @@ void feedEnv(Engine &e, float L, float R, int n)
 TEST_CASE("Envelope follower attack is one time constant and release spans the window",
           "[envfollower]")
 {
-    Engine engine;
+    auto enginePtr = std::make_unique<Engine>();
+    auto &engine = *enginePtr;
     engine.setSampleRate(48000);
     auto &en = engine.patch.envFollowerNode;
     en.attack = std::log2(0.01f);
@@ -195,7 +198,8 @@ TEST_CASE("Envelope follower attack is one time constant and release spans the w
 
 TEST_CASE("Envelope follower input is capped", "[envfollower]")
 {
-    Engine engine;
+    auto enginePtr = std::make_unique<Engine>();
+    auto &engine = *enginePtr;
     engine.setSampleRate(48000);
     engine.patch.envFollowerNode.attack = -11;
     engine.updateEnvFollower();
@@ -212,7 +216,8 @@ TEST_CASE("Envelope follower channel modes rectify the chosen signal", "[envfoll
     using EF = Patch::EnvFollowerNode;
     auto settle = [](int channel)
     {
-        Engine engine;
+        auto enginePtr = std::make_unique<Engine>();
+        auto &engine = *enginePtr;
         engine.setSampleRate(48000);
         engine.patch.envFollowerNode.attack = -11;
         engine.patch.envFollowerNode.channel = channel;
@@ -232,7 +237,8 @@ TEST_CASE("Envelope follower modulates the mix", "[envfollower]")
     // a nyquist square through the default lowpass is almost silent, so wet and dry differ
     auto run = [](float envInput)
     {
-        Engine engine;
+        auto enginePtr = std::make_unique<Engine>();
+        auto &engine = *enginePtr;
         engine.setSampleRate(48000);
         engine.patch.envFollowerNode.attack = -11;
         engine.patch.envFollowerNode.toMix = -1;
@@ -289,7 +295,8 @@ TEST_CASE("Fast log2 tracks log2", "[envfollower]")
 
 TEST_CASE("Reactivating clears the oversampling filters", "[recovery]")
 {
-    Engine e;
+    auto ePtr = std::make_unique<Engine>();
+    auto &e = *ePtr;
     e.patch.routingNode.oversample = 1;
     e.setSampleRate(48000);
     clap_output_events_t out{nullptr, envOutTryPush};
@@ -317,7 +324,8 @@ TEST_CASE("Reactivating clears the oversampling filters", "[recovery]")
 
 TEST_CASE("Reinitializing clears a poisoned filter and follower", "[recovery]")
 {
-    Engine e;
+    auto ePtr = std::make_unique<Engine>();
+    auto &e = *ePtr;
     e.patch.routingNode.feedbackPower = 1;
     e.patch.routingNode.feedback = 0.5;
     e.setSampleRate(48000);
@@ -348,7 +356,8 @@ TEST_CASE("Reinitializing clears a poisoned filter and follower", "[recovery]")
 
 TEST_CASE("Reactivating clears the envelope follower", "[recovery]")
 {
-    Engine e;
+    auto ePtr = std::make_unique<Engine>();
+    auto &e = *ePtr;
     e.setSampleRate(48000);
     // the input cap stops a nan getting in, so poison the state directly
     e.envFollower.zL = std::nanf("");
@@ -403,7 +412,8 @@ TEST_CASE("Reinitializing the follower leaves the filters running", "[recovery]"
 TEST_CASE("A zero time signature behaves as 4/4", "[robustness]")
 {
     using TR = sst::basic_blocks::modulators::Transport;
-    Engine e;
+    auto ePtr = std::make_unique<Engine>();
+    auto &e = *ePtr;
     e.patch.routingNode.retriggerMode = (int)Engine::RetrigModes::EveryBar;
     e.patch.stepLfoNodes[0].toCO[0] = 12;
     e.setSampleRate(48000);
@@ -434,7 +444,8 @@ TEST_CASE("A zero time signature behaves as 4/4", "[robustness]")
 TEST_CASE("Modulation past nyquist stays finite", "[robustness]")
 {
     // vember classic went to nan within samples once modulation pushed cutoff past nyquist
-    Engine e;
+    auto ePtr = std::make_unique<Engine>();
+    auto &e = *ePtr;
     auto &fn = e.patch.filterNodes[0];
     fn.model = sst::filtersplusplus::FilterModel::VemberClassic;
     fn.config = sst::filtersplusplus::Filter::availableModelConfigurations(fn.model, true)[0];
@@ -479,7 +490,8 @@ TEST_CASE("Loading a damaged state is sanitized", "[robustness]")
 
 TEST_CASE("Host values are clamped to the param range", "[robustness]")
 {
-    Engine e;
+    auto ePtr = std::make_unique<Engine>();
+    auto &e = *ePtr;
     e.setSampleRate(48000);
     auto &rm = e.patch.routingNode.routingMode;
     e.handleParamValue(&rm, rm.meta.id, 99.f);
