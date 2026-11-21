@@ -20,7 +20,6 @@
 #include "sst/jucegui/components/Knob.h"
 #include "sst/jucegui/components/MenuButton.h"
 #include "sst/jucegui/components/RuledLabel.h"
-#include "sst/jucegui/components/VUMeter.h"
 #include "patch-data-bindings.h"
 #include "plugin-editor.h"
 
@@ -28,6 +27,7 @@ namespace baconpaul::twofilters::ui
 {
 
 struct EnvTrace;
+struct EnvLevel;
 
 struct EnvFollowerPanel : sst::jucegui::components::NamedPanel
 {
@@ -37,17 +37,20 @@ struct EnvFollowerPanel : sst::jucegui::components::NamedPanel
 
     PluginEditor &editor;
 
+    // linear input and follower peaks since the last send
+    void setLevels(float in, float out);
+
     void beginEdit() {}
     void endEdit(int id) {}
 
-    std::unique_ptr<PatchContinuous> attackD, releaseD;
-    std::unique_ptr<sst::jucegui::components::Knob> attack, release;
+    std::unique_ptr<PatchContinuous> attackD, releaseD, gainD;
+    std::unique_ptr<sst::jucegui::components::Knob> attack, release, gain;
     void paintHeader(juce::Graphics &g) override;
     int headerRuleEnd{0};
 
     std::unique_ptr<PatchDiscrete> sourceD, channelD;
     std::unique_ptr<sst::jucegui::components::MenuButtonDiscreteEditor> source, channel;
-    std::unique_ptr<sst::jucegui::components::VUMeter> level;
+    std::unique_ptr<EnvLevel> level;
     std::unique_ptr<EnvTrace> trace;
 
     static constexpr int numRoutes{2 * 2 + 5};

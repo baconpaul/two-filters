@@ -50,6 +50,8 @@ void Engine::setSampleRate(double sr)
     lagHandler.setRate(60, blockSize, sampleRate);
 
     vuPeak.setSampleRate(sampleRate);
+    envFollower.setSampleRate(sampleRate);
+    updateEnvFollower(true);
 
     audioToMain.push({AudioToMainMsg::SEND_SAMPLE_RATE, 0, (float)sampleRate});
 
@@ -98,11 +100,29 @@ void Engine::reassignLfos()
     sendUpdateLfo();
 }
 
+void Engine::updateEnvFollower(bool force)
+{
+    auto &en = patch.envFollowerNode;
+    if (force || en.attack.value != envAttack)
+    {
+        envAttack = en.attack.value;
+        envFollower.set_attack(std::exp2(envAttack));
+    }
+    if (force || en.release.value != envRelease)
+    {
+        envRelease = en.release.value;
+        envFollower.set_release(std::exp2(envRelease));
+    }
+    envFromSidechain = (int)std::round(en.source.value) == Patch::EnvFollowerNode::SIDECHAIN;
+    envChannel = (int)std::round(en.channel.value);
+}
+
 void Engine::processControl(const clap_output_events_t *outq)
 {
     auto beatsPerMeasure = 4.0 * transport.signature.numerator / transport.signature.denominator;
 
     processUIQueue(outq);
+    updateEnvFollower();
 
     auto pos = patch.routingNode.oversample > 0.5;
     if (pos != overSampling)
@@ -175,6 +195,9 @@ void Engine::processControl(const clap_output_events_t *outq)
         }
     }
 
+    auto &en = patch.envFollowerNode;
+    auto env = envToMod(envLevel, en.gain);
+
     for (int i = 0; i < numFilters; ++i)
     {
         filters[i].concludeBlock();
@@ -191,6 +214,8 @@ void Engine::processControl(const clap_output_events_t *outq)
             re += lfos[j].output * patch.stepLfoNodes[j].toRes[i];
             mo += lfos[j].output * patch.stepLfoNodes[j].toMorph[i];
         }
+        co += env * en.toCO[i];
+        re += env * en.toRes[i];
         if (sst::filtersplusplus::Filter::coefficientsExtraIsBipolar(fn.model, fn.config, 0))
             mo = mo * 2 - 1;
 
@@ -205,7 +230,7 @@ void Engine::processControl(const clap_output_events_t *outq)
     {
         auto bv = patch.routingNode.filterBlendSerial +
                   lfos[0].output * patch.stepLfoNodes[0].toFiltBlend +
-                  lfos[1].output * patch.stepLfoNodes[1].toFiltBlend;
+                  lfos[1].output * patch.stepLfoNodes[1].toFiltBlend + env * en.toFiltBlend;
         bv = std::clamp(bv, 0.f, 1.f);
         blendLipol1.newValue(sqrt(1 - bv)); // so blend of 0 is all 1 or all 2 with sum at half
         blendLipol2.newValue(sqrt(bv));
@@ -214,7 +239,7 @@ void Engine::processControl(const clap_output_events_t *outq)
     {
         auto bv = patch.routingNode.filterBlendParallel +
                   lfos[0].output * patch.stepLfoNodes[0].toFiltBlend +
-                  lfos[1].output * patch.stepLfoNodes[1].toFiltBlend;
+                  lfos[1].output * patch.stepLfoNodes[1].toFiltBlend + env * en.toFiltBlend;
         bv = (std::clamp(bv, -1.f, 1.f) + 1) * 0.5;
 
         blendLipol1.newValue(sqrt(1 - bv) * 1.4142135); // so blend of 0 == bv of 0.5 has lipol of 1
@@ -237,14 +262,14 @@ void Engine::processControl(const clap_output_events_t *outq)
     useFeedback = patch.routingNode.feedbackPower > 0.5;
 
     float inG = patch.routingNode.inputGain + lfos[0].output * patch.stepLfoNodes[0].toPreG +
-                lfos[1].output * patch.stepLfoNodes[1].toPreG;
+                lfos[1].output * patch.stepLfoNodes[1].toPreG + env * en.toPreG;
     inG = std::clamp(inG, 0.f, patch.routingNode.inputGain.meta.maxVal);
     inG = inG * inG * inG;
     inGainLipol.newValue(inG);
 
     float nsG =
         std::clamp(patch.routingNode.noiseLevel + lfos[0].output * patch.stepLfoNodes[0].toNoise +
-                       lfos[1].output * patch.stepLfoNodes[1].toNoise,
+                       lfos[1].output * patch.stepLfoNodes[1].toNoise + env * en.toNoise,
                    0.f, 1.f);
     nsG = nsG * nsG * nsG;
     noiseGainLipol.newValue(nsG);
@@ -252,6 +277,7 @@ void Engine::processControl(const clap_output_events_t *outq)
     float fblev = patch.routingNode.feedback;
     fblev +=
         lfos[0].output * patch.stepLfoNodes[0].toFB + lfos[1].output * patch.stepLfoNodes[1].toFB;
+    fblev += env * en.toFB;
     fblev = std::clamp(fblev, 0.f, 1.f);
     fblev = fblev * fblev * fblev;
     fbLevelLipol.newValue(fblev);
@@ -259,6 +285,7 @@ void Engine::processControl(const clap_output_events_t *outq)
     float mx = patch.routingNode.mix;
     mx +=
         lfos[0].output * patch.stepLfoNodes[0].toMix + lfos[1].output * patch.stepLfoNodes[1].toMix;
+    mx += env * en.toMix;
     mx = std::clamp(mx, 0.f, 1.f);
     mixLipol.newValue(mx);
 
@@ -290,6 +317,9 @@ void Engine::processControl(const clap_output_events_t *outq)
         {
             AudioToMainMsg msg{AudioToMainMsg::UPDATE_VU, 0, vuPeak.vu_peak[0], vuPeak.vu_peak[1]};
             audioToMain.push(msg);
+            audioToMain.push({AudioToMainMsg::UPDATE_ENVFOLLOWER, 0, envInPeak, envOutPeak});
+            envInPeak = 0;
+            envOutPeak = 0;
 
             sendUpdateLfo();
 
@@ -299,6 +329,11 @@ void Engine::processControl(const clap_output_events_t *outq)
         {
             lastVuUpdate++;
         }
+    }
+    else
+    {
+        envInPeak = 0;
+        envOutPeak = 0;
     }
 }
 

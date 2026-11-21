@@ -496,6 +496,7 @@ struct Patch : pats::PatchBase<Patch, Param>
                           .withID(id(3))
                           .withUnorderedMapFormatting(
                               {{LEFT, "L"}, {RIGHT, "R"}, {MID, "Mid"}, {SIDE, "Side"}})),
+              gain(floatMd().asDecibelNarrow().withGroupName(gn).withName("Gain").withID(id(4))),
               toCO{route().asSemitoneRange(-36, 36).withName("To F1 CO").withID(id(10)),
                    route().asSemitoneRange(-36, 36).withName("To F2 CO").withID(id(12))},
               toRes{route().asPercentBipolar().withName("To F1 Res").withID(id(11)),
@@ -512,14 +513,17 @@ struct Patch : pats::PatchBase<Patch, Param>
         static md_t route() { return floatMd().withGroupName(gn); }
         uint32_t id(int f) const { return idBase + f; }
 
-        Param attack, release, source, channel;
+        // follower level at or below this many dB gives no modulation
+        static constexpr float floorDb{-48.f};
+
+        Param attack, release, source, channel, gain;
         Param toCO[numFilters], toRes[numFilters];
         Param toPreG, toFiltBlend, toMix, toFB, toNoise;
 
         std::vector<Param *> params()
         {
-            return {&attack,   &release, &source,      &channel, &toCO[0], &toRes[0], &toCO[1],
-                    &toRes[1], &toPreG,  &toFiltBlend, &toMix,   &toFB,    &toNoise};
+            return {&attack,  &release,  &gain,   &source,      &channel, &toCO[0], &toRes[0],
+                    &toCO[1], &toRes[1], &toPreG, &toFiltBlend, &toMix,   &toFB,    &toNoise};
         }
     } envFollowerNode;
 

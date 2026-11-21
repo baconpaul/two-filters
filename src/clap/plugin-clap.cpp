@@ -198,6 +198,18 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         auto inD = process->audio_inputs->data32;
         auto outD = process->audio_outputs->data32;
 
+        // hosts may omit the sidechain or hand it over mono
+        const float *scL{nullptr}, *scR{nullptr};
+        if (process->audio_inputs_count > sidechainInputIndex)
+        {
+            auto &sc = process->audio_inputs[sidechainInputIndex];
+            if (sc.data32 && sc.channel_count > 0 && sc.data32[0])
+            {
+                scL = sc.data32[0];
+                scR = (sc.channel_count > 1 && sc.data32[1]) ? sc.data32[1] : scL;
+            }
+        }
+
         for (auto s = 0U; s < process->frames_count; ++s)
         {
             if (blockPos == 0)
@@ -215,6 +227,13 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
                 engine->processControl(outq);
             }
+
+            if (!engine->envFromSidechain)
+                engine->processEnvFollower(inD[0][s], inD[1][s]);
+            else if (scL)
+                engine->processEnvFollower(scL[s], scR[s]);
+            else
+                engine->processEnvFollower(0.f, 0.f);
 
             engine->processAudio<routingMode, withFeedback, withNoise, withOS>(
                 inD[0][s], inD[1][s], outD[0][s], outD[1][s]);

@@ -20,12 +20,15 @@
 #include <array>
 #include <atomic>
 #include <string>
+#include <cstdint>
+#include <cstring>
 
 #include "sst/basic-blocks/dsp/LanczosResampler.h"
 
 #include <clap/clap.h>
 #include "sst/basic-blocks/dsp/Lag.h"
 #include "sst/basic-blocks/dsp/VUPeak.h"
+#include "sst/basic-blocks/dsp/Ballistics.h"
 #include "sst/basic-blocks/dsp/RNG.h"
 #include "sst/basic-blocks/dsp/PanLaws.h"
 #include "sst/basic-blocks/tables/EqualTuningProvider.h"
@@ -90,6 +93,59 @@ struct Engine
     static void updateLfoStorageFromTo(const Patch &p, int node, stepLfo_t::Storage &to);
 
     void restartLfos();
+
+    sst::basic_blocks::dsp::Ballistics envFollower;
+    float envAttack{0}, envRelease{0};
+    bool envFromSidechain{false};
+    int envChannel{Patch::EnvFollowerNode::MID};
+    float envLevel{0};
+    void updateEnvFollower(bool force = false);
+
+    // float exponent plus a quadratic on the mantissa, within 0.05db of log2
+    static float fastLog2(float x)
+    {
+        uint32_t i;
+        std::memcpy(&i, &x, sizeof(i));
+        auto e = float(int(i >> 23) - 127);
+        i = (i & 0x7FFFFF) | 0x3F800000;
+        float m;
+        std::memcpy(&m, &i, sizeof(m));
+        return e + (-0.34655f * m + 2.03965f) * m - 1.6931f;
+    }
+
+    // a db window, so quiet sources still swing the full depth
+    static float envToMod(float level, float gainDb)
+    {
+        auto db = 6.0206f * fastLog2(std::max(level, 1e-6f)) + gainDb;
+        return std::clamp(1.f - db / Patch::EnvFollowerNode::floorDb, 0.f, 1.f);
+    }
+
+    void processEnvFollower(float L, float R)
+    {
+        using EF = Patch::EnvFollowerNode;
+        float x;
+        switch (envChannel)
+        {
+        case EF::LEFT:
+            x = L;
+            break;
+        case EF::RIGHT:
+            x = R;
+            break;
+        case EF::SIDE:
+            x = 0.5f * (L - R);
+            break;
+        default:
+            x = 0.5f * (L + R);
+            break;
+        }
+        auto ax = std::fabs(x);
+        envFollower.process_sample(ax, envLevel);
+        envInPeak = std::max(envInPeak, ax);
+        envOutPeak = std::max(envOutPeak, envLevel);
+    }
+    // peaks since the last ui send, so short hits between sends still show
+    float envInPeak{0}, envOutPeak{0};
 
     bool audioRunning{true};
     int beginEndParamGestureCount{0};
@@ -345,6 +401,7 @@ struct Engine
         {
             UPDATE_PARAM,
             UPDATE_VU,
+            UPDATE_ENVFOLLOWER,
             UPDATE_LFOSTEP,
             SEND_SAMPLE_RATE,
         } action;
