@@ -75,13 +75,18 @@ void Engine::reinitializeDSP()
     hrUp.reset();
     hrDn.reset();
     memset(noiseState, 0, sizeof(noiseState));
+    reinitializeFollower();
+    for (int i = 0; i < numFilters; ++i)
+        setupFilter(i);
+}
+
+void Engine::reinitializeFollower()
+{
     envFollower.zL = 0;
     envFollower.zR = 0;
     envLevel = 0;
     envInPeak = 0;
     envOutPeak = 0;
-    for (int i = 0; i < numFilters; ++i)
-        setupFilter(i);
 }
 
 void Engine::updateLfoStorage()
