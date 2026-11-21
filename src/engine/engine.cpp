@@ -99,6 +99,17 @@ void Engine::reinitializeDSP()
         setupFilter(i);
 }
 
+void Engine::prepareForActivation()
+{
+    // patchMain is copied in whole next, so anything still queued is stale
+    while (mainToAudio.pop().has_value())
+        ;
+    lagHandler.active = false;
+    beginEndParamGestureCount = 0;
+    // a stop whose matching start was just dropped must not leave us silent
+    audioRunning = true;
+}
+
 void Engine::reinitializeFollower()
 {
     envFollower.zL = 0;

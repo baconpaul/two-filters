@@ -75,6 +75,7 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                   uint32_t maxFrameCount) noexcept override
     {
         // The audio thread is stopped here; seed it from the main-thread source of truth.
+        engine->prepareForActivation();
         engine->patch.copyValuesFrom(engine->patchMain);
         engine->setSampleRate(sampleRate);
         return true;
@@ -271,7 +272,12 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
         return CLAP_PROCESS_CONTINUE;
     }
 
-    void reset() noexcept override {}
+    void reset() noexcept override
+    {
+        // the host wants a clean start, so no filter or feedback tails carry over
+        engine->reinitializeDSP();
+        blockPos = 0;
+    }
 
     bool handleEvent(const clap_event_header_t *nextEvent)
     {

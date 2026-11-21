@@ -105,6 +105,9 @@ struct Engine
     void reinitializeDSP();
     void reinitializeFollower();
 
+    // main thread, with the audio thread stopped, before patchMain is copied in
+    void prepareForActivation();
+
     // call before choosing the processing variant, so a buffer never runs half switched
     void updateOversampling();
 
