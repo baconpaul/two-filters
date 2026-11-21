@@ -50,11 +50,6 @@ void Engine::setSampleRate(double sr)
     lagHandler.setRate(60, blockSize, sampleRate);
 
     vuPeak.setSampleRate(sampleRate);
-
-    // a reactivate must clear any bad state, or only destroying the plugin recovers it
-    hrUp.reset();
-    hrDn.reset();
-
     envFollower.setSampleRate(sampleRate);
     updateEnvFollower(true);
 
@@ -67,13 +62,26 @@ void Engine::setSampleRate(double sr)
     maxCutoff = 12.0 * log2(nq / 440.0);
     reassignLfos();
     sendUpdateLfo();
-    for (int i = 0; i < numFilters; ++i)
-    {
-        setupFilter(i);
-    }
+
+    // a reactivate must clear any bad state, or only destroying the plugin recovers it
+    reinitializeDSP();
 
     for (auto &pl : panLag)
         pl.setRateInMilliseconds(25, sampleRate, 1.0 / blockSize);
+}
+
+void Engine::reinitializeDSP()
+{
+    hrUp.reset();
+    hrDn.reset();
+    memset(noiseState, 0, sizeof(noiseState));
+    envFollower.zL = 0;
+    envFollower.zR = 0;
+    envLevel = 0;
+    envInPeak = 0;
+    envOutPeak = 0;
+    for (int i = 0; i < numFilters; ++i)
+        setupFilter(i);
 }
 
 void Engine::updateLfoStorage()

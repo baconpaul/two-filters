@@ -295,3 +295,45 @@ TEST_CASE("Reactivating clears the oversampling filters", "[recovery]")
     }
     REQUIRE(ok);
 }
+
+TEST_CASE("Reinitializing clears a poisoned filter and follower", "[recovery]")
+{
+    Engine e;
+    e.patch.routingNode.feedbackPower = 1;
+    e.patch.routingNode.feedback = 0.5;
+    e.setSampleRate(48000);
+    clap_output_events_t out{nullptr, envOutTryPush};
+
+    auto run = [&](float bad)
+    {
+        bool ok{true};
+        for (int b = 0; b < 100; ++b)
+        {
+            e.processControl(&out);
+            for (int s = 0; s < blockSize; ++s)
+            {
+                auto x = (b == 0 && s == 3) ? bad : 0.1f;
+                float L, R;
+                e.processEnvFollower(x, x);
+                e.processAudio<Engine::RoutingModes::Serial, true, false, false>(x, x, L, R);
+                ok = ok && std::isfinite(L) && std::isfinite(R);
+            }
+        }
+        return ok && std::isfinite(e.envLevel);
+    };
+
+    REQUIRE(!run(std::nanf("")));
+    e.reinitializeDSP();
+    REQUIRE(run(0.1f));
+}
+
+TEST_CASE("Reactivating clears the envelope follower", "[recovery]")
+{
+    Engine e;
+    e.setSampleRate(48000);
+    feedEnv(e, std::nanf(""), 0.f, 1);
+    REQUIRE(!std::isfinite(e.envLevel));
+    e.setSampleRate(48000);
+    feedEnv(e, 0.1f, 0.1f, 480);
+    REQUIRE(std::isfinite(e.envLevel));
+}

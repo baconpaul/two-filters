@@ -174,6 +174,15 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 #undef CWNS
         }
 
+        // a nan poisons the state so one sample shows it, but the follower masks its nan as full
+        // depth
+        auto oD = process->audio_outputs[0].data32;
+        if (process->frames_count > 0 && (!std::isfinite(oD[0][0]) || !std::isfinite(oD[1][0]) ||
+                                          !std::isfinite(engine->envLevel)))
+        {
+            engine->reinitializeDSP();
+        }
+
         return CLAP_PROCESS_CONTINUE;
     }
 
