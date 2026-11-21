@@ -561,6 +561,17 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
                                    {&l.toMix, &l.toPreG, &l.toPostG, &l.toFB, &l.toNoise,
                                     &l.toFiltBlend, &l.rate, &l.smooth}});
         }
+
+        // follower controls on top, filter routes below; routing slots line up with the lfos
+        auto &en = pm.envFollowerNode;
+        remotePages.push_back({"Env Follower",
+                               "Env Follower",
+                               {&en.attack, &en.release, &en.gain, &en.source, &en.toCO[0],
+                                &en.toRes[0], &en.toCO[1], &en.toRes[1]}});
+        remotePages.push_back({"Env Follower",
+                               "Env Routing",
+                               {&en.toMix, &en.toPreG, nullptr, &en.toFB, &en.toNoise,
+                                &en.toFiltBlend, &en.channel, nullptr}});
     }
 
     static uint32_t CLAP_ABI remoteControlsCount(const clap_plugin_t *plugin) noexcept
