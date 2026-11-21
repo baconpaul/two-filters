@@ -551,6 +551,9 @@ struct Patch : pats::PatchBase<Patch, Param>
     float migrateParamValueFromVersion(Param *p, float value, uint32_t version);
     void migratePatchFromVersion(uint32_t version);
 
+    // a state from a newer version or a damaged file must not reach the engine as is
+    void sanitizeAfterLoad();
+
     void additionalToStateImpl(TiXmlElement &root);
     void additionalFromStateImpl(TiXmlElement *root, uint32_t version);
 };

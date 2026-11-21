@@ -33,6 +33,23 @@ Engine::Engine() : lfos{tuningProvider, tuningProvider}, hrUp{6, true}, hrDn{6, 
 {
     tuningProvider.init();
     updateLfoStorage();
+
+    // filters++ builds each model's table on first use, so do that here, not on the audio thread
+    for (auto m : sst::filtersplusplus::Filter::availableModels()) [[maybe_unused]]
+        auto c = sst::filtersplusplus::Filter::availableModelConfigurations(m);
+}
+
+void Engine::updateOversampling()
+{
+    auto pos = patch.routingNode.oversample > 0.5;
+    if (pos != overSampling)
+    {
+        overSampling = pos;
+        hrUp.reset();
+        hrDn.reset();
+        setupFilter(0);
+        setupFilter(1);
+    }
 }
 
 Engine::~Engine() {}
@@ -50,6 +67,8 @@ void Engine::setSampleRate(double sr)
     lagHandler.setRate(60, blockSize, sampleRate);
 
     vuPeak.setSampleRate(sampleRate);
+    updateVuEvery = std::max(1, (int32_t)(sampleRate * vuSecondsPerUpdate / blockSize));
+    updateOversampling();
     envFollower.setSampleRate(sampleRate);
     updateEnvFollower(true);
 
@@ -137,20 +156,13 @@ void Engine::updateEnvFollower(bool force)
 
 void Engine::processControl(const clap_output_events_t *outq)
 {
-    auto beatsPerMeasure = 4.0 * transport.signature.numerator / transport.signature.denominator;
+    // hosts with no musical time info send 0/0, so treat any zero as 4/4
+    auto num = transport.signature.numerator;
+    auto den = transport.signature.denominator;
+    auto beatsPerMeasure = (num == 0 || den == 0) ? 4.0 : 4.0 * num / den;
 
     processUIQueue(outq);
     updateEnvFollower();
-
-    auto pos = patch.routingNode.oversample > 0.5;
-    if (pos != overSampling)
-    {
-        overSampling = pos;
-        hrUp.reset();
-        hrDn.reset();
-        setupFilter(0);
-        setupFilter(1);
-    }
 
     auto a0 = patch.filterNodes[0].active > 0.5;
     auto a1 = patch.filterNodes[1].active > 0.5;
@@ -223,7 +235,7 @@ void Engine::processControl(const clap_output_events_t *outq)
         auto &fn = patch.filterNodes[i];
         auto &sn = patch.stepLfoNodes[i];
 
-        float co = std::min((float)fn.cutoff, (float)(maxCutoff * (overSampling + 1)));
+        float co = fn.cutoff;
         float re = fn.resonance;
         float mo = fn.morph;
         for (int j = 0; j < numStepLFOs; ++j)
@@ -234,6 +246,11 @@ void Engine::processControl(const clap_output_events_t *outq)
         }
         co += env * en.toCO[i];
         re += env * en.toRes[i];
+
+        // modulation can push cutoff past nyquist, or morph below 0, where some models go to nan
+        co = std::min(co, (float)(maxCutoff + (overSampling ? 12 : 0)));
+        re = std::min(re, maxModulatedResonance);
+        mo = std::clamp(mo, 0.f, 1.f);
         if (sst::filtersplusplus::Filter::coefficientsExtraIsBipolar(fn.model, fn.config, 0))
             mo = mo * 2 - 1;
 
@@ -380,7 +397,8 @@ void Engine::processUIQueue(const clap_output_events_t *outq)
             {
                 if (beginEndParamGestureCount == 0)
                 {
-                    SQLOG("Non-begin/end bound param edit for '" << dest->meta.name << "'");
+                    SQLOG_AUDIO_DEBUG("Non-begin/end bound param edit for '" << dest->meta.name
+                                                                             << "'");
                 }
                 if (dest->meta.type == md_t::FLOAT &&
                     (dest->adhocFeatures & Param::AdHocFeatureValues::DONT_SMOOTH) == 0)
@@ -495,6 +513,7 @@ void Engine::handleParamValue(Param *p, uint32_t pid, float value)
     {
         p = patch.paramMap.at(pid);
     }
+    value = std::clamp(value, p->meta.minVal, p->meta.maxVal);
 
     auto snap = patch.automationSmoothingMs <= 0 || p->meta.type != md_t::FLOAT ||
                 (p->adhocFeatures & Param::AdHocFeatureValues::DONT_SMOOTH);
@@ -564,7 +583,13 @@ void Engine::setupFilter(int f)
     for (int i = 0; i < 4; ++i)
         filters[f].provideDelayLine(i, combDelays[f][i]);
     if (!filters[f].prepareInstance())
-        SQLOG("Failed to prepare filter instance");
+    {
+        // an unprepared filter has no process function, so fall back to the empty model
+        SQLOG_AUDIO_DEBUG("Failed to prepare filter instance");
+        filters[f].setFilterModel(sst::filtersplusplus::FilterModel::None);
+        filters[f].setModelConfiguration({});
+        [[maybe_unused]] auto ok = filters[f].prepareInstance();
+    }
     filters[f].reset();
     fbL = 0;
     fbR = 0;

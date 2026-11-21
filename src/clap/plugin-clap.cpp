@@ -126,6 +126,7 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
     clap_process_status process(const clap_process *process) noexcept override
     {
+        engine->updateOversampling();
         auto useFeedback = engine->patch.routingNode.feedbackPower > 0.5;
         auto useNoise = engine->patch.routingNode.noisePower > 0.5;
         auto useOS = engine->overSampling;
@@ -292,7 +293,7 @@ struct TwoFilters : public plugHelper_t, sst::clap_juce_shim::EditorProvider
 
             default:
             {
-                SQLOG("Unknown inbound event of type " << nextEvent->type);
+                SQLOG_AUDIO_DEBUG("Unknown inbound event of type " << nextEvent->type);
             }
             break;
             }

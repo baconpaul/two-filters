@@ -361,7 +361,9 @@ TEST_CASE("Reactivating clears the envelope follower", "[recovery]")
 
 TEST_CASE("Reinitializing the follower leaves the filters running", "[recovery]")
 {
-    Engine a, b;
+    // two engines are too big for the stack together
+    auto ap = std::make_unique<Engine>(), bp = std::make_unique<Engine>();
+    auto &a = *ap, &b = *bp;
     a.setSampleRate(48000);
     b.setSampleRate(48000);
     clap_output_events_t out{nullptr, envOutTryPush};
@@ -396,4 +398,90 @@ TEST_CASE("Reinitializing the follower leaves the filters running", "[recovery]"
         REQUIRE(aL == bL);
         REQUIRE(aR == bR);
     }
+}
+
+TEST_CASE("A zero time signature behaves as 4/4", "[robustness]")
+{
+    using TR = sst::basic_blocks::modulators::Transport;
+    Engine e;
+    e.patch.routingNode.retriggerMode = (int)Engine::RetrigModes::EveryBar;
+    e.patch.stepLfoNodes[0].toCO[0] = 12;
+    e.setSampleRate(48000);
+    e.transport.status = TR::PLAYING;
+    clap_output_events_t out{nullptr, envOutTryPush};
+
+    for (auto [num, den] : {std::pair{0, 0}, std::pair{0, 4}, std::pair{4, 0}})
+    {
+        INFO("signature " << num << "/" << den);
+        e.transport.signature.numerator = num;
+        e.transport.signature.denominator = den;
+        bool ok{true};
+        for (int b = 0; b < 200; ++b)
+        {
+            e.processControl(&out);
+            ok = ok && std::isfinite(e.lfos[0].output);
+            for (int s = 0; s < blockSize; ++s)
+            {
+                float L, R;
+                e.processAudio<Engine::RoutingModes::Serial, false, false, false>(0.1f, 0.1f, L, R);
+                ok = ok && std::isfinite(L) && std::isfinite(R);
+            }
+        }
+        REQUIRE(ok);
+    }
+}
+
+TEST_CASE("Modulation past nyquist stays finite", "[robustness]")
+{
+    // vember classic went to nan within samples once modulation pushed cutoff past nyquist
+    Engine e;
+    auto &fn = e.patch.filterNodes[0];
+    fn.model = sst::filtersplusplus::FilterModel::VemberClassic;
+    fn.config = sst::filtersplusplus::Filter::availableModelConfigurations(fn.model, true)[0];
+    fn.cutoff = 70;
+    e.patch.envFollowerNode.toCO[0] = 36;
+    e.patch.envFollowerNode.attack = -11;
+    e.setSampleRate(48000);
+    clap_output_events_t out{nullptr, envOutTryPush};
+
+    bool ok{true};
+    for (int b = 0; b < 600; ++b)
+    {
+        e.processControl(&out);
+        for (int s = 0; s < blockSize; ++s)
+        {
+            auto x = (s & 1) ? 0.9f : -0.9f;
+            float L, R;
+            e.processEnvFollower(x, x);
+            e.processAudio<Engine::RoutingModes::Serial, false, false, false>(x, x, L, R);
+            ok = ok && std::isfinite(L) && std::isfinite(R);
+        }
+    }
+    REQUIRE(ok);
+}
+
+TEST_CASE("Loading a damaged state is sanitized", "[robustness]")
+{
+    auto src = std::make_unique<Patch>();
+    src->routingNode.routingMode = 7;
+    src->stepLfoNodes[0].stepCount = 0;
+    src->filterNodes[0].cutoff = std::nanf("");
+    src->filterNodes[1].model = (sst::filtersplusplus::FilterModel)9999;
+    auto state = src->toState();
+
+    auto dst = std::make_unique<Patch>();
+    REQUIRE(dst->fromState(state));
+    REQUIRE(dst->routingNode.routingMode.value <= dst->routingNode.routingMode.meta.maxVal);
+    REQUIRE(dst->stepLfoNodes[0].stepCount.value >= dst->stepLfoNodes[0].stepCount.meta.minVal);
+    REQUIRE(std::isfinite(dst->filterNodes[0].cutoff.value));
+    REQUIRE(dst->filterNodes[1].model == sst::filtersplusplus::FilterModel::None);
+}
+
+TEST_CASE("Host values are clamped to the param range", "[robustness]")
+{
+    Engine e;
+    e.setSampleRate(48000);
+    auto &rm = e.patch.routingNode.routingMode;
+    e.handleParamValue(&rm, rm.meta.id, 99.f);
+    REQUIRE(rm.value == rm.meta.maxVal);
 }
