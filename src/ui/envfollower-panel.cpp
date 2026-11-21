@@ -133,8 +133,8 @@ EnvFollowerPanel::EnvFollowerPanel(PluginEditor &e)
     mkRoute(4, en.toPreG, "Pre");
     mkRoute(5, en.toFiltBlend, "Blend");
     mkRoute(6, en.toMix, "Mix");
-    mkRoute(7, en.toFB, "F/Back");
-    mkRoute(8, en.toNoise, "Noise");
+    mkRoute(fbRoute, en.toFB, "F/Back");
+    mkRoute(noiseRoute, en.toNoise, "Noise");
 
     auto mkLab = [this](auto &l, const std::string &t)
     {
@@ -155,9 +155,20 @@ EnvFollowerPanel::EnvFollowerPanel(PluginEditor &e)
     jcad::setTraversalId(channel.get(), bi++);
     for (auto &k : routeK)
         jcad::setTraversalId(k.get(), bi++);
+
+    onModelChanged();
 }
 
 EnvFollowerPanel::~EnvFollowerPanel() = default;
+
+void EnvFollowerPanel::onModelChanged()
+{
+    auto &rn = editor.patchMainRef.routingNode;
+    routeK[fbRoute]->setEnabled(rn.feedbackPower > 0.5);
+    routeK[noiseRoute]->setEnabled(rn.noisePower > 0.5);
+    routeK[fbRoute]->repaint();
+    routeK[noiseRoute]->repaint();
+}
 
 void EnvFollowerPanel::setLevels(float in, float out)
 {

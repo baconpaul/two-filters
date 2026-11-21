@@ -40,6 +40,8 @@ struct EnvFollowerPanel : sst::jucegui::components::NamedPanel
     // linear input and follower peaks since the last send
     void setLevels(float in, float out);
 
+    void onModelChanged();
+
     void beginEdit() {}
     void endEdit(int id) {}
 
@@ -54,6 +56,7 @@ struct EnvFollowerPanel : sst::jucegui::components::NamedPanel
     std::unique_ptr<EnvTrace> trace;
 
     static constexpr int numRoutes{2 * 2 + 5};
+    static constexpr int fbRoute{7}, noiseRoute{8};
     std::array<std::unique_ptr<PatchContinuous>, numRoutes> routeD;
     std::array<std::unique_ptr<sst::jucegui::components::Knob>, numRoutes> routeK;
     std::unique_ptr<sst::jucegui::components::RuledLabel> toF1, toF2, toRt;
