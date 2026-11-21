@@ -171,7 +171,8 @@ void feedEnv(Engine &e, float L, float R, int n)
 }
 } // namespace
 
-TEST_CASE("Envelope follower attack and release are one time constant", "[envfollower]")
+TEST_CASE("Envelope follower attack is one time constant and release spans the window",
+          "[envfollower]")
 {
     Engine engine;
     engine.setSampleRate(48000);
@@ -183,9 +184,27 @@ TEST_CASE("Envelope follower attack and release are one time constant", "[envfol
     feedEnv(engine, 1, 1, 480);
     REQUIRE(engine.envLevel == Approx(1 - std::exp(-1.f)).margin(1e-3));
 
-    auto peak = engine.envLevel;
-    feedEnv(engine, 0, 0, 4800);
-    REQUIRE(engine.envLevel == Approx(peak * std::exp(-1.f)).margin(1e-3));
+    // from full depth, the release time is the time to fall through the whole db window
+    feedEnv(engine, 1, 1, 48000);
+    REQUIRE(Engine::envToMod(engine.envLevel, 0) == Approx(1.f).margin(1e-3));
+    feedEnv(engine, 0, 0, 2400);
+    REQUIRE(Engine::envToMod(engine.envLevel, 0) == Approx(0.5f).margin(0.01));
+    feedEnv(engine, 0, 0, 2400);
+    REQUIRE(Engine::envToMod(engine.envLevel, 0) == Approx(0.f).margin(0.01));
+}
+
+TEST_CASE("Envelope follower input is capped", "[envfollower]")
+{
+    Engine engine;
+    engine.setSampleRate(48000);
+    engine.patch.envFollowerNode.attack = -11;
+    engine.updateEnvFollower();
+
+    feedEnv(engine, 1e30f, 1e30f, 4800);
+    REQUIRE(engine.envLevel <= Engine::followerInputCap);
+
+    feedEnv(engine, std::nanf(""), 0.f, 10);
+    REQUIRE(std::isfinite(engine.envLevel));
 }
 
 TEST_CASE("Envelope follower channel modes rectify the chosen signal", "[envfollower]")
@@ -331,7 +350,9 @@ TEST_CASE("Reactivating clears the envelope follower", "[recovery]")
 {
     Engine e;
     e.setSampleRate(48000);
-    feedEnv(e, std::nanf(""), 0.f, 1);
+    // the input cap stops a nan getting in, so poison the state directly
+    e.envFollower.zL = std::nanf("");
+    feedEnv(e, 0.f, 0.f, 1);
     REQUIRE(!std::isfinite(e.envLevel));
     e.setSampleRate(48000);
     feedEnv(e, 0.1f, 0.1f, 480);
@@ -362,7 +383,8 @@ TEST_CASE("Reinitializing the follower leaves the filters running", "[recovery]"
         block(b, 0.3f, bL, bR);
     }
 
-    feedEnv(b, std::nanf(""), 0.f, 1);
+    b.envFollower.zL = std::nanf("");
+    feedEnv(b, 0.f, 0.f, 1);
     REQUIRE(!std::isfinite(b.envLevel));
     b.reinitializeFollower();
     REQUIRE(b.envLevel == 0.f);

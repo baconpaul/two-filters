@@ -143,13 +143,19 @@ struct Engine
             x = 0.5f * (L + R);
             break;
         }
+        // a cap keeps a huge spike from pinning full depth for seconds, and nan lands on 0
         auto ax = std::fabs(x);
+        ax = ax > followerInputCap ? followerInputCap : (ax >= 0.f ? ax : 0.f);
         envFollower.process_sample(ax, envLevel);
         envInPeak = std::max(envInPeak, ax);
         envOutPeak = std::max(envOutPeak, envLevel);
     }
     // peaks since the last ui send, so short hits between sends still show
     float envInPeak{0}, envOutPeak{0};
+    static constexpr float followerInputCap{2.5f};
+    // release is linear in db, so scale the time constant to make the knob the time to zero
+    static constexpr float releaseToWindow{
+        8.685889638f / -Patch::EnvFollowerNode::floorDb}; // 20 log10(e) db per time constant
 
     bool audioRunning{true};
     int beginEndParamGestureCount{0};

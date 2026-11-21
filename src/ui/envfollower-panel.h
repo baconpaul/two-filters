@@ -16,6 +16,9 @@
 #ifndef BACONPAUL_TWOFILTERS_UI_ENVFOLLOWER_PANEL_H
 #define BACONPAUL_TWOFILTERS_UI_ENVFOLLOWER_PANEL_H
 
+#include <array>
+#include <memory>
+
 #include "sst/jucegui/components/NamedPanel.h"
 #include "sst/jucegui/components/Knob.h"
 #include "sst/jucegui/components/MenuButton.h"
@@ -39,6 +42,7 @@ struct EnvFollowerPanel : sst::jucegui::components::NamedPanel
 
     // linear input and follower peaks since the last send
     void setLevels(float in, float out);
+    uint32_t lastMinimalRepaint{0};
 
     void onModelChanged();
 
