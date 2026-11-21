@@ -101,6 +101,9 @@ struct Engine
     float envLevel{0};
     void updateEnvFollower(bool force = false);
 
+    // clears filter, feedback, oversampling and follower state
+    void reinitializeDSP();
+
     // float exponent plus a quadratic on the mantissa, within 0.05db of log2
     static float fastLog2(float x)
     {
