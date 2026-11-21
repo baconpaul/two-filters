@@ -129,7 +129,7 @@ void Engine::updateEnvFollower(bool force)
     if (force || en.release.value != envRelease)
     {
         envRelease = en.release.value;
-        envFollower.set_release(std::exp2(envRelease));
+        envFollower.set_release(std::exp2(envRelease) * releaseToWindow);
     }
     envFromSidechain = (int)std::round(en.source.value) == Patch::EnvFollowerNode::SIDECHAIN;
     envChannel = (int)std::round(en.channel.value);

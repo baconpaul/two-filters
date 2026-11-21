@@ -38,7 +38,6 @@ struct EnvTrace : juce::Component
         inHist[writePos] = in;
         outHist[writePos] = out;
         writePos = (writePos + 1) % histSize;
-        repaint();
     }
 
     void paint(juce::Graphics &g) override
@@ -174,6 +173,16 @@ void EnvFollowerPanel::setLevels(float in, float out)
 {
     trace->push(in, out);
     level->level = out;
+
+    // minimal graphics still keeps the history, but only shows it once a second
+    if (editor.cpuGraphicsMode == PluginEditor::MINIMAL)
+    {
+        auto now = juce::Time::getMillisecondCounter();
+        if (now - lastMinimalRepaint < 1000)
+            return;
+        lastMinimalRepaint = now;
+    }
+    trace->repaint();
     level->repaint();
 }
 
