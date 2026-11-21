@@ -337,3 +337,41 @@ TEST_CASE("Reactivating clears the envelope follower", "[recovery]")
     feedEnv(e, 0.1f, 0.1f, 480);
     REQUIRE(std::isfinite(e.envLevel));
 }
+
+TEST_CASE("Reinitializing the follower leaves the filters running", "[recovery]")
+{
+    Engine a, b;
+    a.setSampleRate(48000);
+    b.setSampleRate(48000);
+    clap_output_events_t out{nullptr, envOutTryPush};
+
+    auto block = [&](Engine &e, float x, float &L, float &R)
+    {
+        e.processControl(&out);
+        for (int s = 0; s < blockSize; ++s)
+        {
+            e.processEnvFollower(x, x);
+            e.processAudio<Engine::RoutingModes::Serial, false, false, false>(x, x, L, R);
+        }
+    };
+
+    float aL, aR, bL, bR;
+    for (int i = 0; i < 50; ++i)
+    {
+        block(a, 0.3f, aL, aR);
+        block(b, 0.3f, bL, bR);
+    }
+
+    feedEnv(b, std::nanf(""), 0.f, 1);
+    REQUIRE(!std::isfinite(b.envLevel));
+    b.reinitializeFollower();
+    REQUIRE(b.envLevel == 0.f);
+
+    for (int i = 0; i < 50; ++i)
+    {
+        block(a, 0.f, aL, aR);
+        block(b, 0.f, bL, bR);
+        REQUIRE(aL == bL);
+        REQUIRE(aR == bR);
+    }
+}
