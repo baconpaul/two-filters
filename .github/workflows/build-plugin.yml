@@ -187,6 +187,7 @@ jobs:
           reuse_tag: false
           create_tag: true
           token: ${{ secrets.GITHUB_TOKEN }}
+          release_blurb_file: resources/ReleaseBlurb.md
 
 
       - name: Post to Discord
