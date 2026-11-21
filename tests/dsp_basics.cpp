@@ -267,3 +267,31 @@ TEST_CASE("Fast log2 tracks log2", "[envfollower]")
     REQUIRE(Engine::fastLog2(1.f) == Approx(0.f).margin(1e-6));
     REQUIRE(Engine::fastLog2(0.25f) == Approx(-2.f).margin(1e-6));
 }
+
+TEST_CASE("Reactivating clears the oversampling filters", "[recovery]")
+{
+    Engine e;
+    e.patch.routingNode.oversample = 1;
+    e.setSampleRate(48000);
+    clap_output_events_t out{nullptr, envOutTryPush};
+    e.processControl(&out);
+    REQUIRE(e.overSampling);
+
+    float nan = std::nanf(""), u[2], v[2], d[2]{nan, nan}, o, p;
+    e.hrUp.process_sample_U2(nan, nan, u, v);
+    e.hrDn.process_sample_D2(d, d, o, p);
+
+    e.setSampleRate(48000);
+    bool ok{true};
+    for (int b = 0; b < 100; ++b)
+    {
+        e.processControl(&out);
+        for (int s = 0; s < blockSize; ++s)
+        {
+            float L, R;
+            e.processAudio<Engine::RoutingModes::Serial, false, false, true>(0.1f, 0.1f, L, R);
+            ok = ok && std::isfinite(L) && std::isfinite(R);
+        }
+    }
+    REQUIRE(ok);
+}

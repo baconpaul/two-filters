@@ -50,6 +50,11 @@ void Engine::setSampleRate(double sr)
     lagHandler.setRate(60, blockSize, sampleRate);
 
     vuPeak.setSampleRate(sampleRate);
+
+    // a reactivate must clear any bad state, or only destroying the plugin recovers it
+    hrUp.reset();
+    hrDn.reset();
+
     envFollower.setSampleRate(sampleRate);
     updateEnvFollower(true);
 
