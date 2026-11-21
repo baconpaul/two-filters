@@ -953,6 +953,7 @@ void PluginEditor::resetEnablement()
     for (auto &f : stepLFOPanel)
         f->onModelChanged();
     routingPanel->enableFB();
+    envFollowerPanel->onModelChanged();
 }
 
 void PluginEditor::postPatchChange(const std::string &s)
