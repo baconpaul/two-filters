@@ -14,67 +14,84 @@
  */
 
 #include "envfollower-panel.h"
-#include <cmath>
+#include <array>
 #include "sst/jucegui/components/BaseStyles.h"
+#include "sst/jucegui/components/VUMeter.h"
 
 namespace baconpaul::twofilters::ui
 {
 
-// fake input bursts with a follower drawn over them
+namespace bst = sst::jucegui::components::base_styles;
+using vuSt = sst::jucegui::components::VUMeter::Styles;
+
+// scrolling input peaks with the follower over them, both in modulation depth
 struct EnvTrace : juce::Component
 {
     EnvTrace(EnvFollowerPanel &p) : panel(p) {}
 
+    static constexpr int histSize{1024};
+    std::array<float, histSize> inHist{}, outHist{};
+    int writePos{0};
+
+    void push(float in, float out)
+    {
+        inHist[writePos] = in;
+        outHist[writePos] = out;
+        writePos = (writePos + 1) % histSize;
+        repaint();
+    }
+
     void paint(juce::Graphics &g) override
     {
-        namespace bst = sst::jucegui::components::base_styles;
         auto st = panel.style();
         auto gCol = st->getColour(bst::ValueGutter::styleClass, bst::ValueGutter::gutter);
         auto vCol = st->getColour(bst::ValueBearing::styleClass, bst::ValueBearing::value);
         auto lCol = st->getColour(bst::BaseLabel::styleClass, bst::BaseLabel::labelcolor);
-        auto lFt = st->getFont(bst::BaseLabel::styleClass, bst::BaseLabel::labelfont);
 
         g.setColour(gCol);
         g.fillRect(getLocalBounds());
 
-        auto w = getWidth();
+        auto w = std::min(getWidth(), histSize);
         auto h = (float)getHeight();
-        std::vector<float> in(w), fol(w);
-        uint32_t seed{22};
-        auto rnd = [&seed]()
-        {
-            seed = seed * 1664525u + 1013904223u;
-            return (seed >> 8) / 16777216.f;
-        };
-        for (int x = 0; x < w; ++x)
-        {
-            auto ph = std::fmod(x * 4.0f / w, 1.0f);
-            auto hit = std::exp(-ph * 6.f) * (x * 4 / w % 2 == 0 ? 1.f : 0.6f);
-            in[x] = hit * (0.4f + 0.6f * rnd());
-        }
-        float f{0};
-        for (int x = 0; x < w; ++x)
-        {
-            auto c = in[x] > f ? 0.35f : 0.04f;
-            f += c * (in[x] - f);
-            fol[x] = f;
-        }
+        auto gain = panel.editor.patchMainRef.envFollowerNode.gain.value;
+        auto y = [&](float lev) { return h * (1 - 0.9f * Engine::envToMod(lev, gain)); };
+        auto at = [&](int x) { return (writePos - w + x + histSize) % histSize; };
 
         g.setColour(lCol.withAlpha(0.35f));
         for (int x = 0; x < w; ++x)
-            g.drawVerticalLine(x, h * (1 - in[x] * 0.9f), h);
+            g.drawVerticalLine(x, y(inHist[at(x)]), h);
 
         juce::Path p;
-        p.startNewSubPath(0, h * (1 - fol[0] * 0.9f));
+        p.startNewSubPath(0, y(outHist[at(0)]));
         for (int x = 1; x < w; ++x)
-            p.lineTo(x, h * (1 - fol[x] * 0.9f));
+            p.lineTo(x, y(outHist[at(x)]));
         g.setColour(vCol);
         g.strokePath(p, juce::PathStrokeType(1.5f));
+    }
 
-        g.setColour(lCol);
-        g.setFont(lFt);
-        g.drawText("Input / Follower (placeholder)", getLocalBounds().reduced(4, 2),
-                   juce::Justification::topLeft);
+    EnvFollowerPanel &panel;
+};
+
+// how much of each route depth the follower is giving right now
+struct EnvLevel : juce::Component
+{
+    EnvLevel(EnvFollowerPanel &p) : panel(p) {}
+
+    float level{0};
+
+    void paint(juce::Graphics &g) override
+    {
+        auto st = panel.style();
+        auto b = getLocalBounds().toFloat();
+        g.setColour(st->getColour(vuSt::styleClass, vuSt::vu_gutter));
+        g.fillRect(b);
+
+        auto gain = panel.editor.patchMainRef.envFollowerNode.gain.value;
+        auto v = Engine::envToMod(level, gain) * b.getWidth();
+        g.setGradientFill(juce::ColourGradient::horizontal(
+            st->getColour(vuSt::styleClass, vuSt::vu_gradstart), 0,
+            st->getColour(vuSt::styleClass, vuSt::vu_gradend), b.getWidth()));
+        g.fillRect(b.withWidth(v));
     }
 
     EnvFollowerPanel &panel;
@@ -89,15 +106,15 @@ EnvFollowerPanel::EnvFollowerPanel(PluginEditor &e)
     addAndMakeVisible(*attack);
     createComponent(editor, *this, en.release, release, releaseD);
     addAndMakeVisible(*release);
+    createComponent(editor, *this, en.gain, gain, gainD);
+    addAndMakeVisible(*gain);
 
     createComponent(editor, *this, en.source, source, sourceD);
     addAndMakeVisible(*source);
     createComponent(editor, *this, en.channel, channel, channelD);
     addAndMakeVisible(*channel);
 
-    level = std::make_unique<sst::jucegui::components::VUMeter>(
-        sst::jucegui::components::VUMeter::HORIZONTAL);
-    level->setLevels(0.55f, 0.55f);
+    level = std::make_unique<EnvLevel>(*this);
     addAndMakeVisible(*level);
 
     trace = std::make_unique<EnvTrace>(*this);
@@ -133,6 +150,7 @@ EnvFollowerPanel::EnvFollowerPanel(PluginEditor &e)
     auto bi = 15000;
     jcad::setTraversalId(attack.get(), bi++);
     jcad::setTraversalId(release.get(), bi++);
+    jcad::setTraversalId(gain.get(), bi++);
     jcad::setTraversalId(source.get(), bi++);
     jcad::setTraversalId(channel.get(), bi++);
     for (auto &k : routeK)
@@ -140,6 +158,13 @@ EnvFollowerPanel::EnvFollowerPanel(PluginEditor &e)
 }
 
 EnvFollowerPanel::~EnvFollowerPanel() = default;
+
+void EnvFollowerPanel::setLevels(float in, float out)
+{
+    trace->push(in, out);
+    level->level = out;
+    level->repaint();
+}
 
 // the route group labels share the header row, so stop the title rule short of them
 void EnvFollowerPanel::paintHeader(juce::Graphics &g)
@@ -177,16 +202,17 @@ void EnvFollowerPanel::resized()
 
     // controls on the left
     auto x0 = ca.getX();
-    attack->setBounds(knobs.withX(x0 + kmarg).withWidth(kw));
-    release->setBounds(knobs.withX(x0 + kmarg + kw + kmarg).withWidth(kw));
+    auto kn = 0;
+    for (auto *k : {attack.get(), release.get(), gain.get()})
+        k->setBounds(knobs.withX(x0 + group(kn++)).withWidth(kw));
 
-    auto cA = knobs.withX(x0 + group(2) + 4).withWidth(chanW - 8);
+    auto cA = knobs.withX(x0 + group(3) + 4).withWidth(chanW - 8);
     source->setBounds(cA.withHeight(22));
     channel->setBounds(cA.withHeight(22).translated(0, 25));
     level->setBounds(cA.withHeight(6).translated(0, 51));
 
     auto rx = ca.getRight() - routeW;
-    auto mx = x0 + group(2) + chanW + kmarg;
+    auto mx = x0 + group(3) + chanW + kmarg;
     trace->setBounds(knobs.withX(mx).withRight(rx - kmarg));
 
     // routes on the right, their labels up in the header row

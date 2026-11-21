@@ -196,6 +196,10 @@ void PluginEditor::idle()
         {
             vuMeter->setLevels(aum->value, aum->value2);
         }
+        else if (aum->action == Engine::AudioToMainMsg::UPDATE_ENVFOLLOWER)
+        {
+            envFollowerPanel->setLevels(aum->value, aum->value2);
+        }
         else if (aum->action == Engine::AudioToMainMsg::SEND_SAMPLE_RATE)
         {
             sampleRate = aum->value;

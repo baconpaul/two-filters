@@ -19,6 +19,7 @@
 #include <algorithm>
 
 #include "engine/steplfo_songpos.h"
+#include "engine/engine.h"
 #include "sst/basic-blocks/modulators/StepLFO.h"
 #include "sst/basic-blocks/modulators/Transport.h"
 #include "sst/basic-blocks/tables/EqualTuningProvider.h"
@@ -157,4 +158,112 @@ TEST_CASE("stepLFOSongPos matches a free-running StepLFO", "[lfo]")
         INFO("blk " << blk << " songpos " << a << " freerun " << b);
         REQUIRE(d < 1e-3);
     }
+}
+
+namespace
+{
+bool envOutTryPush(const clap_output_events_t *, const clap_event_header_t *) { return true; }
+
+void feedEnv(Engine &e, float L, float R, int n)
+{
+    for (int i = 0; i < n; ++i)
+        e.processEnvFollower(L, R);
+}
+} // namespace
+
+TEST_CASE("Envelope follower attack and release are one time constant", "[envfollower]")
+{
+    Engine engine;
+    engine.setSampleRate(48000);
+    auto &en = engine.patch.envFollowerNode;
+    en.attack = std::log2(0.01f);
+    en.release = std::log2(0.1f);
+    engine.updateEnvFollower();
+
+    feedEnv(engine, 1, 1, 480);
+    REQUIRE(engine.envLevel == Approx(1 - std::exp(-1.f)).margin(1e-3));
+
+    auto peak = engine.envLevel;
+    feedEnv(engine, 0, 0, 4800);
+    REQUIRE(engine.envLevel == Approx(peak * std::exp(-1.f)).margin(1e-3));
+}
+
+TEST_CASE("Envelope follower channel modes rectify the chosen signal", "[envfollower]")
+{
+    using EF = Patch::EnvFollowerNode;
+    auto settle = [](int channel)
+    {
+        Engine engine;
+        engine.setSampleRate(48000);
+        engine.patch.envFollowerNode.attack = -11;
+        engine.patch.envFollowerNode.channel = channel;
+        engine.updateEnvFollower();
+        feedEnv(engine, 0.8f, -0.4f, 4800);
+        return engine.envLevel;
+    };
+
+    REQUIRE(settle(EF::LEFT) == Approx(0.8f).margin(1e-3));
+    REQUIRE(settle(EF::RIGHT) == Approx(0.4f).margin(1e-3));
+    REQUIRE(settle(EF::MID) == Approx(0.2f).margin(1e-3));
+    REQUIRE(settle(EF::SIDE) == Approx(0.6f).margin(1e-3));
+}
+
+TEST_CASE("Envelope follower modulates the mix", "[envfollower]")
+{
+    // a nyquist square through the default lowpass is almost silent, so wet and dry differ
+    auto run = [](float envInput)
+    {
+        Engine engine;
+        engine.setSampleRate(48000);
+        engine.patch.envFollowerNode.attack = -11;
+        engine.patch.envFollowerNode.toMix = -1;
+        clap_output_events_t out{nullptr, envOutTryPush};
+
+        float oL{0}, oR{0}, in{0};
+        for (int b = 0; b < 200; ++b)
+        {
+            engine.processControl(&out);
+            for (int s = 0; s < blockSize; ++s)
+            {
+                engine.processEnvFollower(envInput, envInput);
+                in = (s % 2) ? 0.3f : -0.3f;
+                engine.processAudio<Engine::RoutingModes::Serial, false, false, false>(in, in, oL,
+                                                                                       oR);
+            }
+        }
+        return std::pair{in, oL};
+    };
+
+    auto [inQuiet, outQuiet] = run(0.f);
+    REQUIRE(std::abs(outQuiet) < 0.1f);
+
+    auto [inLoud, outLoud] = run(1.f);
+    REQUIRE(outLoud == Approx(inLoud).margin(1e-4));
+}
+
+TEST_CASE("Envelope follower maps a db window to modulation", "[envfollower]")
+{
+    auto fl = Patch::EnvFollowerNode::floorDb;
+    REQUIRE(Engine::envToMod(1.f, 0) == Approx(1.f));
+    REQUIRE(Engine::envToMod(2.f, 0) == Approx(1.f));
+    REQUIRE(Engine::envToMod(0.f, 0) == Approx(0.f));
+    // fast log is within 0.05db, about 0.001 of depth
+    auto dm = 0.002;
+    REQUIRE(Engine::envToMod(std::pow(10.f, fl / 40), 0) == Approx(0.5f).margin(dm));
+
+    // gain slides the window, so a quiet source can reach full depth
+    REQUIRE(Engine::envToMod(std::pow(10.f, -12.f / 20), 0) == Approx(0.75f).margin(dm));
+    REQUIRE(Engine::envToMod(std::pow(10.f, -12.f / 20), 12) == Approx(1.f).margin(dm));
+    REQUIRE(Engine::envToMod(1.f, -24) == Approx(0.5f).margin(dm));
+}
+
+TEST_CASE("Fast log2 tracks log2", "[envfollower]")
+{
+    for (float x = 1e-6f; x < 100.f; x *= 1.013f)
+    {
+        INFO("x=" << x);
+        REQUIRE(Engine::fastLog2(x) == Approx(std::log2(x)).margin(0.008));
+    }
+    REQUIRE(Engine::fastLog2(1.f) == Approx(0.f).margin(1e-6));
+    REQUIRE(Engine::fastLog2(0.25f) == Approx(-2.f).margin(1e-6));
 }
